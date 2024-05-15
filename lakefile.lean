@@ -10,7 +10,9 @@ package «lentil» where
   -- add any additional package configuration options here
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git" @ "master"
+  "https://github.com/leanprover-community/mathlib4.git" @ "v4.7.0"
+
+require Duper from git "https://github.com/leanprover-community/duper.git" @ "main"
 
 @[default_target]
 lean_lib «Lentil» where
