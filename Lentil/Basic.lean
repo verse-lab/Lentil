@@ -1,7 +1,7 @@
 import Aesop
 import Mathlib.Data.List.Basic
 import Mathlib.Tactic.Linarith
--- import Duper
+import Duper
 
 -- basic semantics & connectives
 
@@ -41,7 +41,7 @@ def tla_exist {α β : Type} (p : α → predicate β) : predicate β := λ σ �
 notation:50 p:51 "∧" q:51 => (tla_and p q)
 notation:50 p:51 "∨" q:51 => (tla_or p q)
 notation:50 p:51 "→" q:51 => (tla_implies p q)
-notation:50 "¬" p:51 => (tla_not p)
+prefix:66 "¬" => tla_not
 notation:50 "∀" x:51 "," p:51 => (tla_forall (λ x ↦ p))
 notation:50 "∃" x:51 "," p:51 => (tla_exist (λ x ↦ p))
 
@@ -60,6 +60,7 @@ notation:50 σ:51 "⊨" p:51 => (satisfies p σ)
 def valid {α : Type} (p : predicate α) : Prop := ∀ σ, σ ⊨ p
 def pred_implies {α : Type} (p q : predicate α) : Prop := ∀ σ, σ ⊨ p → σ ⊨ q
 
+prefix:51 "⊢" => valid
 infix:51 "⊢" => pred_implies
 
 def enabled {α : Type} (a : action α) (s : α) : Prop := ∃ s', a s s'
