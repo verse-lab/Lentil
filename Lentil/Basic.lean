@@ -1,6 +1,7 @@
 import Aesop
 import Mathlib.Data.List.Basic
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.PushNeg
 import Duper
 
 -- basic semantics & connectives
@@ -38,24 +39,25 @@ def tla_not {α : Type} (p : predicate α) : predicate α := λ σ ↦ ¬ p σ
 def tla_forall {α β : Type} (p : α → predicate β) : predicate β := λ σ ↦ ∀ x, p x σ
 def tla_exist {α β : Type} (p : α → predicate β) : predicate β := λ σ ↦ ∃ x, p x σ
 
-notation:50 p:51 "∧" q:51 => (tla_and p q)
-notation:50 p:51 "∨" q:51 => (tla_or p q)
-notation:50 p:51 "→" q:51 => (tla_implies p q)
+infixr:55 "∧" => tla_and
+infixr:55 "∨" => tla_or
+infixr:30 "→" => tla_implies
 prefix:66 "¬" => tla_not
 notation:50 "∀" x:51 "," p:51 => (tla_forall (λ x ↦ p))
 notation:50 "∃" x:51 "," p:51 => (tla_exist (λ x ↦ p))
 
 def always {α : Type} (p : predicate α) : predicate α := λ σ ↦ ∀ k, p σ[k:]
 def eventually {α : Type} (p : predicate α) : predicate α := λ σ ↦ ∃ k, p σ[k:]
-def next {α : Type} (p : predicate α) : predicate α := λ σ ↦ p σ[1:]
+def later {α : Type} (p : predicate α) : predicate α := λ σ ↦ p σ[1:]
 
 prefix:66 "□" => always
 prefix:66 "◇" => eventually
-prefix:66 "◯" => next
+prefix:66 "◯" => later
 
+-- FIXME: make this an infix?
 def satisfies {α : Type} (p : predicate α) (σ : exec α) : Prop := p σ
 
-notation:50 σ:51 "⊨" p:51 => (satisfies p σ)
+notation:55 σ:56 "⊨" p:56 => (satisfies p σ)
 
 def valid {α : Type} (p : predicate α) : Prop := ∀ σ, σ ⊨ p
 def pred_implies {α : Type} (p q : predicate α) : Prop := ∀ σ, σ ⊨ p → σ ⊨ q

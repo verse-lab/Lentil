@@ -24,7 +24,7 @@ macro "tla_unfold_1" : tactic =>
 macro "tla_unfold" : tactic =>
   `(tactic|
       (simp [tla_and, tla_or, tla_not, tla_implies, tla_forall, tla_exist,
-        always, eventually, next,
+        always, eventually, later,
         leads_to,
         valid, pred_implies, satisfies,
         drop_drop] at *))
@@ -34,15 +34,15 @@ section test_simple
 variable {α : Type}
 variable (p q r : predicate α)
 
+local add_aesop_rules norm tactic (by tla_unfold)
+-- local add_aesop_rules unsafe 20% tactic (by push_neg)
+local add_aesop_rules safe [tactic (by funext), apply Iff.intro]
+
 lemma eventually_to_always :
-  ◇ p = ¬ (□ (¬ p)) := by
-  aesop
-    (add norm tactic (by tla_unfold), safe 50 tactic (by funext))
+  ◇ p = ¬ □ ¬ p := by aesop
 
 lemma always_to_eventually :
-  □ p = ¬ (◇ (¬ p)) := by
-  aesop
-    (add norm tactic (by tla_unfold), safe 50 tactic (by funext))
+  □ p = ¬ ◇ ¬ p := by aesop
 
 -- this seems not very easy to automate
 lemma always_idem :
@@ -56,13 +56,26 @@ lemma eventually_idem :
   ◇ ◇ p = ◇ p := by
   repeat rw [eventually_to_always]
   rewrite (config := {occs := .neg [0,1,2]}) [<- always_idem]
-  aesop
-    (add norm tactic (by tla_unfold), safe 50 tactic (by funext)) -- TODO why worked?
+  aesop -- TODO why worked?
 
 -- lemma always_intro :
 --   (⊢ p) ↔ ⊢ □ p := by sorry
   -- aesop
   --   (add norm tactic (by tla_unfold), safe apply Iff.intro)
+
+lemma always_and :
+  □ (p ∧ q) = □ p ∧ □ q := by aesop
+
+lemma eventually_or :
+  ◇ (p ∨ q) = ◇ p ∨ ◇ q := by
+  repeat rw [eventually_to_always]
+  sorry
+
+lemma later_and :
+  ◯ (p ∧ q) = ◯ p ∧ ◯ q := by aesop
+
+lemma later_or :
+  ◯ (p ∨ q) = ◯ p ∨ ◯ q := by aesop
 
 end test_simple
 
