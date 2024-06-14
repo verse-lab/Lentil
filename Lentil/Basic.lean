@@ -12,13 +12,17 @@ def predicate (α : Type) := exec α → Prop
 def state_pred {α : Type} (f : α → Prop) : predicate α :=
   λ σ ↦ f (σ 0)
 
-notation:50 "⌜" P "⌝" => (state_pred P)
+notation:50 "⌜" p "⌝" => (state_pred p)
+
+def pure_pred {α : Type} (p : Prop) : predicate α := ⌜ λ _ ↦ p ⌝
+
+notation:50 "⌞" p "⌟" => (pure_pred p)
 
 def action (α : Type) := α → α → Prop
 def action_pred {α : Type} (a : action α) : predicate α :=
   λ σ ↦ a (σ 0) (σ 1)
 
-notation:90 "⟨" P:91 "⟩" => (action_pred P)
+notation:90 "⟨" p:91 "⟩" => (action_pred p)
 
 def drop {α : Type} (k : ℕ) (σ : exec α) : exec α := λ n ↦ σ (n + k)
 
