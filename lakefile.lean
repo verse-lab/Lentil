@@ -1,6 +1,8 @@
 import Lake
 open Lake DSL
 
+require aesop from git "https://github.com/leanprover-community/aesop" @ "v4.15.0"
+
 package «lentil» where
   -- Settings applied to both builds and interactive editing
   leanOptions := #[
@@ -8,11 +10,6 @@ package «lentil» where
     ⟨`pp.proofs.withType, false⟩
   ]
   -- add any additional package configuration options here
-
-require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git" @ "v4.7.0"
-
-require Duper from git "https://github.com/leanprover-community/duper.git" @ "main"
 
 @[default_target]
 lean_lib «Lentil» where
