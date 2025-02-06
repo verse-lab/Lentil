@@ -22,7 +22,7 @@ attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implie
 
 macro "tla_unfold_simp" : tactic => `(tactic| (simp [tlasimp_def] at *))
 
-variable {σ : Type}
+variable {σ : Type u}
 
 theorem dual_lemma (p q : pred σ) : ¬ p =tla= ¬ q → (p) =tla= (q) := by
   unfold tla_not ; intro h ; funext e ; have := congrFun h e ; aesop

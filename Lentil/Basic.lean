@@ -3,56 +3,69 @@ import Batteries.Util.ExtendedBinder
 
 open Lean
 
--- a small library about TLA, with only currently required things
+/-! ## A Shallow-Embedding of TLA -/
 
 namespace TLA
 
--- this part is from `TransitionSystem`; any better way for inheriting those definitions?
-def exec (σ : Type) := Nat → σ
-def pred (σ : Type) := exec σ → Prop
-def state_pred {σ : Type} (f : σ → Prop) : pred σ :=
+/-! NOTE: There are multiple ways to formalize the concept of infinite sequences.
+    Here, we follow the definition from `coq-tla`, while an alternative is to define
+    infinite sequence as a coinductive datatype (like `Stream` in Rocq/Agda).
+
+    Lean also comes with a definition of `Stream`, but it is a type class instead of
+    a datatype, and the sequences generated from it are not necessarily infinite
+    (in the sense that it may generate finite sequences). So here we do not use it.
+-/
+
+def exec (σ : Type u) := Nat → σ
+def pred (σ : Type u) := exec σ → Prop
+def state_pred {σ : Type u} (f : σ → Prop) : pred σ :=
   fun e => f (e 0)
-def action (σ : Type) := σ → σ → Prop
-def action_pred {σ : Type} (a : action σ) : pred σ :=
+def action (σ : Type u) := σ → σ → Prop
+def action_pred {σ : Type u} (a : action σ) : pred σ :=
   fun e => a (e 0) (e 1)
 
-def pure_pred {α : Type} (p : Prop) : pred α := state_pred (fun _ => p)
-def tla_true {α : Type} : pred α := pure_pred True
-def tla_false {α : Type} : pred α := pure_pred False
+def pure_pred {α : Type u} (p : Prop) : pred α := state_pred (fun _ => p)
+def tla_true {α : Type u} : pred α := pure_pred True
+def tla_false {α : Type u} : pred α := pure_pred False
 
-def tla_and {α : Type} (p q : pred α) : pred α := fun σ => p σ ∧ q σ
-def tla_or {α : Type} (p q : pred α) : pred α := fun σ => p σ ∨ q σ
-def tla_implies {α : Type} (p q : pred α) : pred α := fun σ => p σ → q σ
-def tla_not {α : Type} (p : pred α) : pred α := fun σ => ¬ p σ
-def tla_forall {α β : Type} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
-def tla_exists {α β : Type} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
+def tla_and {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∧ q σ
+def tla_or {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∨ q σ
+def tla_implies {α : Type u} (p q : pred α) : pred α := fun σ => p σ → q σ
+def tla_not {α : Type u} (p : pred α) : pred α := fun σ => ¬ p σ
+def tla_forall {α : Type u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
+def tla_exists {α : Type u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
 
--- HMM how to derive all these kinds?
-instance {α : Type} : Std.Commutative (@tla_and α) := by
+-- HMM how to automatically derive all these kinds?
+instance {α : Type u} : Std.Commutative (@tla_and α) := by
   constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
 
-instance {α : Type} : Std.Associative (@tla_and α) := by
+instance {α : Type u} : Std.Associative (@tla_and α) := by
   constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
 
-def exec.drop {α : Type} (k : Nat) (σ : exec α) : exec α := λ n => σ (n + k)
-def always {α : Type} (p : pred α) : pred α := λ σ => ∀ k, p <| σ.drop k
-def eventually {α : Type} (p : pred α) : pred α := λ σ => ∃ k, p <| σ.drop k
-def later {α : Type} (p : pred α) : pred α := λ σ => p <| σ.drop 1
+def exec.drop {α : Type u} (k : Nat) (σ : exec α) : exec α := λ n => σ (n + k)
+def exec.take {α : Type u} (k : Nat) (σ : exec α) : List α := List.range k |>.map σ
+def exec.take_from {α : Type u} (start k : Nat) (σ : exec α) : List α := List.range' start k |>.map σ
 
-theorem exec.drop_drop {α : Type} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by
+def always {α : Type u} (p : pred α) : pred α := λ σ => ∀ k, p <| σ.drop k
+def eventually {α : Type u} (p : pred α) : pred α := λ σ => ∃ k, p <| σ.drop k
+def later {α : Type u} (p : pred α) : pred α := λ σ => p <| σ.drop 1
+
+theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by
   funext n ; simp [exec.drop] ; ac_rfl
 
-def exec.satisfies {α : Type} (p : pred α) (σ : exec α) : Prop := p σ
-def valid {α : Type} (p : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p
-def pred_implies {α : Type} (p q : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p → σ.satisfies q
+def exec.satisfies {α : Type u} (p : pred α) (σ : exec α) : Prop := p σ
+def valid {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p
+def pred_implies {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p → σ.satisfies q
 
 theorem pred_implies_trans {p q r : pred α} : pred_implies p q → pred_implies q r → pred_implies p r := by
   intros h1 h2 e hp ; apply h2 ; apply h1 ; assumption
 
-def enabled {α : Type} (a : action α) (s : α) : Prop := ∃ s', a s s'
-def tla_enabled {α : Type} (a : action α) : pred α := state_pred (enabled a)
+def enabled {α : Type u} (a : action α) (s : α) : Prop := ∃ s', a s s'
+def tla_enabled {α : Type u} (a : action α) : pred α := state_pred (enabled a)
 
 end TLA
+
+/-! ## Syntax and Pretty-Printing for TLA Notations -/
 
 declare_syntax_cat tlafml
 syntax (priority := low) term:max : tlafml
@@ -108,8 +121,8 @@ macro_rules
   | `([tlafml| $t:term ]) => `($t)
 
 -- these definitions are not necessarily required, but for delaboration purposes
-def TLA.leads_to {α : Type} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → ◇ q) ]
-def TLA.weak_fairness {α : Type} (a : action α) : pred α := [tlafml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
+def TLA.leads_to {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → ◇ q) ]
+def TLA.weak_fairness {α : Type u} (a : action α) : pred α := [tlafml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
 
 macro_rules
   | `([tlafml| $f1:tlafml ↝ $f2:tlafml ]) => `(TLA.leads_to [tlafml| $f1 ] [tlafml| $f2 ])
