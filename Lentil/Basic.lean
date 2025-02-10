@@ -241,7 +241,11 @@ def TLA.tlafml_syntax_coe (stx : TSyntax `term) : Lean.PrettyPrinter.UnexpandM (
     | `(fun $x:ident => $stx)
     | `(fun ($x:ident : $_) => $stx) =>
       match stx with
-      | `(TLA.tla_and $stx') => do `([tlafml| ⋀ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
+      | `($stxx $stx') =>
+        match stxx with
+        | `(tla_and) | `(TLA.tla_and) =>      -- FIXME: a bad hack for now
+          do `([tlafml| ⋀ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
+        | _ => throw ()
       | _ => throw ()
     | _ => throw ()
   | _ => throw ()
