@@ -3,6 +3,12 @@ import Batteries.Util.ExtendedBinder
 
 open Lean
 
+private def binderIdentToFunBinder (stx : TSyntax ``binderIdent) : MacroM (TSyntax ``Parser.Term.funBinder) :=
+  match stx with
+  | `(binderIdent| $x:ident) =>  `(Parser.Term.funBinder| $x:ident )
+  | `(binderIdent| _ ) =>  `(Parser.Term.funBinder| _ )
+  | _ => Macro.throwUnsupported
+
 /-! ## A Shallow-Embedding of TLA -/
 
 namespace TLA
@@ -42,6 +48,12 @@ instance {α : Type u} : Std.Commutative (@tla_and α) := by
 instance {α : Type u} : Std.Associative (@tla_and α) := by
   constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
 
+instance {α : Type u} : Std.Commutative (@tla_or α) := by
+  constructor ; intros ; unfold tla_or ; funext e ; ac_rfl
+
+instance {α : Type u} : Std.Associative (@tla_or α) := by
+  constructor ; intros ; unfold tla_or ; funext e ; ac_rfl
+
 def exec.drop {α : Type u} (k : Nat) (σ : exec α) : exec α := λ n => σ (n + k)
 def exec.take {α : Type u} (k : Nat) (σ : exec α) : List α := List.range k |>.map σ
 def exec.take_from {α : Type u} (start k : Nat) (σ : exec α) : List α := List.range' start k |>.map σ
@@ -75,11 +87,9 @@ syntax "⌞ " term " ⌟" : tlafml
 syntax "⟨ " term " ⟩" : tlafml
 syntax "⊤" : tlafml
 syntax "⊥" : tlafml
-syntax:max "¬" tlafml:40 : tlafml
+syntax tlafml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
+syntax:max tlafml_heading_op tlafml:40 : tlafml
 syntax:max "Enabled" term:40 : tlafml
-syntax:max "□" tlafml:40 : tlafml
-syntax:max "◇" tlafml:40 : tlafml
-syntax:max "◯" tlafml:40 : tlafml
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
 syntax:15 tlafml:16 " → " tlafml:15 : tlafml
 syntax:35 tlafml:36 " ∧ " tlafml:35 : tlafml
@@ -93,7 +103,8 @@ syntax "∀ " extBinder ", " tlafml:51 : tlafml
 open Batteries.ExtendedBinder in
 syntax "∃ " extBinder ", " tlafml:51 : tlafml
 
-syntax "⋀ " binderIdent " ∈ " term ", " tlafml : tlafml
+syntax tlafml_bigop := "⋀ " <|> "⋁ "
+syntax tlafml_bigop binderIdent " ∈ " term ", " tlafml : tlafml
 
 syntax "[tlafml|" tlafml "]" : term
 
@@ -104,11 +115,15 @@ macro_rules
   | `([tlafml| ⟨ $t:term ⟩ ]) => `(TLA.action_pred $t)
   | `([tlafml| ⊤ ]) => `(TLA.tla_true)
   | `([tlafml| ⊥ ]) => `(TLA.tla_false)
-  | `([tlafml| ¬ $f:tlafml ]) => `(TLA.tla_not [tlafml| $f ])
+  | `([tlafml| $op:tlafml_heading_op $f:tlafml ]) => do
+    let opterm ← match op with
+      | `(tlafml_heading_op|¬) => `(TLA.tla_not)
+      | `(tlafml_heading_op|□) => `(TLA.always)
+      | `(tlafml_heading_op|◇) => `(TLA.eventually)
+      | `(tlafml_heading_op|◯) => `(TLA.later)
+      | _ => Macro.throwUnsupported
+    `($opterm [tlafml| $f ])
   | `([tlafml| Enabled $t:term ]) => `(TLA.tla_enabled $t)
-  | `([tlafml| □ $f:tlafml ]) => `(TLA.always [tlafml| $f ])
-  | `([tlafml| ◇ $f:tlafml ]) => `(TLA.eventually [tlafml| $f ])
-  | `([tlafml| ◯ $f:tlafml ]) => `(TLA.later [tlafml| $f ])
   | `([tlafml| $f1:tlafml → $f2:tlafml ]) => `(TLA.tla_implies [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| $f1:tlafml ∧ $f2:tlafml ]) => `(TLA.tla_and [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| $f1:tlafml ∨ $f2:tlafml ]) => `(TLA.tla_or [tlafml| $f1 ] [tlafml| $f2 ])
@@ -116,8 +131,12 @@ macro_rules
   | `([tlafml| ∀ $x:ident : $t, $f:tlafml]) => `(TLA.tla_forall fun $x:ident : $t => [tlafml| $f ])
   | `([tlafml| ∃ $x:ident, $f:tlafml]) => `(TLA.tla_exists fun $x:ident => [tlafml| $f ])
   | `([tlafml| ∃ $x:ident : $t, $f:tlafml]) => `(TLA.tla_exists fun $x:ident : $t => [tlafml| $f ])
-  | `([tlafml| ⋀ $x:ident ∈ $l:term, $f:tlafml]) => `(List.foldr (fun $x => TLA.tla_and ([tlafml| $f ])) TLA.tla_true $l)
-  | `([tlafml| ⋀ _ ∈ $l:term, $f:tlafml]) => `(List.foldr (fun _ => TLA.tla_and ([tlafml| $f ])) TLA.tla_true $l)
+  | `([tlafml| $op:tlafml_bigop $x:binderIdent ∈ $l:term, $f:tlafml]) =>
+    -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
+    match op with
+    | `(tlafml_bigop|⋀ ) => do `(List.foldr (fun $(← binderIdentToFunBinder x) => TLA.tla_and ([tlafml| $f ])) TLA.tla_true $l)
+    | `(tlafml_bigop|⋁ ) => do `(List.foldr (fun $(← binderIdentToFunBinder x) => TLA.tla_or ([tlafml| $f ])) TLA.tla_false $l)
+    | _ => Macro.throwUnsupported
   | `([tlafml| $t:term ]) => `($t)
 
 -- these definitions are not necessarily required, but for delaboration purposes
@@ -148,6 +167,7 @@ def TLA.tlafml_syntax_coe (stx : TSyntax `term) : Lean.PrettyPrinter.UnexpandM (
   | `(term|$t:term) => `(tlafml| $t:term )
 
 -- FIXME: it would be desirable to derive the things below automatically
+-- due to some annoying repetition
 @[app_unexpander TLA.pure_pred] def TLA.unexpand_pure_pred : Lean.PrettyPrinter.Unexpander
   | `($_ $p) => `([tlafml| ⌞ $p ⌟ ])
   | _ => throw ()
@@ -245,6 +265,22 @@ def TLA.tlafml_syntax_coe (stx : TSyntax `term) : Lean.PrettyPrinter.UnexpandM (
         match stxx with
         | `(tla_and) | `(TLA.tla_and) =>      -- FIXME: a bad hack for now
           do `([tlafml| ⋀ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
+        | _ => throw ()
+      | _ => throw ()
+    | _ => throw ()
+  | _ => throw ()
+
+@[app_unexpander List.foldr] def TLA.unexpand_tla_or_bigvee : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx1 [tlafml| ⊥ ] $l:term) =>
+    -- HMM directly writing `$stx1` as `(fun ...)` above does not work?
+    match stx1 with
+    | `(fun $x:ident => $stx)
+    | `(fun ($x:ident : $_) => $stx) =>
+      match stx with
+      | `($stxx $stx') =>
+        match stxx with
+        | `(tla_or) | `(TLA.tla_or) =>      -- FIXME: a bad hack for now
+          do `([tlafml| ⋁ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
         | _ => throw ()
       | _ => throw ()
     | _ => throw ()
