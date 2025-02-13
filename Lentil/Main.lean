@@ -238,7 +238,6 @@ theorem leads_to_combine (Γ Γ' p1 q1 p2 q2 : pred σ)
   simp [exec.drop_drop] at h1' h2'
   constructor ; rw [← Nat.add_assoc] ; assumption ; rw [Nat.add_comm k1 k2, ← Nat.add_assoc] ; assumption
 
--- HMM not sure if this is a good way to do things
 theorem leads_to_strengthen_lhs (Γ p q inv : pred σ)
   (hinv : (Γ) |-tla- □ inv) :
   (Γ) |-tla- (p ∧ inv ↝ q) → (Γ) |-tla- (p ↝ q) := by

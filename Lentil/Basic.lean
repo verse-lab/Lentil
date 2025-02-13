@@ -164,7 +164,8 @@ macro_rules
   | `([tlafml| $f1:tlafml ↝ $f2:tlafml ]) => `(TLA.leads_to [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| 𝒲ℱ $t:term ]) => `(TLA.weak_fairness $t)
 
--- FIXME: use something fancier like `ᴛʟᴀ`
+/- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
+   easily typed in Lean VSCode extension, so anyway -/
 syntax:max tlafml:max " |-tla- " tlafml:max : term
 syntax:max "|-tla- " tlafml:max : term
 syntax:max tlafml:max " =tla= " tlafml:max : term
