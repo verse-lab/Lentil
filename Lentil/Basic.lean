@@ -182,10 +182,17 @@ macro_rules
 /-- Converting a syntax in `term` category into `tlafml`.
     This is useful in the cases where we want to eliminate the redundant `[tlafml| ... ]`
     wrapper of some sub-formula when it is inside a `tlafml`. -/
-def TLA.tlafml_syntax_coe [Monad m] [MonadQuotation m] (stx : TSyntax `term) : m (TSyntax `tlafml) := do
+def TLA.syntax_term_to_tlafml [Monad m] [MonadQuotation m] (stx : TSyntax `term) : m (TSyntax `tlafml) := do
   match stx with
   | `([tlafml| $f:tlafml ]) => pure f
   | `(term|$t:term) => `(tlafml| $t:term )
+
+/-- Converting a syntax in `term` category into `tlafml`,
+    by inserting `[tlafml| ... ]` wrapper if needed.  -/
+def TLA.syntax_tlafml_to_term [Monad m] [MonadQuotation m] (stx : TSyntax `tlafml) : m (TSyntax `term) := do
+  match stx with
+  | `(tlafml| $t:term ) => pure t
+  | f => `(term|[tlafml| $f:tlafml ])
 
 -- taken from https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
 open PrettyPrinter.Delaborator SubExpr in
@@ -237,7 +244,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       /- we are not sure about whether the argument is a `fun _ => _` or something else,
          so here we first `delab` the argument and then look into it;
          this seems to work, as `delab` would also call `delab_tlafml_inner` on the argument,
-         so that we can match the inner syntax of `f` and use `TLA.tlafml_syntax_coe`? -/
+         so that we can match the inner syntax of `f` and use `TLA.syntax_term_to_tlafml`? -/
       let body ← withAppArg delab
       let (a, stx) ← get_bindername_funbody body
       match fn with
@@ -258,7 +265,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
   annAsTerm stx
 where get_bindername_funbody (body : Term) : DelabM (Ident × TSyntax `tlafml) := do
   match body with
-  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) => pure (a, (← TLA.tlafml_syntax_coe stx))
+  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) => pure (a, (← TLA.syntax_term_to_tlafml stx))
   | _ =>
     -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
     -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
@@ -267,25 +274,30 @@ where get_bindername_funbody (body : Term) : DelabM (Ident × TSyntax `tlafml) :
     pure (x, (← `(tlafml| $bodyapp:term )))
 
 open PrettyPrinter.Delaborator SubExpr in
-partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.using_delab.name true) do
+partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
   let e ← getExpr
   let fn := e.getAppFn.constName
   -- need to consider implicit arguments below in comparing `e.getAppNumArgs'`
-  guard <| (
+  let check_applicable (offset : Nat) :=
     (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
         ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
-      && e.getAppNumArgs' == 2) ||
+      && e.getAppNumArgs' == 2 + offset) ||
     (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to,
         ``TLA.tla_forall, ``TLA.tla_exists]
-      && e.getAppNumArgs' == 3) ||
+      && e.getAppNumArgs' == 3 + offset) ||
     (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
-      && e.getAppNumArgs' == 1) ||
+      && e.getAppNumArgs' == 1 + offset) ||
     (List.elem fn [``TLA.tla_bigwedge, ``TLA.tla_bigvee]
-      && e.getAppNumArgs' == 6)
-  )
-  match ← delab_tlafml_inner with
-  | `(tlafml| $t:term ) => pure t
-  | f => `(term|[tlafml| $f:tlafml ])
+      && e.getAppNumArgs' == 6 + offset)
+  if check_applicable 0
+  then delab_tlafml_inner >>= TLA.syntax_tlafml_to_term
+  else whenPPOption (fun o => o.get lentil.pp.autoRenderSatisfies.name true) do
+    if check_applicable 1
+    then
+      let res ← withAppFn delab_tlafml_inner
+      let e ← withAppArg delab
+      `(term| $e |=tla= $res)
+    else failure
 
 attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
 attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
@@ -295,15 +307,15 @@ attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
 attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
 
 @[app_unexpander TLA.pred_implies] def TLA.unexpand_pred_implies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `(($(← TLA.tlafml_syntax_coe stx1)) |-tla- ($(← TLA.tlafml_syntax_coe stx2)))
+  | `($_ $stx1 $stx2) => do `(($(← TLA.syntax_term_to_tlafml stx1)) |-tla- ($(← TLA.syntax_term_to_tlafml stx2)))
   | _ => throw ()
 
 @[app_unexpander TLA.valid] def TLA.unexpand_valid : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `(|-tla- ($(← TLA.tlafml_syntax_coe stx)))
+  | `($_ $stx) => do `(|-tla- ($(← TLA.syntax_term_to_tlafml stx)))
   | _ => throw ()
 
 @[app_unexpander TLA.exec.satisfies] def TLA.unexpand_satisfies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `($stx2 |=tla= $(← TLA.tlafml_syntax_coe stx1))
+  | `($_ $stx1 $stx2) => do `($stx2 |=tla= $(← TLA.syntax_term_to_tlafml stx1))
   | _ => throw ()
 
 @[app_unexpander Eq] def TLA.unexpand_tla_eq : Lean.PrettyPrinter.Unexpander

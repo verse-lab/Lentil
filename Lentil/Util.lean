@@ -8,9 +8,14 @@ def binderIdentToFunBinder (stx : TSyntax ``binderIdent) : MacroM (TSyntax ``Par
   | `(binderIdent| _ ) =>  `(Parser.Term.funBinder| _ )
   | _ => Macro.throwUnsupported
 
-register_option lentil.pp.using_delab : Bool := {
+register_option lentil.pp.useDelab : Bool := {
   defValue := true
   descr := "Use Delab instead of Unexpander for delaboration. "
+}
+
+register_option lentil.pp.autoRenderSatisfies : Bool := {
+  defValue := true
+  descr := "Automatically render an application `p e` as `e |=tla= p` when `p` is a TLA formula. "
 }
 
 register_simp_attr tlasimp_def

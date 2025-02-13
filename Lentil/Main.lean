@@ -17,7 +17,7 @@ macro "tla_unfold" : tactic =>
   `(tactic| (try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later state_pred pure_pred valid pred_implies exec.satisfies tla_bigwedge tla_bigvee)
      <;> (try (dsimp only [Foldable.fold] at *)))
 
-attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true
+attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false
   always eventually later state_pred pure_pred
   valid pred_implies exec.satisfies exec.drop_drop
   tla_bigwedge tla_bigvee Foldable.fold
@@ -119,14 +119,23 @@ section two
 
 variable (p q : pred σ)
 
-theorem tla_and_comm : (p ∧ q) =tla= (q ∧ p) := by
+theorem and_comm : (p ∧ q) =tla= (q ∧ p) := by
   funext e ; tla_unfold_simp ; aesop
 
-theorem tla_and_assoc : ((p ∧ q) ∧ r) =tla= (p ∧ (q ∧ r)) := by
+theorem and_left : (p ∧ q) |-tla- (p) := by
+  tla_unfold_simp ; try (intros ; assumption)
+
+theorem and_right : (p ∧ q) |-tla- (q) := by
+  tla_unfold_simp
+
+theorem and_assoc : ((p ∧ q) ∧ r) =tla= (p ∧ (q ∧ r)) := by
   funext e ; tla_unfold_simp ; aesop
 
 theorem implies_to_or : (p → q) =tla= (¬ p ∨ q) := by
   funext e ; tla_unfold_simp ; apply Decidable.imp_iff_not_or
+
+theorem not_implies_to_and : (¬ (p → q)) =tla= (p ∧ ¬ q) := by
+  funext e ; tla_unfold_simp
 
 theorem not_or : (¬ (p ∨ q)) =tla= (¬ p ∧ ¬ q) := by
   funext e ; tla_unfold_simp
@@ -139,6 +148,9 @@ theorem contraposition_for_tla_implies : (p → q) =tla= (¬ q → ¬ p) := by
 
 theorem contraposition_for_pred_implies : (p) |-tla- (q) = ((¬ q) |-tla- ¬ p) := by
   repeat rw [← impl_intro, contraposition_for_tla_implies]
+
+theorem proof_by_contra (p q : pred σ) : (p) |-tla- (q) = (¬ q ∧ p) |-tla- (⊥) := by
+  rw [contraposition_for_pred_implies] ; tla_unfold_simp
 
 -- the following: about modal operators
 
