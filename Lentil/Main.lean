@@ -14,11 +14,13 @@ macro_rules
   | `(tactic| try_unfold_at_all $idt $idts:ident* ) => `(tactic| (try unfold $idt at *) ; try_unfold_at_all $idts* )
 
 macro "tla_unfold" : tactic =>
-  `(tactic| try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later state_pred pure_pred valid pred_implies exec.satisfies)
+  `(tactic| (try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later state_pred pure_pred valid pred_implies exec.satisfies tla_bigwedge tla_bigvee)
+     <;> (try (dsimp only [Foldable.fold] at *)))
 
 attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true
   always eventually later state_pred pure_pred
   valid pred_implies exec.satisfies exec.drop_drop
+  tla_bigwedge tla_bigvee Foldable.fold
 
 macro "tla_unfold_simp" : tactic => `(tactic| (simp [tlasimp_def] at *))
 
@@ -165,7 +167,7 @@ theorem eventually_and_split : (◇ (p ∧ q)) |-tla- (◇ p ∧ ◇ q) := by
 theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧ ◇ □ q) := by
   rw [pred_eq_iff_iff] ; constructor
   on_goal 1=> rw [always_and] ; apply eventually_and_split
-  tla_unfold ; dsimp ; intro e ⟨⟨n1, h1⟩, ⟨n2, h2⟩⟩ ; exists (n1 + n2)
+  tla_unfold ; intro e ⟨⟨n1, h1⟩, ⟨n2, h2⟩⟩ ; exists (n1 + n2)
   intro k ; simp [exec.drop_drop] at *
   specialize h1 (n2 + k) ; specialize h2 (n1 + k)
   have hq1 : n1 + (n2 + k) = n1 + n2 + k := by omega

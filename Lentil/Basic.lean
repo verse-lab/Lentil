@@ -1,13 +1,8 @@
 import Lean
 import Batteries.Util.ExtendedBinder
+import Lentil.Util
 
 open Lean
-
-private def binderIdentToFunBinder (stx : TSyntax ``binderIdent) : MacroM (TSyntax ``Parser.Term.funBinder) :=
-  match stx with
-  | `(binderIdent| $x:ident) =>  `(Parser.Term.funBinder| $x:ident )
-  | `(binderIdent| _ ) =>  `(Parser.Term.funBinder| _ )
-  | _ => Macro.throwUnsupported
 
 /-! ## A Shallow-Embedding of TLA -/
 
@@ -75,9 +70,31 @@ theorem pred_implies_trans {p q r : pred α} : pred_implies p q → pred_implies
 def enabled {α : Type u} (a : action α) (s : α) : Prop := ∃ s', a s s'
 def tla_enabled {α : Type u} (a : action α) : pred α := state_pred (enabled a)
 
+-- HMM this is kind of awkward: we need `Std.Commutative` and `Std.Associative` to be able
+-- to work on finset.
+/-- A customized typeclass to express structures that can be folded upon. -/
+class Foldable (c : Type u → Type v) where
+  fold {α : Type u} {β : Type w} (op : β → β → β) [Std.Commutative op] [Std.Associative op]
+    (b : β) (f : α → β) (s : c α) : β
+
+instance : Foldable List where
+  fold op _ _ b f s := List.foldr (op <| f ·) b s
+
+def tla_bigwedge {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
+  Foldable.fold tla_and tla_true f s
+
+def tla_bigvee {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
+  Foldable.fold tla_or tla_false f s
+
 end TLA
 
-/-! ## Syntax and Pretty-Printing for TLA Notations -/
+/-! ## Syntax for TLA Notations
+
+    Our notations for TLA formulas intersect with those for plain Lean terms,
+    so to avoid potentially ambiguity(?), we define a new syntax category `tlafml`
+    for TLA formulas and define macro rules for expanding formulas in `tlafml` into
+    Lean terms.
+-/
 
 declare_syntax_cat tlafml
 syntax (priority := low) term:max : tlafml
@@ -134,8 +151,8 @@ macro_rules
   | `([tlafml| $op:tlafml_bigop $x:binderIdent ∈ $l:term, $f:tlafml]) =>
     -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
     match op with
-    | `(tlafml_bigop|⋀ ) => do `(List.foldr (fun $(← binderIdentToFunBinder x) => TLA.tla_and ([tlafml| $f ])) TLA.tla_true $l)
-    | `(tlafml_bigop|⋁ ) => do `(List.foldr (fun $(← binderIdentToFunBinder x) => TLA.tla_or ([tlafml| $f ])) TLA.tla_false $l)
+    | `(tlafml_bigop|⋀ ) => do `(TLA.tla_bigwedge (fun $(← binderIdentToFunBinder x) => [tlafml| $f ]) $l)
+    | `(tlafml_bigop|⋁ ) => do `(TLA.tla_bigvee (fun $(← binderIdentToFunBinder x) => [tlafml| $f ]) $l)
     | _ => Macro.throwUnsupported
   | `([tlafml| $t:term ]) => `($t)
 
@@ -159,82 +176,122 @@ macro_rules
   | `($f1:tlafml =tla= $f2:tlafml) => `([tlafml| $f1 ] = [tlafml| $f2 ])
   | `($e:term |=tla= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e)
 
--- doing a trick here, since it seems that `app_unexpander` cannot detect the case where a term is directly used as `tlafml`
--- e.g., try removing the second branch and `#check forall (p : TLA.pred Prop), (p) |-tla- (p)`
-def TLA.tlafml_syntax_coe (stx : TSyntax `term) : Lean.PrettyPrinter.UnexpandM (TSyntax `tlafml) := do
+/-! ## Pretty-Printing for TLA Notations -/
+
+/-- Converting a syntax in `term` category into `tlafml`.
+    This is useful in the cases where we want to eliminate the redundant `[tlafml| ... ]`
+    wrapper of some sub-formula when it is inside a `tlafml`. -/
+def TLA.tlafml_syntax_coe [Monad m] [MonadQuotation m] (stx : TSyntax `term) : m (TSyntax `tlafml) := do
   match stx with
   | `([tlafml| $f:tlafml ]) => pure f
   | `(term|$t:term) => `(tlafml| $t:term )
 
--- FIXME: it would be desirable to derive the things below automatically
--- due to some annoying repetition
-@[app_unexpander TLA.pure_pred] def TLA.unexpand_pure_pred : Lean.PrettyPrinter.Unexpander
-  | `($_ $p) => `([tlafml| ⌞ $p ⌟ ])
-  | _ => throw ()
+-- taken from https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
+open PrettyPrinter.Delaborator SubExpr in
+def annAsTerm {any} (stx : TSyntax any) : DelabM (TSyntax any) :=
+  (⟨·⟩) <$> annotateTermInfo ⟨stx.raw⟩
 
-@[app_unexpander TLA.state_pred] def TLA.unexpand_state_pred : Lean.PrettyPrinter.Unexpander
-  | `($_ $p) => `([tlafml| ⌜ $p ⌝ ])
-  | _ => throw ()
+-- heavily inspired by https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
+open PrettyPrinter.Delaborator SubExpr in
+partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
+  let e ← getExpr
+  let stx ← do
+    /- NOTE: we could get rid of the nesting of `withAppFn` and `withAppArg`
+       by having something more general, but currently doing so does not
+       give much benefit -/
+    -- let argstxs ← withAppFnArgs (pure []) fun l => do
+    --   let x ← delab_tlafml_inner
+    --   pure <| x :: l
+    let fn := e.getAppFn'.constName
+    match fn with
+    | ``TLA.tla_true => `(tlafml| ⊤ )
+    | ``TLA.tla_false => `(tlafml| ⊥ )
+    | ``TLA.state_pred | ``TLA.pure_pred | ``TLA.action_pred | ``TLA.tla_enabled | ``TLA.weak_fairness =>
+      let t ← withAppArg delab
+      match fn with
+      | ``TLA.state_pred => `(tlafml| ⌜ $t:term ⌝ )
+      | ``TLA.pure_pred => `(tlafml| ⌞ $t:term ⌟ )
+      | ``TLA.action_pred => `(tlafml| ⟨ $t:term ⟩ )
+      | ``TLA.tla_enabled => `(tlafml| Enabled $t:term )
+      | ``TLA.weak_fairness => `(tlafml| 𝒲ℱ $t:term )
+      | _ => unreachable!
+    | ``TLA.tla_not | ``TLA.always | ``TLA.eventually | ``TLA.later =>
+      let f ← withAppArg delab_tlafml_inner
+      match fn with
+      | ``TLA.tla_not => `(tlafml| ¬ $f:tlafml )
+      | ``TLA.always => `(tlafml| □ $f:tlafml )
+      | ``TLA.eventually => `(tlafml| ◇ $f:tlafml )
+      | ``TLA.later => `(tlafml| ◯ $f:tlafml )
+      | _ => unreachable!
+    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to =>
+      let f1 ← withAppFn <| withAppArg delab_tlafml_inner
+      let f2 ← withAppArg delab_tlafml_inner
+      match fn with
+      | ``TLA.tla_and => `(tlafml| $f1:tlafml ∧ $f2:tlafml)
+      | ``TLA.tla_or => `(tlafml| $f1:tlafml ∨ $f2:tlafml)
+      | ``TLA.tla_implies => `(tlafml| $f1:tlafml → $f2:tlafml)
+      | ``TLA.leads_to => `(tlafml| $f1:tlafml ↝ $f2:tlafml)
+      | _ => unreachable!
+    | ``TLA.tla_forall | ``TLA.tla_exists =>
+      /- we are not sure about whether the argument is a `fun _ => _` or something else,
+         so here we first `delab` the argument and then look into it;
+         this seems to work, as `delab` would also call `delab_tlafml_inner` on the argument,
+         so that we can match the inner syntax of `f` and use `TLA.tlafml_syntax_coe`? -/
+      let body ← withAppArg delab
+      let (a, stx) ← get_bindername_funbody body
+      match fn with
+      | ``TLA.tla_forall => do `(tlafml| ∀ $a:ident, $stx )
+      | ``TLA.tla_exists => do `(tlafml| ∃ $a:ident, $stx )
+      | _ => unreachable!
+    | ``TLA.tla_bigwedge | ``TLA.tla_bigvee =>
+      let body ← withAppFn <| withAppArg delab
+      let l ← withAppArg delab
+      let (a, stx) ← get_bindername_funbody body
+      match fn with
+      | ``TLA.tla_bigwedge => do `(tlafml| ⋀ $a:ident ∈ $l, $stx )
+      | ``TLA.tla_bigvee => do `(tlafml| ⋁ $a:ident ∈ $l, $stx )
+      | _ => unreachable!
+    | _ =>
+      -- in this case, `e` may not even be an `.app`, so directly delab it
+      `(tlafml| $(← delab):term )
+  annAsTerm stx
+where get_bindername_funbody (body : Term) : DelabM (Ident × TSyntax `tlafml) := do
+  match body with
+  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) => pure (a, (← TLA.tlafml_syntax_coe stx))
+  | _ =>
+    -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
+    -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
+    let x := mkIdent <| .mkSimple "x"
+    let bodyapp ← `(term| $body $x )
+    pure (x, (← `(tlafml| $bodyapp:term )))
 
-@[app_unexpander TLA.action_pred] def TLA.unexpand_action_pred : Lean.PrettyPrinter.Unexpander
-  | `($_ $p) => `([tlafml| ⟨ $p ⟩ ])
-  | _ => throw ()
+open PrettyPrinter.Delaborator SubExpr in
+partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.using_delab.name true) do
+  let e ← getExpr
+  let fn := e.getAppFn.constName
+  -- need to consider implicit arguments below in comparing `e.getAppNumArgs'`
+  guard <| (
+    (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
+        ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
+      && e.getAppNumArgs' == 2) ||
+    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to,
+        ``TLA.tla_forall, ``TLA.tla_exists]
+      && e.getAppNumArgs' == 3) ||
+    (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
+      && e.getAppNumArgs' == 1) ||
+    (List.elem fn [``TLA.tla_bigwedge, ``TLA.tla_bigvee]
+      && e.getAppNumArgs' == 6)
+  )
+  match ← delab_tlafml_inner with
+  | `(tlafml| $t:term ) => pure t
+  | f => `(term|[tlafml| $f:tlafml ])
 
-@[app_unexpander TLA.tla_enabled] def TLA.unexpand_tla_enabled : Lean.PrettyPrinter.Unexpander
-  | `($_ $p) => `([tlafml| Enabled $p ])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_true] def TLA.unexpand_tla_true : Lean.PrettyPrinter.Unexpander
-  | `($_) => `([tlafml| ⊤ ])
-
-@[app_unexpander TLA.tla_false] def TLA.unexpand_tla_false : Lean.PrettyPrinter.Unexpander
-  | `($_) => `([tlafml| ⊥ ])
-
-@[app_unexpander TLA.tla_and] def TLA.unexpand_tla_and : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `([tlafml| $(← TLA.tlafml_syntax_coe stx1) ∧ $(← TLA.tlafml_syntax_coe stx2)])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_or] def TLA.unexpand_tla_or : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `([tlafml| $(← TLA.tlafml_syntax_coe stx1) ∨ $(← TLA.tlafml_syntax_coe stx2)])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_implies] def TLA.unexpand_tla_implies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `([tlafml| $(← TLA.tlafml_syntax_coe stx1) → $(← TLA.tlafml_syntax_coe stx2)])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_not] def TLA.unexpand_tla_not : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `([tlafml| ¬ $(← TLA.tlafml_syntax_coe stx) ])
-  | _ => throw ()
-
-@[app_unexpander TLA.always] def TLA.unexpand_always : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `([tlafml| □ $(← TLA.tlafml_syntax_coe stx) ])
-  | _ => throw ()
-
-@[app_unexpander TLA.eventually] def TLA.unexpand_eventually : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `([tlafml| ◇ $(← TLA.tlafml_syntax_coe stx) ])
-  | _ => throw ()
-
-@[app_unexpander TLA.later] def TLA.unexpand_later : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `([tlafml| ◯ $(← TLA.tlafml_syntax_coe stx) ])
-  | _ => throw ()
-
-@[app_unexpander TLA.leads_to] def TLA.unexpand_leads_to : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `([tlafml| $(← TLA.tlafml_syntax_coe stx1) ↝ $(← TLA.tlafml_syntax_coe stx2)])
-  | _ => throw ()
-
-@[app_unexpander TLA.weak_fairness] def TLA.unexpand_weak_fairness : Lean.PrettyPrinter.Unexpander
-  | `($_ $p) => `([tlafml| 𝒲ℱ $p ])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_forall] def TLA.unexpand_tla_forall : Lean.PrettyPrinter.Unexpander
-  | `($_ fun $a:ident => $stx)
-  | `($_ fun ($a:ident : $_) => $stx) => do `([tlafml| ∀ $a:ident, ($(← TLA.tlafml_syntax_coe stx)) ])
-  | _ => throw ()
-
-@[app_unexpander TLA.tla_exists] def TLA.unexpand_tla_exists : Lean.PrettyPrinter.Unexpander
-  | `($_ fun $a:ident => $stx)
-  | `($_ fun ($a:ident : $_) => $stx) => do `([tlafml| ∃ $a:ident, ($(← TLA.tlafml_syntax_coe stx)) ])
-  | _ => throw ()
+attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
+attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
+attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to] delab_tlafml
+attribute [delab app.TLA.tla_true, delab app.TLA.tla_false] delab_tlafml
+attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
+attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
 
 @[app_unexpander TLA.pred_implies] def TLA.unexpand_pred_implies : Lean.PrettyPrinter.Unexpander
   | `($_ $stx1 $stx2) => do `(($(← TLA.tlafml_syntax_coe stx1)) |-tla- ($(← TLA.tlafml_syntax_coe stx2)))
@@ -252,40 +309,19 @@ def TLA.tlafml_syntax_coe (stx : TSyntax `term) : Lean.PrettyPrinter.UnexpandM (
   | `($_ [tlafml| $f1:tlafml ] [tlafml| $f2:tlafml ]) => `(($f1) =tla= ($f2))
   | `($_ [tlafml| $f1:tlafml ] $t2:term) => do `(($f1) =tla= ($(← `(tlafml| $t2:term ))))
   | `($_ $t1:term [tlafml| $f2:tlafml ]) => do `(($(← `(tlafml| $t1:term ))) =tla= ($f2))
-  | _ => throw ()
+  | _ => throw ()       -- NOTE: we don't want all equalities to be rendered into equalities between TLA formulas!
 
-@[app_unexpander List.foldr] def TLA.unexpand_tla_and_bigwedge : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 [tlafml| ⊤ ] $l:term) =>
-    -- HMM directly writing `$stx1` as `(fun ...)` above does not work?
-    match stx1 with
-    | `(fun $x:ident => $stx)
-    | `(fun ($x:ident : $_) => $stx) =>
-      match stx with
-      | `($stxx $stx') =>
-        match stxx with
-        | `(tla_and) | `(TLA.tla_and) =>      -- FIXME: a bad hack for now
-          do `([tlafml| ⋀ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
-        | _ => throw ()
-      | _ => throw ()
-    | _ => throw ()
-  | _ => throw ()
+/-- info: Nat.zero.succ = Nat.zero : Prop -/
+#guard_msgs in
+#check (Nat.succ Nat.zero = Nat.zero)
 
-@[app_unexpander List.foldr] def TLA.unexpand_tla_or_bigvee : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 [tlafml| ⊥ ] $l:term) =>
-    -- HMM directly writing `$stx1` as `(fun ...)` above does not work?
-    match stx1 with
-    | `(fun $x:ident => $stx)
-    | `(fun ($x:ident : $_) => $stx) =>
-      match stx with
-      | `($stxx $stx') =>
-        match stxx with
-        | `(tla_or) | `(TLA.tla_or) =>      -- FIXME: a bad hack for now
-          do `([tlafml| ⋁ $x:ident ∈ $l:term, $(← TLA.tlafml_syntax_coe stx')])
-        | _ => throw ()
-      | _ => throw ()
-    | _ => throw ()
-  | _ => throw ()
-
-register_simp_attr tlasimp_def
-register_simp_attr tlasimp
-register_simp_attr tladual      -- experimental
+-- taken from https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Syntax.lean
+open PrettyPrinter Parenthesizer in
+@[category_parenthesizer tlafml]
+def tlafml.parenthesizer : CategoryParenthesizer | prec => do
+  maybeParenthesize `tlafml true wrapParens prec $
+    parenthesizeCategoryCore `tlafml prec
+where
+  wrapParens (stx : Syntax) : Syntax := Unhygienic.run do
+    let pstx ← `(($(⟨stx⟩)))
+    return pstx.raw.setInfo (SourceInfo.fromRef stx)
