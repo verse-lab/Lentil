@@ -64,6 +64,8 @@ def exec.satisfies {α : Type u} (p : pred α) (σ : exec α) : Prop := p σ
 def valid {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p
 def pred_implies {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p → σ.satisfies q
 
+@[refl] theorem pred_implies_refl {α : Type u} (p : pred α) : pred_implies p p := (fun _ => id)
+
 theorem pred_implies_trans {p q r : pred α} : pred_implies p q → pred_implies q r → pred_implies p r := by
   intros h1 h2 e hp ; apply h2 ; apply h1 ; assumption
 
@@ -80,11 +82,23 @@ class Foldable (c : Type u → Type v) where
 instance : Foldable List where
   fold op _ _ b f s := List.foldr (op <| f ·) b s
 
+theorem Foldable.list_index_form_change {α : Type u} {β : Type w} (op : β → β → β) [inst1 : Std.Commutative op] [inst2 : Std.Associative op]
+    (b : β) (f : α → β) (l : List α) :
+  Foldable.fold op b f l = Foldable.fold op b (f <| l[·]) (List.finRange l.length) := by
+  induction l with
+  | nil => rfl
+  | cons x l ih =>
+    simp [Foldable.fold, List.finRange_succ] at *
+    rw [ih] ; apply congrArg
+    rw [List.foldr_map] ; simp
+
 def tla_bigwedge {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
   Foldable.fold tla_and tla_true f s
 
 def tla_bigvee {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
   Foldable.fold tla_or tla_false f s
+
+def tla_until {α : Type u} (p q : pred α) : pred α := λ σ => ∃ i, (q <| σ.drop i) ∧ ∀ j < i, (p <| σ.drop j)
 
 end TLA
 
@@ -112,6 +126,7 @@ syntax:15 tlafml:16 " → " tlafml:15 : tlafml
 syntax:35 tlafml:36 " ∧ " tlafml:35 : tlafml
 syntax:30 tlafml:31 " ∨ " tlafml:30 : tlafml
 syntax:20 tlafml:21 " ↝ " tlafml:20 : tlafml
+syntax:25 tlafml:26 " 𝑈 " tlafml:25 : tlafml
 syntax:arg "𝒲ℱ" term:max : tlafml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
@@ -144,6 +159,7 @@ macro_rules
   | `([tlafml| $f1:tlafml → $f2:tlafml ]) => `(TLA.tla_implies [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| $f1:tlafml ∧ $f2:tlafml ]) => `(TLA.tla_and [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| $f1:tlafml ∨ $f2:tlafml ]) => `(TLA.tla_or [tlafml| $f1 ] [tlafml| $f2 ])
+  | `([tlafml| $f1:tlafml 𝑈 $f2:tlafml ]) => `(TLA.tla_until [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| ∀ $x:ident, $f:tlafml]) => `(TLA.tla_forall fun $x:ident => [tlafml| $f ])
   | `([tlafml| ∀ $x:ident : $t, $f:tlafml]) => `(TLA.tla_forall fun $x:ident : $t => [tlafml| $f ])
   | `([tlafml| ∃ $x:ident, $f:tlafml]) => `(TLA.tla_exists fun $x:ident => [tlafml| $f ])
@@ -231,7 +247,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       | ``TLA.eventually => `(tlafml| ◇ $f:tlafml )
       | ``TLA.later => `(tlafml| ◯ $f:tlafml )
       | _ => unreachable!
-    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to =>
+    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to | ``TLA.tla_until =>
       let f1 ← withAppFn <| withAppArg delab_tlafml_inner
       let f2 ← withAppArg delab_tlafml_inner
       match fn with
@@ -239,6 +255,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       | ``TLA.tla_or => `(tlafml| $f1:tlafml ∨ $f2:tlafml)
       | ``TLA.tla_implies => `(tlafml| $f1:tlafml → $f2:tlafml)
       | ``TLA.leads_to => `(tlafml| $f1:tlafml ↝ $f2:tlafml)
+      | ``TLA.tla_until => `(tlafml| $f1:tlafml 𝑈 $f2:tlafml)
       | _ => unreachable!
     | ``TLA.tla_forall | ``TLA.tla_exists =>
       /- we are not sure about whether the argument is a `fun _ => _` or something else,
@@ -282,7 +299,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
     (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
         ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
       && e.getAppNumArgs' == 2 + offset) ||
-    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to,
+    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to, ``TLA.tla_until,
         ``TLA.tla_forall, ``TLA.tla_exists]
       && e.getAppNumArgs' == 3 + offset) ||
     (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
@@ -301,7 +318,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
 
 attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
 attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
-attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to] delab_tlafml
+attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to, delab app.TLA.tla_until] delab_tlafml
 attribute [delab app.TLA.tla_true, delab app.TLA.tla_false] delab_tlafml
 attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
 attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml

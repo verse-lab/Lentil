@@ -14,15 +14,22 @@ macro_rules
   | `(tactic| try_unfold_at_all $idt $idts:ident* ) => `(tactic| (try unfold $idt at *) ; try_unfold_at_all $idts* )
 
 macro "tla_unfold" : tactic =>
-  `(tactic| (try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later state_pred pure_pred valid pred_implies exec.satisfies tla_bigwedge tla_bigvee)
+  `(tactic| (try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later tla_until state_pred pure_pred valid pred_implies exec.satisfies tla_bigwedge tla_bigvee)
      <;> (try (dsimp only [Foldable.fold] at *)))
 
 attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false
-  always eventually later state_pred pure_pred
+  always eventually later tla_until state_pred pure_pred
   valid pred_implies exec.satisfies exec.drop_drop
   tla_bigwedge tla_bigvee Foldable.fold
 
 macro "tla_unfold_simp" : tactic => `(tactic| (simp [tlasimp_def] at *))
+
+attribute [tla_nontemporal_def] tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false
+  state_pred pure_pred
+  valid pred_implies exec.satisfies
+  tla_bigwedge tla_bigvee Foldable.fold
+
+macro "tla_nontemporal_simp" : tactic => `(tactic| (simp [tla_nontemporal_def] at *))
 
 variable {σ : Type u}
 
@@ -50,7 +57,7 @@ theorem impl_drop_hyp_one_r (p q r : pred σ) : (p) |-tla- (q) → (p ∧ r) |-t
 end structural
 
 macro "tla_intros" : tactic =>
-  `(tactic| try (rw [TLA.impl_intro]) ; repeat rw [TLA.impl_intro_add_r])
+  `(tactic| (try rw [TLA.impl_intro]) <;> (repeat rw [TLA.impl_intro_add_r]))
 
 section one
 
@@ -61,11 +68,41 @@ theorem not_not : (¬ ¬ p) =tla= (p) := by
 
 -- the following: about modal operators
 
+theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
+  tla_unfold_simp ; constructor
+  · aesop
+  · intro h ; exact (fun e => h e 0)
+
+theorem later_always_comm : (◯ □ p) =tla= (□ ◯ p) := by
+  funext e ; tla_unfold_simp
+  constructor <;> intro h k <;> rw [Nat.add_comm] <;> apply h
+
+theorem always_unroll : □ p =tla= (p ∧ ◯ □ p) := by
+  rw [later_always_comm]
+  funext e ; tla_unfold_simp
+  constructor
+  · intro h ; apply And.intro (h 0) (by aesop)
+  · intro ⟨h0, hs⟩ k ; cases k with
+    | zero => exact h0
+    | succ k => apply hs
+
+theorem always_induction : □ p =tla= (p ∧ □ (p → ◯ p)) := by
+  funext e ; tla_unfold_simp
+  constructor
+  · intro h ; apply And.intro (h 0) (by aesop)
+  · intro ⟨h0, hs⟩ k ; induction k <;> aesop
+
 theorem always_weaken : □ p |-tla- (p) := by
   tla_unfold_simp ; intro e h ; apply h 0
 
-theorem always_weaken_eventually : □ p |-tla- ◇ p := by
+theorem always_weaken_to_eventually : □ p |-tla- ◇ p := by
   tla_unfold_simp ; intro e h ; exists 0 ; apply h
+
+theorem later_weaken_to_eventually : ◯ p |-tla- ◇ p := by
+  tla_unfold_simp ; intro e h ; exists 1
+
+theorem now_weaken_to_eventually : (p) |-tla- ◇ p := by
+  tla_unfold_simp ; intro e h ; exists 0
 
 theorem not_always : (¬ □ p) =tla= (◇ ¬ p) := by
   funext e ; tla_unfold_simp
@@ -149,10 +186,37 @@ theorem contraposition_for_tla_implies : (p → q) =tla= (¬ q → ¬ p) := by
 theorem contraposition_for_pred_implies : (p) |-tla- (q) = ((¬ q) |-tla- ¬ p) := by
   repeat rw [← impl_intro, contraposition_for_tla_implies]
 
-theorem proof_by_contra (p q : pred σ) : (p) |-tla- (q) = (¬ q ∧ p) |-tla- (⊥) := by
+theorem proof_by_contra : (p) |-tla- (q) = (¬ q ∧ p) |-tla- (⊥) := by
   rw [contraposition_for_pred_implies] ; tla_unfold_simp
 
+theorem modus_ponens : (p ∧ (p → q)) |-tla- (q) := by
+  tla_unfold_simp ; aesop
+
+theorem modus_ponens_with_premise : (p ∧ (p → q)) |-tla- (p ∧ q) := by
+  tla_unfold_simp ; aesop
+
 -- the following: about modal operators
+
+theorem always_and_eventually : (◇ p ∧ □ q) |-tla- (◇ (p ∧ q)) := by
+  tla_unfold_simp ; aesop
+
+theorem always_and_eventually' : (◇ p ∧ □ q) |-tla- (◇ (p ∧ □ q)) := by
+  tla_unfold_simp ; aesop
+
+theorem later_monotone : (p) |-tla- (q) → ◯ p |-tla- ◯ q := by
+  tla_unfold_simp ; aesop
+
+theorem always_monotone : (p) |-tla- (q) → □ p |-tla- □ q := by
+  tla_unfold_simp ; aesop
+
+theorem eventually_monotone : (p) |-tla- (q) → ◇ p |-tla- ◇ q := by
+  tla_unfold_simp ; aesop
+
+theorem always_eventually_monotone : (p) |-tla- (q) → (□ ◇ p) |-tla- (□ ◇ q) := by
+  intro h ; apply always_monotone ; apply eventually_monotone ; assumption
+
+theorem eventually_always_monotone : (p) |-tla- (q) → (◇ □ p) |-tla- (◇ □ q) := by
+  intro h ; apply eventually_monotone ; apply always_monotone ; assumption
 
 theorem later_and : (◯ (p ∧ q)) =tla= (◯ p ∧ ◯ q) := by
   funext e ; tla_unfold_simp
@@ -190,7 +254,78 @@ theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧
 theorem always_eventually_or_distrib : (□ ◇ (p ∨ q)) =tla= (□ ◇ p ∨ □ ◇ q) := by
   apply dual_lemma ; simp [tlasimp, not_or, eventually_always_and_distrib]
 
+theorem until_induction : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
+  tla_unfold_simp ; intro e hp h
+  by_cases h' : (∃ n, q <| e.drop n)
+  · rcases h' with ⟨n', h'⟩
+    have ⟨n', _, hq, hmin⟩ := Nat.find_min (p := fun n_ => q (exec.drop n_ e)) _ h'
+    right ; exists n'
+    suffices hthis : q (exec.drop n' e) ∧ ∀ (j : Nat), j ≤ n' → p (exec.drop j e) by
+      rcases hthis with ⟨h1, h2⟩
+      apply And.intro (And.intro (by apply h2 n' (by simp)) h1) (fun j hlt => h2 _ (by omega))
+    apply And.intro hq ; intro j hlt
+    induction j with
+    | zero => exact hp
+    | succ j ih => apply h ; apply ih ; omega ; apply hmin ; omega
+  · simp at h'
+    left ; intro j ; apply And.intro _ (h' _)
+    induction j <;> solve_by_elim
+
 end two
+
+section bigop
+
+variable {α : Type u} {β : Type v} (f g : β → pred α) (l : List β)
+
+-- FIXME: currently we only have the definition of `fold`, but we do not specify
+-- its result, so for each `Foldable` instance, we need to repeat the following proofs!
+-- also, can we get rid of the repetition?
+
+theorem bigwedge_list_cons (b : β) : (⋀ x ∈ (b :: l), (f x)) =tla= ((f b) ∧ ⋀ x ∈ l, (f x)) := rfl
+
+theorem bigwedge_forall_list : (⋀ x ∈ l, (f x)) =tla= (∀ x, (⌞ x ∈ l ⌟ → (f x))) := by
+  induction l with
+  | nil => funext e ; tla_unfold_simp
+  | cons b l ih =>
+    rw [bigwedge_list_cons, ih]
+    funext e ; tla_unfold_simp
+
+theorem bigwedge_forall_fintype_list : (⋀ x ∈ l, (f x)) =tla= (∀ x : Fin l.length, (f l[x])) := by
+  rw [bigwedge_forall_list]
+  funext e ; tla_unfold_simp ; apply List.mem_forall_iff_fin_index
+
+theorem bigwedge_inner_and_split : (⋀ x ∈ l, (f x) ∧ (g x)) =tla= ((⋀ x ∈ l, (f x)) ∧ (⋀ x ∈ l, (g x))) := by
+  (repeat rw [bigwedge_forall_list]) ; funext e ; tla_unfold_simp ; aesop
+
+theorem always_bigwedge : (□ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, □ (f x)) := by
+  (repeat rw [bigwedge_forall_list]) ; funext e ; tla_unfold_simp ; aesop
+
+theorem eventually_always_bigwedge_distrib : (◇ □ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, ◇ □ (f x)) := by
+  induction l with
+  | nil => funext e ; tla_unfold_simp
+  | cons x l ih => (repeat rw [bigwedge_list_cons]) ; rw [eventually_always_and_distrib, ih]
+
+theorem bigvee_list_cons (b : β) : (⋁ x ∈ (b :: l), (f x)) =tla= ((f b) ∨ ⋁ x ∈ l, (f x)) := rfl
+
+theorem bigvee_exists_list : (⋁ x ∈ l, (f x)) =tla= (∃ x, (⌞ x ∈ l ⌟ ∧ (f x))) := by
+  induction l with
+  | nil => funext e ; tla_unfold_simp
+  | cons b l ih =>
+    rw [bigvee_list_cons, ih]
+    funext e ; tla_unfold_simp
+
+theorem bigvee_exists_fintype_list : (⋁ x ∈ l, (f x)) =tla= (∃ x : Fin l.length, (f l[x])) := by
+  rw [bigvee_exists_list]
+  funext e ; tla_unfold_simp ; apply List.mem_exists_iff_fin_index
+
+theorem bigvee_and_distrib (p : pred α) : (p ∧ ⋁ x ∈ l, (f x)) =tla= (⋁ x ∈ l, p ∧ (f x)) := by
+  repeat rw [bigvee_exists_list]
+  funext e ; tla_unfold_simp ; aesop
+
+theorem bigwedge_bigvee_match : ((⋀ x ∈ l, (f x)) ∧ (⋁ x ∈ l, (g x))) |-tla- (⋁ x ∈ l, (f x) ∧ (g x)) := by
+  rw [bigwedge_forall_list, bigvee_exists_list, bigvee_exists_list] ; tla_unfold_simp ; aesop
+
+end bigop
 
 theorem state_preds_and (p q : σ → Prop) : (⌜ p ⌝ ∧ ⌜ q ⌝) =tla= ⌜ λ s => p s ∧ q s ⌝ := by
   funext e ; tla_unfold_simp
@@ -257,12 +392,12 @@ theorem leads_to_strengthen_lhs (Γ p q inv : pred σ)
 
 end leads_to
 
-theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Prop} :
-  (∀ s, init s → inv s) →
-  (∀ s s', next s s' → inv s → inv s') →
+theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Prop}
+    (hinit : ∀ s, init s → inv s)
+    (hnext : ∀ s s', next s s' → inv s → inv s') :
   (⌜ init ⌝ ∧ □ ⟨next⟩) |-tla- (□ ⌜ inv ⌝) := by
   tla_unfold_simp ; unfold exec.drop action_pred ; simp
-  intro hb hn e hinit hs k
+  intro e hinit hs k
   induction k with
   | zero => aesop
   | succ n ih => rw [Nat.add_comm] ; aesop
