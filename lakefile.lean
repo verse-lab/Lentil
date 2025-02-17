@@ -15,5 +15,5 @@ package «lentil» where
 lean_lib «Lentil» where
   -- add any library configuration options here
 
-lean_lib Examples where
+lean_lib LentilExamples where
   globs := #[.submodules `Examples]
