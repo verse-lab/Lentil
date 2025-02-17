@@ -1,8 +1,7 @@
 import Lake
 open Lake DSL
 
-require aesop from git "https://github.com/leanprover-community/aesop.git" @ "v4.15.0"
-require mathlib from git "https://github.com/leanprover-community/mathlib4.git" @ "v4.15.0-patch1"
+require mathlib from git "https://github.com/leanprover-community/mathlib4.git" @ "v4.15.0"
 
 package «lentil» where
   -- Settings applied to both builds and interactive editing
