@@ -66,6 +66,9 @@ variable (p : pred σ)
 theorem not_not : (¬ ¬ p) =tla= (p) := by
   funext e ; tla_unfold_simp
 
+theorem not_as_implies_false : (¬ p) =tla= (p → ⊥) := by
+  funext e ; tla_unfold_simp
+
 -- the following: about modal operators
 
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
