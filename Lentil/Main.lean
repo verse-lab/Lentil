@@ -1,35 +1,11 @@
-import Aesop
-import Batteries.Tactic.Basic
 import Lentil.Basic
+import Lentil.Tactics.Basic
 
 open Classical
 
 namespace TLA
 
 section main
-
-syntax "try_unfold_at_all" ident+ : tactic
-macro_rules
-  | `(tactic| try_unfold_at_all $idt ) => `(tactic| (try unfold $idt at *) )
-  | `(tactic| try_unfold_at_all $idt $idts:ident* ) => `(tactic| (try unfold $idt at *) ; try_unfold_at_all $idts* )
-
-macro "tla_unfold" : tactic =>
-  `(tactic| (try_unfold_at_all leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false always eventually later tla_until state_pred pure_pred valid pred_implies exec.satisfies tla_bigwedge tla_bigvee)
-     <;> (try (dsimp only [Foldable.fold] at *)))
-
-attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false
-  always eventually later tla_until state_pred pure_pred
-  valid pred_implies exec.satisfies exec.drop_drop
-  tla_bigwedge tla_bigvee Foldable.fold
-
-macro "tla_unfold_simp" : tactic => `(tactic| (simp [tlasimp_def] at *))
-
-attribute [tla_nontemporal_def] tla_and tla_or tla_not tla_implies tla_forall tla_exists tla_true tla_false
-  state_pred pure_pred
-  valid pred_implies exec.satisfies
-  tla_bigwedge tla_bigvee Foldable.fold
-
-macro "tla_nontemporal_simp" : tactic => `(tactic| (simp [tla_nontemporal_def] at *))
 
 variable {σ : Type u}
 

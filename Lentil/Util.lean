@@ -168,3 +168,5 @@ register_simp_attr tla_nontemporal_def  -- marking the non-temporal parts of TLA
 register_simp_attr tlasimp_def
 register_simp_attr tlasimp
 register_simp_attr tladual      -- experimental
+
+initialize registerTraceClass `lentil.debug
