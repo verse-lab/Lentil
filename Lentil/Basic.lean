@@ -127,6 +127,7 @@ syntax:35 tlafml:36 " ∧ " tlafml:35 : tlafml
 syntax:30 tlafml:31 " ∨ " tlafml:30 : tlafml
 syntax:20 tlafml:21 " ↝ " tlafml:20 : tlafml
 syntax:25 tlafml:26 " 𝑈 " tlafml:25 : tlafml
+syntax:17 tlafml:18 " ⇒ " tlafml:17 : tlafml
 syntax:arg "𝒲ℱ" term:max : tlafml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
@@ -174,10 +175,12 @@ macro_rules
 
 -- these definitions are not necessarily required, but for delaboration purposes
 def TLA.leads_to {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → ◇ q) ]
+def TLA.always_implies {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → q) ]
 def TLA.weak_fairness {α : Type u} (a : action α) : pred α := [tlafml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
 
 macro_rules
   | `([tlafml| $f1:tlafml ↝ $f2:tlafml ]) => `(TLA.leads_to [tlafml| $f1 ] [tlafml| $f2 ])
+  | `([tlafml| $f1:tlafml ⇒ $f2:tlafml ]) => `(TLA.always_implies [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| 𝒲ℱ $t:term ]) => `(TLA.weak_fairness $t)
 
 /- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
@@ -247,7 +250,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       | ``TLA.eventually => `(tlafml| ◇ $f:tlafml )
       | ``TLA.later => `(tlafml| ◯ $f:tlafml )
       | _ => unreachable!
-    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to | ``TLA.tla_until =>
+    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to | ``TLA.tla_until | ``TLA.always_implies =>
       let f1 ← withAppFn <| withAppArg delab_tlafml_inner
       let f2 ← withAppArg delab_tlafml_inner
       match fn with
@@ -256,6 +259,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       | ``TLA.tla_implies => `(tlafml| $f1:tlafml → $f2:tlafml)
       | ``TLA.leads_to => `(tlafml| $f1:tlafml ↝ $f2:tlafml)
       | ``TLA.tla_until => `(tlafml| $f1:tlafml 𝑈 $f2:tlafml)
+      | ``TLA.always_implies => `(tlafml| $f1:tlafml ⇒ $f2:tlafml)
       | _ => unreachable!
     | ``TLA.tla_forall | ``TLA.tla_exists =>
       /- we are not sure about whether the argument is a `fun _ => _` or something else,
@@ -299,7 +303,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
     (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
         ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
       && e.getAppNumArgs' == 2 + offset) ||
-    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to, ``TLA.tla_until,
+    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to, ``TLA.tla_until, ``TLA.always_implies,
         ``TLA.tla_forall, ``TLA.tla_exists]
       && e.getAppNumArgs' == 3 + offset) ||
     (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
@@ -318,7 +322,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
 
 attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
 attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
-attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to, delab app.TLA.tla_until] delab_tlafml
+attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to, delab app.TLA.tla_until, delab app.TLA.always_implies] delab_tlafml
 attribute [delab app.TLA.tla_true, delab app.TLA.tla_false] delab_tlafml
 attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
 attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
