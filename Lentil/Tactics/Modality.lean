@@ -1,4 +1,7 @@
-import Lentil.Main
+import Lentil.Rules.Basic
+import Lentil.Tactics.Basic
+
+-- tactics that might manipulate modalities
 
 open Lean
 
