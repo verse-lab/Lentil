@@ -23,6 +23,12 @@ section structural
 
 theorem impl_intro (p q : pred σ) : |-tla- (p → q) = (p) |-tla- (q) := rfl
 
+theorem impl_decouple (p q : pred σ) : |-tla- (p → q) → |-tla- (p) → |-tla- (q) := by
+  tla_unfold_simp ; aesop
+
+theorem and_valid_split (p q : pred σ) : |-tla- (p ∧ q) = (|-tla- (p) ∧ |-tla- (q)) := by
+  tla_unfold_simp ; aesop
+
 theorem impl_intro_add_r (p q r : pred σ) : (r) |-tla- (p → q) = (r ∧ p) |-tla- (q) := by
   tla_unfold_simp
 

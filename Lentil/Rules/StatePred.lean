@@ -26,6 +26,7 @@ theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Pro
   | zero => aesop
   | succ n ih => rw [Nat.add_comm] ; aesop
 
+/-
 set_option maxHeartbeats 800000 in
 /-- `wf1` with `p`, `q`, `init` and `inv` being state predicates. -/
 theorem wf1' (p q init inv : σ → Prop) (next a : action σ)
@@ -37,6 +38,7 @@ theorem wf1' (p q init inv : σ → Prop) (next a : action σ)
   (⌜ init ⌝ ∧ □ ⟨next⟩ ∧ 𝒲ℱ a) |-tla- (⌜ p ⌝ ↝ ⌜ q ⌝) := by
   have hinv := init_invariant hinit_inv hnext_inv
   apply wf1 (state_pred p) (state_pred q) (state_pred init) (state_pred inv) <;> tla_unfold_simp <;> aesop
+-/
 
 end state_pred_specialized
 
