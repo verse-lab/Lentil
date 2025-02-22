@@ -3,7 +3,7 @@ import Lentil.Tactics.Basic
 
 /-! Basic theorems about TLA. -/
 
-open Classical
+open Classical LentilLib
 
 namespace TLA
 

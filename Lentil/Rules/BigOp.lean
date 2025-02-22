@@ -2,7 +2,7 @@ import Lentil.Rules.Basic
 
 /-! Theorems about big operators (e.g., `⋀`, `⋁`). -/
 
-open Classical
+open Classical LentilLib
 
 namespace TLA
 
