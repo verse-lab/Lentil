@@ -1,7 +1,7 @@
 import Lake
 open Lake DSL
 
-require mathlib from git "https://github.com/leanprover-community/mathlib4.git" @ "v4.15.0"
+require aesop from git "https://github.com/leanprover-community/aesop" @ "v4.15.0"
 
 package «lentil» where
   -- Settings applied to both builds and interactive editing
@@ -14,6 +14,3 @@ package «lentil» where
 @[default_target]
 lean_lib «Lentil» where
   -- add any library configuration options here
-
-lean_lib LentilExamples where
-  globs := #[.submodules `Examples]
