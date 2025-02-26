@@ -33,8 +33,8 @@ def tla_and {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∧ q σ
 def tla_or {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∨ q σ
 def tla_implies {α : Type u} (p q : pred α) : pred α := fun σ => p σ → q σ
 def tla_not {α : Type u} (p : pred α) : pred α := fun σ => ¬ p σ
-def tla_forall {α : Type u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
-def tla_exists {α : Type u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
+def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
+def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
 
 -- HMM how to automatically derive all these kinds?
 instance {α : Type u} : Std.Commutative (@tla_and α) := by
