@@ -7,7 +7,7 @@ open Lean
 
 register_option lentil.pp.useDelab : Bool := {
   defValue := true
-  descr := "Use Delab instead of Unexpander for delaboration. "
+  descr := "Use the delaborator from `Lentil.Basic` for delaboration. "
 }
 
 register_option lentil.pp.autoRenderSatisfies : Bool := {
