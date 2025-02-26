@@ -1,9 +1,49 @@
 import Lentil.Basic
 import Lentil.Tactics.Basic
+import Lentil.Gadgets.TheoremLifting
 
 /-! Basic theorems about TLA. -/
 
 open Classical LentilLib
+
+-- lift a bunch of proplemmas first
+
+-- `And`
+#tla_lift and_self_iff and_not_self_iff not_and_self_iff and_comm and_assoc
+#tla_lift And.left => TLA.and_left
+#tla_lift And.right => TLA.and_right
+#tla_lift And.imp_left => TLA.and_imp_left
+#tla_lift And.imp_right => TLA.and_imp_right
+#tla_lift And.imp => TLA.and_imp_both
+#tla_lift not_and_of_not_left not_and_of_not_right and_left_comm and_right_comm
+  and_rotate and_and_and_comm and_and_left and_and_right
+
+-- `Or`
+#tla_lift or_self_iff or_left_comm or_right_comm or_or_or_comm or_or_distrib_left
+  or_or_distrib_right or_rotate or_comm or_assoc Or.inl Or.inr
+#tla_lift Or.inl => TLA.or_inl
+#tla_lift Or.inr => TLA.or_inr
+
+-- distributive laws
+#tla_lift and_or_left or_and_right or_and_left and_or_right
+
+-- `Not`
+#tla_lift not_imp_of_and_not not_and' not_or imp_false not_true
+#tla_lift not_false_iff => TLA.not_false
+
+-- `∀`, `∃`
+#tla_lift not_exists forall_and exists_or exists_and_left exists_and_right
+  forall_comm exists_comm
+
+-- `Decidable`, but we are in the classical setting
+#tla_lift Decidable.not_not Decidable.by_contra Decidable.not_imp_comm
+  Decidable.not_imp_self Decidable.or_iff_not_imp_left
+  Decidable.imp_iff_or_not Decidable.not_and_not_right
+  Decidable.or_iff_not_and_not Decidable.and_iff_not_or_not
+#tla_lift Decidable.not_and_iff_or_not_not => TLA.not_and
+#tla_lift Decidable.imp_iff_not_or => TLA.implies_to_or
+#tla_lift Decidable.not_imp_iff_and_not => TLA.not_implies_to_and
+#tla_lift Decidable.not_imp_not => TLA.contraposition_for_tla_implies
 
 namespace TLA
 
@@ -43,14 +83,6 @@ end structural
 section one
 
 variable (p : pred σ)
-
-theorem not_not : (¬ ¬ p) =tla= (p) := by
-  funext e ; tla_unfold_simp
-
-theorem not_as_implies_false : (¬ p) =tla= (p → ⊥) := by
-  funext e ; tla_unfold_simp
-
--- the following: about modal operators
 
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
   tla_unfold_simp ; constructor
@@ -136,39 +168,19 @@ attribute [tlasimp] not_not not_always not_eventually always_idem eventually_ide
   always_eventually_always eventually_always_eventually
   always_eventually_idem eventually_always_idem
 
+-- TODO where to put these? also, generalization of finite and/or
+theorem forall_always {α : Sort v} (p : α → pred σ) : (∀ x : α, □ (p x)) =tla= (□ (∀ x : α, (p x))) := by
+  funext e ; tla_unfold_simp ; aesop
+
+theorem exists_eventually {α : Sort v} (p : α → pred σ) : (∃ x : α, ◇ (p x)) =tla= (◇ (∃ x : α, (p x))) := by
+  funext e ; tla_unfold_simp ; aesop
+
 section two
 
 variable (p q : pred σ)
 
-theorem and_comm : (p ∧ q) =tla= (q ∧ p) := by
-  funext e ; tla_unfold_simp ; aesop
-
-theorem and_left : (p ∧ q) |-tla- (p) := by
-  tla_unfold_simp ; try (intros ; assumption)
-
-theorem and_right : (p ∧ q) |-tla- (q) := by
-  tla_unfold_simp
-
-theorem and_assoc : ((p ∧ q) ∧ r) =tla= (p ∧ (q ∧ r)) := by
-  funext e ; tla_unfold_simp ; aesop
-
-theorem implies_to_or : (p → q) =tla= (¬ p ∨ q) := by
-  funext e ; tla_unfold_simp ; apply Decidable.imp_iff_not_or
-
-theorem not_implies_to_and : (¬ (p → q)) =tla= (p ∧ ¬ q) := by
-  funext e ; tla_unfold_simp
-
-theorem not_or : (¬ (p ∨ q)) =tla= (¬ p ∧ ¬ q) := by
-  funext e ; tla_unfold_simp
-
-theorem not_and : (¬ (p ∧ q)) =tla= (¬ p ∨ ¬ q) := by
-  funext e ; tla_unfold_simp ; apply Decidable.imp_iff_not_or
-
-theorem contraposition_for_tla_implies : (p → q) =tla= (¬ q → ¬ p) := by
-  funext e ; tla_unfold_simp ; aesop
-
 theorem contraposition_for_pred_implies : (p) |-tla- (q) = ((¬ q) |-tla- ¬ p) := by
-  repeat rw [← impl_intro, contraposition_for_tla_implies]
+  repeat rw [← impl_intro, ← contraposition_for_tla_implies]
 
 theorem proof_by_contra : (p) |-tla- (q) = (¬ q ∧ p) |-tla- (⊥) := by
   rw [contraposition_for_pred_implies] ; tla_unfold_simp

@@ -2,7 +2,7 @@ import Lean
 import Batteries.Util.ExtendedBinder
 import Lentil.Util
 
-open Lean
+open Lean LentilLib
 
 /-! ## A Shallow-Embedding of TLA -/
 
@@ -36,7 +36,7 @@ def tla_not {α : Type u} (p : pred α) : pred α := fun σ => ¬ p σ
 def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
 def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
 
--- HMM how to automatically derive all these kinds?
+-- NOTE: this all could be automatically lifted, but to avoid dependency circles, we don't do that
 instance {α : Type u} : Std.Commutative (@tla_and α) := by
   constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
 

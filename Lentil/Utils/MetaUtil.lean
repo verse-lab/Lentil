@@ -2,6 +2,8 @@ import Lean
 
 open Lean Meta Elab
 
+namespace LentilLib
+
 /-- Add a single theorem to the environment by providing its name, type and proof. -/
 def simpleAddTheorem (name : Name) (lvlParams : List Name) (type value : Expr) (nonComputable? : Bool) : CoreM Unit := do
   let thm := Declaration.thmDecl <| mkTheoremValEx name lvlParams type value []
@@ -24,3 +26,19 @@ def simpleProveTheorem (name : Name) (lvlParams : List Name) (type : Expr) (proo
     check proof
     instantiateMVars proof
   simpleAddTheorem name lvlParams type proof nonComputable?
+
+-- inspired by [this discussion](https://leanprover.zulipchat.com/#narrow/channel/239415-metaprogramming-.2F-tactics/topic/Generating.20fresh.20names.20for.20universe.20levels)
+/-- Gives a name based on `baseName` that's not already in the list. -/
+partial def mkUnusedName (names : List Name) (baseName : Name) : Name :=
+  if not (names.contains baseName) then
+    baseName
+  else
+    let rec loop (i : Nat := 0) : Name :=
+      let w := Name.appendIndexAfter baseName i
+      if names.contains w then
+        loop (i + 1)
+      else
+        w
+    loop 1
+
+end LentilLib

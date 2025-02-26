@@ -5,7 +5,7 @@ import Lentil.Rules.Basic
 
 namespace TLA.Expr
 
-open Lean Meta
+open Lean Meta LentilLib
 
 -- need to take care of the implicit type argument below
 
@@ -48,7 +48,7 @@ end TLA.Expr
 
 namespace TLA.Deriving
 
-open Lean Meta Core Elab TLA.Expr
+open Lean Meta Core Elab TLA.Expr LentilLib
 
 -- does not assume dependency from `ps` to `q`
 def assembleUnderCommonContextShape (σ : Expr) (ps : List Expr) (q : Expr) : MetaM Expr := do
@@ -146,7 +146,7 @@ def deriveForPredImpliesOrValid (nm : Name) : CoreM Unit := do
         `(term| by solve
         | tla_nontemporal_simp ; aesop
         | intro $introNames* ; have $htmp := @$(mkIdent nm) $introNames*
-          (try rw [← impl_intro] at $htmp:ident)
+          (try rw [← TLA.impl_intro] at $htmp:ident)
           repeat (first
             | (solve
               | tla_nontemporal_simp ; aesop)
@@ -154,7 +154,7 @@ def deriveForPredImpliesOrValid (nm : Name) : CoreM Unit := do
             | unfold TLA.always_implies at $htmp:ident
             | rw [← TLA.always_intro] at $htmp:ident
             | intro $htmp':ident ; specialize $htmp $htmp' ; clear $htmp'
-            | rw [TLA.and_valid_split, and_imp] at $htmp:ident
+            | rw [TLA.and_valid_split, _root_.and_imp] at $htmp:ident
           ))) noncomputable?
 
 end TLA.Deriving
