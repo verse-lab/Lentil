@@ -34,6 +34,7 @@ open Classical LentilLib
 -- `∀`, `∃`
 #tla_lift not_exists forall_and exists_or exists_and_left exists_and_right
   forall_comm exists_comm
+#tla_lift Bool.forall_bool Bool.exists_bool'
 
 -- `Decidable`, but we are in the classical setting
 #tla_lift Decidable.not_not Decidable.by_contra Decidable.not_imp_comm
@@ -168,13 +169,6 @@ attribute [tlasimp] not_not not_always not_eventually always_idem eventually_ide
   always_eventually_always eventually_always_eventually
   always_eventually_idem eventually_always_idem
 
--- TODO where to put these? also, generalization of finite and/or
-theorem forall_always {α : Sort v} (p : α → pred σ) : (∀ x : α, □ (p x)) =tla= (□ (∀ x : α, (p x))) := by
-  funext e ; tla_unfold_simp ; aesop
-
-theorem exists_eventually {α : Sort v} (p : α → pred σ) : (∃ x : α, ◇ (p x)) =tla= (◇ (∃ x : α, (p x))) := by
-  funext e ; tla_unfold_simp ; aesop
-
 section two
 
 variable (p q : pred σ)
@@ -214,6 +208,58 @@ theorem always_eventually_monotone : (p) |-tla- (q) → (□ ◇ p) |-tla- (□ 
 theorem eventually_always_monotone : (p) |-tla- (q) → (◇ □ p) |-tla- (◇ □ q) := by
   intro h ; apply eventually_monotone ; apply always_monotone ; assumption
 
+theorem until_induction : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
+  tla_unfold_simp ; intro e hp h
+  by_cases h' : (∃ n, q <| e.drop n)
+  · rcases h' with ⟨n', h'⟩
+    have ⟨n', _, hq, hmin⟩ := Nat.find_min (p := fun n_ => q (exec.drop n_ e)) _ h'
+    right ; exists n'
+    suffices hthis : q (exec.drop n' e) ∧ ∀ (j : Nat), j ≤ n' → p (exec.drop j e) by
+      rcases hthis with ⟨h1, h2⟩
+      apply And.intro (And.intro (by apply h2 n' (by simp)) h1) (fun j hlt => h2 _ (by omega))
+    apply And.intro hq ; intro j hlt
+    induction j with
+    | zero => exact hp
+    | succ j ih => apply h ; apply ih ; omega ; apply hmin ; omega
+  · simp at h'
+    left ; intro j ; apply And.intro _ (h' _)
+    induction j <;> solve_by_elim
+
+end two
+
+section two_with_quantifiers
+
+variable {α : Sort v} (p : α → pred σ)
+
+theorem later_forall : (◯ ∀ x, (p x)) =tla= (∀ x, ◯ (p x)) := by
+  funext e ; tla_unfold_simp
+
+theorem later_exists : (◯ ∃ x, (p x)) =tla= (∃ x, ◯ (p x)) := by
+  funext e ; tla_unfold_simp
+
+theorem always_forall : (□ ∀ x, (p x)) =tla= (∀ x, □ (p x)) := by
+  funext e ; tla_unfold_simp ; aesop
+
+theorem eventually_exists : (◇ ∃ x, (p x)) =tla= (∃ x, ◇ (p x)) := by
+  funext e ; tla_unfold_simp ; aesop
+
+/-- uni-direction, moving `∃` into `□` -/
+theorem exists_into_always : (∃ x, □ (p x)) |-tla- □ (∃ x, (p x)) := by
+  tla_unfold_simp ; aesop
+
+/-- uni-direction, moving `◇` into `∀` -/
+@[tladual]
+theorem eventually_into_forall : (◇ ∀ x, (p x)) |-tla- (∀ x, ◇ (p x)) := by
+  tla_unfold_simp ; aesop
+
+end two_with_quantifiers
+
+section two'
+
+variable (p q : pred σ)
+
+/- NOTE: in principle we can derive the following via metaprogramming,
+   but these proofs are so short, so why bother ... -/
 theorem later_and : (◯ (p ∧ q)) =tla= (◯ p ∧ ◯ q) := by
   funext e ; tla_unfold_simp
 
@@ -236,6 +282,7 @@ theorem always_or_merge : (□ p ∨ □ q) |-tla- □ (p ∨ q) := by
 theorem eventually_and_split : (◇ (p ∧ q)) |-tla- (◇ p ∧ ◇ q) := by
   tla_unfold_simp ; aesop
 
+-- NOTE: this __DOES NOT__ apply if we change `∧` into `∀`, unless, e.g. `α` is finite!
 theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧ ◇ □ q) := by
   rw [pred_eq_iff_iff] ; constructor
   on_goal 1=> rw [always_and] ; apply eventually_and_split
@@ -250,24 +297,7 @@ theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧
 theorem always_eventually_or_distrib : (□ ◇ (p ∨ q)) =tla= (□ ◇ p ∨ □ ◇ q) := by
   apply dual_lemma ; simp [tlasimp, not_or, eventually_always_and_distrib]
 
-theorem until_induction : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
-  tla_unfold_simp ; intro e hp h
-  by_cases h' : (∃ n, q <| e.drop n)
-  · rcases h' with ⟨n', h'⟩
-    have ⟨n', _, hq, hmin⟩ := Nat.find_min (p := fun n_ => q (exec.drop n_ e)) _ h'
-    right ; exists n'
-    suffices hthis : q (exec.drop n' e) ∧ ∀ (j : Nat), j ≤ n' → p (exec.drop j e) by
-      rcases hthis with ⟨h1, h2⟩
-      apply And.intro (And.intro (by apply h2 n' (by simp)) h1) (fun j hlt => h2 _ (by omega))
-    apply And.intro hq ; intro j hlt
-    induction j with
-    | zero => exact hp
-    | succ j ih => apply h ; apply ih ; omega ; apply hmin ; omega
-  · simp at h'
-    left ; intro j ; apply And.intro _ (h' _)
-    induction j <;> solve_by_elim
-
-end two
+end two'
 
 end playground
 
