@@ -21,6 +21,9 @@ register_simp_attr tla_nontemporal_def
 /-- Marking the TLA definitions. -/
 register_simp_attr tlasimp_def
 
+/-- Marking the things to simplify when explicitly reasoning about `exec`. -/
+register_simp_attr execsimp
+
 /-- Marking the theorems that can be simplify reasoning at the TLA level. -/
 register_simp_attr tlasimp
 
