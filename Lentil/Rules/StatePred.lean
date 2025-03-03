@@ -1,4 +1,5 @@
 import Lentil.Rules.WF
+import Lentil.Tactics.StateFinite
 
 /-! Theorems specialized for state predicates.
     Their premises are typically pure Lean propositions involving
@@ -14,18 +15,16 @@ section state_pred_specialized
 variable {σ : Type u}
 
 theorem state_preds_and (p q : σ → Prop) : (⌜ p ⌝ ∧ ⌜ q ⌝) =tla= ⌜ λ s => p s ∧ q s ⌝ := by
-  funext e ; tla_unfold_simp
+  funext e ; tla_nontemporal_simp
 
 theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Prop}
     (hinit : ∀ s, init s → inv s)
     (hnext : ∀ s s', next s s' → inv s → inv s') :
   (⌜ init ⌝ ∧ □ ⟨next⟩) |-tla- (□ ⌜ inv ⌝) := by
-  tla_unfold_simp ; unfold exec.drop action_pred ; simp
-  intro e hinit hs k
-  induction k with
-  | zero => aesop
-  | succ n ih => rw [Nat.add_comm] ; aesop
-
+  rw (occs := .pos [2]) [always_induction]
+  rw [and_pred_implies_split] ; apply And.intro
+  · tla_nontemporal_simp ; aesop
+  · intro e ⟨_, hnext⟩ ; simp_finite_exec_goal ; aesop
 /-
 set_option maxHeartbeats 800000 in
 /-- `wf1` with `p`, `q`, `init` and `inv` being state predicates. -/

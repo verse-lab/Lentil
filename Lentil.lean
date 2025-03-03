@@ -9,3 +9,4 @@ import «Lentil».Rules.WF
 import «Lentil».Tactics.Basic
 import «Lentil».Tactics.Modality
 import «Lentil».Tactics.Structural
+import «Lentil».Tactics.StateFinite
