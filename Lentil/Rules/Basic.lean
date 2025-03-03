@@ -20,7 +20,7 @@ open Classical LentilLib
 
 -- `Or`
 #tla_lift or_self_iff or_left_comm or_right_comm or_or_or_comm or_or_distrib_left
-  or_or_distrib_right or_rotate or_comm or_assoc Or.inl Or.inr
+  or_or_distrib_right or_rotate or_comm or_assoc
 #tla_lift Or.inl => TLA.or_inl
 #tla_lift Or.inr => TLA.or_inr
 
@@ -28,7 +28,7 @@ open Classical LentilLib
 #tla_lift and_or_left or_and_right or_and_left and_or_right
 
 -- `Not`
-#tla_lift not_imp_of_and_not not_and' not_or imp_false not_true
+#tla_lift not_and' not_or imp_false not_true
 #tla_lift not_false_iff => TLA.not_false
 
 -- `∀`, `∃`
@@ -65,6 +65,9 @@ section structural
 theorem impl_intro (p q : pred σ) : |-tla- (p → q) = (p) |-tla- (q) := rfl
 
 theorem impl_decouple (p q : pred σ) : |-tla- (p → q) → |-tla- (p) → |-tla- (q) := by
+  tla_unfold_simp ; aesop
+
+theorem and_pred_implies_split (Γ p q : pred σ) : (Γ) |-tla- (p ∧ q) = ((Γ) |-tla- (p) ∧ (Γ) |-tla- (q)) := by
   tla_unfold_simp ; aesop
 
 theorem and_valid_split (p q : pred σ) : |-tla- (p ∧ q) = (|-tla- (p) ∧ |-tla- (q)) := by
