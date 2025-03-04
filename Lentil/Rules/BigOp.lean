@@ -12,6 +12,7 @@ variable {α : Type u} {β : Type v} (f g : β → pred α) (l : List β)
 
 -- FIXME: currently we only have the definition of `fold`, but we do not specify
 -- its result, so for each `Foldable` instance, we need to repeat the following proofs!
+-- maybe we should revise the definitions of `bigwedge` and `bigvee` (see `Lentil/Basic.lean`)
 -- also, can we get rid of the repetition?
 
 section bigwedge
