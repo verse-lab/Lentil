@@ -95,13 +95,13 @@ partial def elabSimpFiniteExecTLAGoal : TacticM Unit := do
   -- since at this stage, if the goal is truly "finite", then `e` should be nowhere
   -- or maybe the goal becomes "finite" after clearing
   withMainContext do
-    if Expr.occurs (← getMainTarget) e then
+    if e.occurs (← getMainTarget) then
       throwTacticEx `simp_finite_exec_goal (← getMainGoal)
   -- the following code is taken from `Mathlib/Tactic/ClearExcept.lean`
   liftMetaTactic1 fun mv => do
     let mut toClear : Array FVarId := #[]
     for decl in ← getLCtx do
-      if Expr.occurs decl.type e then
+      if e.occurs decl.type then
         toClear := toClear.push decl.fvarId
     mv.tryClearMany toClear
 
