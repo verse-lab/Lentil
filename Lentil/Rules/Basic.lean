@@ -40,8 +40,8 @@ open Classical LentilLib
 #tla_lift Decidable.not_not Decidable.by_contra Decidable.not_imp_comm
   Decidable.not_imp_self Decidable.or_iff_not_imp_left
   Decidable.imp_iff_or_not Decidable.not_and_not_right
-  Decidable.or_iff_not_and_not Decidable.and_iff_not_or_not
-#tla_lift Decidable.not_and_iff_or_not_not => TLA.not_and
+  Decidable.or_iff_not_not_and_not Decidable.and_iff_not_not_or_not
+#tla_lift Decidable.not_and_iff_not_or_not => TLA.not_and
 #tla_lift Decidable.imp_iff_not_or => TLA.implies_to_or
 #tla_lift Decidable.not_imp_iff_and_not => TLA.not_implies_to_and
 #tla_lift Decidable.not_imp_not => TLA.contraposition_for_tla_implies

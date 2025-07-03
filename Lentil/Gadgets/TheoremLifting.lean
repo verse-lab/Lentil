@@ -146,7 +146,7 @@ partial def convertTheoremStatement (thmStmt : Expr) (uName : Name) : MetaM (Lif
       /- FIXME: here, using such association list is very error-prone
          (may introduce unresolved fvar/mvar easily); any better solution? -/
       withLocalDecls (xs'.map Prod.snd) fun ys => do
-        let alist := xs'.zipWith ys fun (x, _) y => (x, y)
+        let alist := xs'.zipWith (fun (x, _) y => (x, y)) ys
         let alist := alist.toList.toAssocList'
         match_expr body with
         | Iff a b => do
