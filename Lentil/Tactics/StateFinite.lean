@@ -21,7 +21,7 @@ partial def generalizeExecStatesAux (e typ : Expr) (mv : MVarId) : MetaM MVarId 
   mv.withContext do
     -- use the underlying meta program for `generalize` tactic
     -- some code are taken from `evalGeneralize`
-    let ss ← Array.range targets.length |>.mapM fun x => do mkFreshUserName <| Name.mkSimple <| "s" ++ ⟨List.replicate x '\''⟩
+    let ss ← Array.range targets.length |>.mapM fun x => do mkFreshUserName <| Name.mkSimple <| "s" ++ (String.mk <| List.replicate x '\'')
     let args : Array GeneralizeArg := ss.zip targets.toArray |>.map fun (s, expr) => { expr, xName? := s }
     let hyps := ((← getLocalHyps).map (·.fvarId!))
     let (_, _, mv') ← mv.generalizeHyp args hyps
