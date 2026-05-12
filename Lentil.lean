@@ -6,6 +6,8 @@ import «Lentil».Rules.BigOp
 import «Lentil».Rules.LeadsTo
 import «Lentil».Rules.StatePred
 import «Lentil».Rules.WF
+import «Lentil».ProofMode.Tactics
+import «Lentil».ProofMode.Display
 import «Lentil».Tactics.Basic
 import «Lentil».Tactics.Modality
 import «Lentil».Tactics.Structural

@@ -70,6 +70,9 @@ theorem impl_decouple (p q : pred σ) : |-tla- (p → q) → |-tla- (p) → |-tl
 theorem and_pred_implies_split (Γ p q : pred σ) : (Γ) |-tla- (p ∧ q) = ((Γ) |-tla- (p) ∧ (Γ) |-tla- (q)) := by
   tla_unfold_simp ; aesop
 
+theorem valid_eq_true_implies (p : pred σ) : |-tla- (p) = ((⊤) |-tla- (p)) := by
+  tla_unfold_simp
+
 theorem and_valid_split (p q : pred σ) : |-tla- (p ∧ q) = (|-tla- (p) ∧ |-tla- (q)) := by
   tla_unfold_simp ; aesop
 
@@ -87,6 +90,10 @@ end structural
 section one
 
 variable (p : pred σ)
+
+theorem and_true (p : pred σ) : (p ∧ ⊤) =tla= (p) := by funext e ; tla_unfold_simp'
+
+theorem true_and (p : pred σ) : (⊤ ∧ p) =tla= (p) := by funext e ; tla_unfold_simp'
 
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
   tla_unfold_simp ; constructor
@@ -303,5 +310,27 @@ theorem always_eventually_or_distrib : (□ ◇ (p ∨ q)) =tla= (□ ◇ p ∨ 
 end two'
 
 end playground
+
+-- FIXME: Better name
+section more
+
+theorem forall_elim {α : Type u} {β : Type v} {p : β → pred α} {Γ : pred α} :
+  (∀ x, (Γ) |-tla- ((p x))) = ((Γ) |-tla- (∀ x, (p x))) := by tla_unfold_simp ; grind
+
+theorem exists_elim {α : Type u} {β : Type v} {p : β → pred α} {Γ : pred α} (x : β) :
+  ((Γ) |-tla- ((p x))) → ((Γ) |-tla- (∃ x, (p x))) := by tla_unfold_simp ; grind
+
+end more
+
+section pure
+
+theorem valid_pure {p : Prop} : p → @valid α (pure_pred p) := by tla_unfold_simp ; grind
+
+theorem pred_implies_pure {p : Prop} : p → @pred_implies α q (pure_pred p) := by tla_unfold_simp ; grind
+
+theorem pure_fact_intro {α : Type u} {Γ p : pred α} {q : Prop} :
+  (q → ((Γ) |-tla- (p))) = ((Γ) |-tla- (⌞ q ⌟ → p)) := by tla_unfold_simp ; grind
+
+end pure
 
 end TLA

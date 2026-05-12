@@ -1,50 +1,8 @@
 import Lean
 import Lentil.Rules.Basic
+import Lentil.Expr
 
 /-! Gadgets for providing different variants of a proven theorem. -/
-
-namespace TLA.Expr
-
-open Lean Meta LentilLib
-
--- need to take care of the implicit type argument below
-
-partial def splitAndIntoParts (p : Expr) : MetaM (List Expr) := do
-  match_expr p with
-  | TLA.tla_and _ a b =>
-    let as ← splitAndIntoParts a
-    let bs ← splitAndIntoParts b
-    pure (as ++ bs)
-  | _ => pure [p]
-
-partial def splitImplicationsIntoParts (p : Expr) : MetaM (List Expr × Expr) := do
-  match_expr p with
-  | TLA.tla_implies _ p q =>
-    let ps ← splitAndIntoParts p
-    let (ps', q') ← splitImplicationsIntoParts q
-    pure (ps ++ ps', q')
-  | _ => pure ([], p)
-
-def splitPredImpliesIntoParts (p : Expr) : MetaM (List Expr × Expr) := do
-  match_expr p with
-  | TLA.pred_implies _ p q =>
-    let ps ← splitAndIntoParts p
-    let (ps', q') ← splitImplicationsIntoParts q
-    pure (ps ++ ps', q')
-  | TLA.valid _ body => splitImplicationsIntoParts body
-  | _ => throwError "not a |-tla- statement"
-
-/-- Given some TLA related expression and return the type of the state
-    (i.e., the argument after `TLA.pred`).
-    While this could be done via `inferType`, just peeking the expression
-    should be much "cheaper". -/
-def peekStateType (p : Expr) : Option Expr :=
-  match_expr p with
-  | TLA.pred_implies σ _ _ => .some σ
-  | TLA.valid σ _ => .some σ
-  | _ => .none
-
-end TLA.Expr
 
 namespace TLA.Deriving
 

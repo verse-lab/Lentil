@@ -30,4 +30,7 @@ register_simp_attr tlasimp
 /-- Marking the theorems that are dual to some existing theorems. -/
 register_simp_attr tladual
 
+/-- Marking the theorems that are used for normalizing sequents. -/
+register_simp_attr tlanormsimp
+
 initialize registerTraceClass `lentil.debug

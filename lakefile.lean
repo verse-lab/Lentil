@@ -13,4 +13,7 @@ package «lentil» where
 
 @[default_target]
 lean_lib «Lentil» where
-  -- add any library configuration options here
+  globs := #[`«Lentil»]
+
+lean_lib «LentilTest» where
+  globs := #[Glob.submodules `LentilTest]

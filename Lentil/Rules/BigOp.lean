@@ -23,6 +23,17 @@ theorem bigwedge_list_nil : (⋀ x ∈ [], (f x)) =tla= (⊤) := rfl
 @[tlasimp]
 theorem bigwedge_list_cons (b : β) : (⋀ x ∈ (b :: l), (f x)) =tla= ((f b) ∧ ⋀ x ∈ l, (f x)) := rfl
 
+@[tlasimp]
+theorem bigwedge_list_append (l1 l2 : List β) : (⋀ x ∈ (l1 ++ l2), (f x)) =tla= ((⋀ x ∈ l1, (f x)) ∧ ⋀ x ∈ l2, (f x)) := by
+  simp only [tla_bigwedge, Foldable.fold, List.foldr_append]
+  simp only [← List.foldr_map]
+  generalize (l1.map f) = l1' ; clear l1
+  generalize (List.foldr tla_and [tlafml|⊤] (List.map f l2)) = p ; clear l2
+  -- CHECK Why so hard? No existing lemma?
+  induction l1' with
+  | nil => simp [true_and]
+  | cons b l1' ih => simp [and_assoc, ih]
+
 theorem bigwedge_forall_list : (⋀ x ∈ l, (f x)) =tla= (∀ x, (⌞ x ∈ l ⌟ → (f x))) := by
   induction l with
   | nil => funext e ; tla_unfold_simp

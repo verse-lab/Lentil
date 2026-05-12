@@ -1,0 +1,102 @@
+import Lentil
+
+/- Tests for the `tla_specialize` tactic.
+
+   `tla_specialize h arg₁ … argₙ` repeatedly specializes the temporal
+   hypothesis named `h`, replacing it in place. Arguments specialize either
+   `∀` binders, temporal implications using proof-mode hypotheses, or pure
+   implications using Lean-local proof hypotheses.
+-/
+
+namespace TLA.ProofMode.Test.Specialize
+
+open TLA TLA.ProofMode
+
+variable {σ : Type u} (a b c : pred σ)
+
+-- Specialize a `∀` hypothesis with a Lean term.
+example (P : Nat → pred σ) : TLA.pred_implies (TLA.tla_forall P) (P 0) := by
+  tla_start h
+  tla_specialize h 0
+  show Entails [⟨"h", P 0⟩] (P 0)
+  intro _ hp ; exact hp
+
+-- Multiple arguments specialize nested `∀` binders left-to-right.
+example (P : Nat → Nat → pred σ) :
+    TLA.pred_implies (TLA.tla_forall fun x : Nat => TLA.tla_forall fun y : Nat => P x y)
+      (P 1 2) := by
+  tla_start h
+  tla_specialize h 1 2
+  show Entails [⟨"h", P 1 2⟩] (P 1 2)
+  intro _ hp ; exact hp
+
+-- Mixed specialization: a `∀` binder followed by a temporal implication.
+example (P Q : Nat → pred σ) :
+    TLA.pred_implies
+      (TLA.tla_and (TLA.tla_forall fun n : Nat => TLA.tla_implies (P n) (Q n)) (P 0))
+      (Q 0) := by
+  tla_start h hp
+  tla_specialize h 0 hp
+  show Entails [⟨"h", Q 0⟩, ⟨"hp", P 0⟩] (Q 0)
+  intro _ ⟨hq, _⟩ ; exact hq
+
+-- Temporal implication specialization keeps the premise hypothesis.
+example : ((a → b) ∧ a) |-tla- (b) := by
+  tla_start h ha
+  tla_specialize h ha
+  show Entails [⟨"h", b⟩, ⟨"ha", a⟩] b
+  intro _ ⟨hb, _⟩ ; exact hb
+
+-- Pure implication specialization uses a Lean-local proof.
+example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tla- (a) := by
+  tla_start h
+  tla_specialize h hQ
+  show Entails [⟨"h", a⟩] a
+  intro _ ha ; exact ha
+
+-- The specialized hypothesis keeps its original position in the context.
+example (P : Nat → pred σ) :
+    TLA.pred_implies (TLA.tla_and a (TLA.tla_and (TLA.tla_forall P) b)) (P 3) := by
+  tla_start ha h hb
+  tla_specialize h 3
+  show Entails [⟨"ha", a⟩, ⟨"h", P 3⟩, ⟨"hb", b⟩] (P 3)
+  intro _ ⟨_, hp, _⟩ ; exact hp
+
+-- Error: the named temporal hypothesis does not exist.
+/--
+error: tla_specialize: hypothesis 'missing' not found in the goal's Entails list
+-/
+#guard_msgs in
+example : (a) |-tla- (a) := by
+  tla_start ha
+  tla_specialize missing 0
+
+-- Error: implication argument is neither a Lean-local proof nor a temporal hyp.
+/--
+error: tla_specialize: temporal hypothesis 'ha' not found in the goal's Entails list
+-/
+#guard_msgs in
+example : (a → b) |-tla- (b) := by
+  tla_start h
+  tla_specialize h ha
+
+-- Error: the selected hypothesis cannot be specialized.
+/--
+error: tla_specialize: hypothesis 'ha' is not a ∀ or implication; got a
+-/
+#guard_msgs in
+example : (a) |-tla- (a) := by
+  tla_start ha
+  tla_specialize ha 0
+
+-- Error: Lean locals win over temporal hypotheses, and a non-Prop local cannot
+-- discharge an implication antecedent.
+/--
+error: tla_specialize: Lean-local argument 'n' is not a proof
+-/
+#guard_msgs in
+example (n : Nat) : (a → b) |-tla- (b) := by
+  tla_start h
+  tla_specialize h n
+
+end TLA.ProofMode.Test.Specialize

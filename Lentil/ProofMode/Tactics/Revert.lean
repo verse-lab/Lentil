@@ -1,0 +1,86 @@
+import Lentil.Rules.Basic
+import Lentil.ProofMode.Basic
+import Lentil.ProofMode.Tactics.Apply
+import Lentil.ProofMode.Tactics.Intro
+
+namespace TLA.ProofMode
+
+open Lean Meta Elab Tactic
+
+-- NOTE: The following approach to restoring binder names is inspired by
+-- `binderNameHint` and `resolveBinderNameHint`
+set_option linter.unusedVariables false in
+private def binderNameHintAsString (n : String) (p : α → β) : α → β := p
+
+private def resolveBinderNameHintAsString (e : Expr) : CoreM Expr := do
+  Core.transform e (post := fun e' => do
+    if e'.isAppOfArity' ``binderNameHintAsString 4 then
+      let args := e'.getAppArgs'
+      let α := args[0]!
+      let target := args[3]!
+      let some name := parseStringLit? args[2]! | return .done e'
+      -- Manual eta-expansion
+      return .done <| Expr.lam (Name.mkSimple name) α (.app (target.liftLooseBVars 0 1) (.bvar 0)) .default
+    else return .done e')
+
+-- NOTE: This is essentially the other direction of the equality,
+-- but here we need to deal with the binder name, so make it a separate theorem.
+theorem Entails_revert_forall {σ : Type u} {hyps : List (NamedPred σ)}
+  {α : Type v} {p : α → pred σ} (n : String) :
+  Entails hyps (TLA.tla_forall (binderNameHintAsString n p)) → (∀ x, Entails hyps (p x)) := forall_elim.mpr
+
+theorem Entails_revert {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+  (toRevert : String) :
+  -- NOTE: Still, linear complexity, but should be fine?
+  letI rev := hyps.find? fun h => h.name == toRevert
+  letI hyps' := hyps.eraseP fun h => h.name == toRevert
+  letI goal' := rev.elim goal fun r => [tlafml| (r.pred) → goal]
+  Entails hyps' goal' → Entails hyps goal := by
+  rcases h : (List.find? (fun h ↦ h.name == toRevert) hyps) with _ | r <;> rw [h] <;> dsimp
+  · rw [List.eraseP_of_forall_not]
+    · exact id
+    · simp at h ⊢ ; exact h
+  · replace h := List.mem_of_find?_eq_some h
+    rw [← Entails_intro_temporal r.name]
+    refine pred_implies_trans ?_
+    apply repeatedAnd_subset_implies ; grind
+
+private def revertTacDSimps := #[``List.find?, ``List.eraseP, ``String.reduceBEq,
+  ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
+
+private def restoreBinderNameInForallCase : TacticM Unit := do
+  let g ← getMainGoal
+  g.withContext do
+    let ty ← getMainTarget
+    let ty ← resolveBinderNameHintAsString ty
+    -- The eta-expansion might introduce redexes, so do beta-reduction once
+    let ty ← Core.betaReduce ty
+    let g' ← g.replaceTargetDefEq ty
+    replaceMainGoal [g']
+
+syntax (name := tlaRevertTac) "tla_revert" (ppSpace colGt ident)+ : tactic
+
+elab_rules : tactic
+  | `(tactic| tla_revert $[$names:ident]*) => do
+    -- Revert in reverse order so that the resulting nested implication mirrors
+    -- the order of the names in the user's invocation (left-to-right becomes
+    -- outermost-to-innermost in the goal).
+    for name in names.reverse do
+      withMainContext do
+        match (← getLCtx).findFromUserName? name.getId with
+        | some decl =>
+          if ← Meta.isProp decl.type then
+            evalTactic <| ← `(tactic|
+              revert $name:ident ; refine $(mkIdent ``Entails_pure_fact_intro).$(mkIdent `mpr) ?_)
+          else
+            let nameStr := toString name.getId
+            evalTactic <| ← `(tactic|
+              revert $name:ident ; refine $(mkIdent ``Entails_revert_forall) $(quote nameStr) ?_)
+            restoreBinderNameInForallCase
+        | none =>
+          let nameStr := toString name.getId
+          evalTactic <| ← `(tactic|
+            refine $(mkIdent ``Entails_revert) ($(quote nameStr)) ?_)
+          postDSimpAfterApplyingReflectionTheorem revertTacDSimps
+
+end TLA.ProofMode

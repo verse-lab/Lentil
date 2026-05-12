@@ -1,3 +1,5 @@
+import Lean
+
 namespace LentilLib
 
 namespace List
@@ -18,6 +20,51 @@ theorem mem_exists_iff_fin_index {α : Type u} (l : List α) (p : α → Prop) :
 
 theorem finRange_fin_in (n : Nat) : ∀ (x : Fin n), x ∈ List.finRange n := by
   intro ⟨x, hlt⟩ ; rw [List.mem_iff_getElem] ; simp ; assumption
+
+theorem take_getElem_drop {α : Type u} {l : List α} {n : Nat} (h : n < l.length) :
+  l.take n ++ l[n] :: l.drop (n + 1) = l := by
+  conv => enter [2] ; rw [← List.take_append_drop n l, ← List.getElem_cons_drop h]
+
+theorem modify_perm {α : Type u} {l : List α} {idx : Nat} (h : idx < l.length) (f : α → α) :
+  List.Perm (l ++ [f (l[idx]'h)]) (l.modify idx f ++ [(l[idx]'h)]) := by
+  conv => enter [1, 1] ; rw [← take_getElem_drop h]
+  rw [List.modify_eq_take_cons_drop h]
+  -- ...
+  repeat rw [List.append_assoc]
+  apply List.Perm.append ; rfl
+  exact List.cons_append_cons_perm
+
+def foldrD {β : Type v} (f : β → β → β) (d : β) : List β → β
+  | [a] => a
+  | a :: as => f a (foldrD f d as)
+  | [] => d
+
+theorem foldrD_eq_foldr {β : Type v} (f : β → β → β) (d : β) (l : List β)
+  (h : ∀ x, f x d = x) :
+  foldrD f d l = l.foldr f d := by
+  induction l with
+  | nil => simp [foldrD]
+  | cons a l ih =>
+    rcases hh : l with _ | ⟨b, l⟩
+    · simp [foldrD, h]
+    · simp [foldrD, ← hh, ih]
+
+def containsDuplicateElemHashable {α : Type u} [BEq α] [Hashable α] (l : List α) : Bool :=
+  -- NOTE: Since `MProd` assumes the same universe level for both components,
+  -- `α` has to have level 1
+  /-
+  Id.run do
+  let mut seen : Std.HashSet α := Std.HashSet.emptyWithCapacity (α := α)
+  for x in l do
+    if seen.contains x then
+      return true
+    else
+      seen := seen.insert x
+  return false
+  -/
+  Prod.snd <| l.foldl (init := (Std.HashSet.emptyWithCapacity (α := α), false)) fun (seen, dup) x =>
+    if dup || seen.contains x then (seen, true)
+    else (seen.insert x, false)
 
 end List
 

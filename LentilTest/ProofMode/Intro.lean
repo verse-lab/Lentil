@@ -1,0 +1,115 @@
+import Lentil
+
+/- Tests for the `tla_intro` tactic.
+
+   `tla_intro x₁ … xₙ` repeatedly peels things off the goal side of the
+   current `Entails` sequent, one item per iteration:
+     * `∀`-binder           → `Entails_intro_forall` (= `forall_elim.mp`),
+                              then Lean `intro` of the binder name;
+     * `⌞..⌟ → ..`          → `Entails_intro_pure` (= `pure_fact_intro.mp`),
+                              then Lean `intro` of the Prop hypothesis;
+     * `p → q` (non-pure)   → `Entails_intro_temporal`, which appends the
+                              new hypothesis to the temporal context with
+                              the user-supplied label.
+-/
+
+namespace TLA.ProofMode.Test.Intro
+
+open TLA TLA.ProofMode
+
+variable {σ : Type u} (p q : pred σ)
+
+-- Intro a ∀ binder.
+set_option linter.unusedVariables false in
+example : (p) |-tla- (∀ n : Nat, (p)) := by
+  tla_start hp
+  tla_intro n
+  show Entails [⟨"hp", p⟩] p
+  exact pred_implies_refl _
+
+-- Intro a pure-predicate antecedent (`⌞q⌟ → …`).
+example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
+  tla_start hp
+  tla_intro hQ
+  show Entails [⟨"hp", p⟩] p
+  exact pred_implies_refl _
+
+-- The introduced pure fact lands as a Lean hypothesis usable in subsequent
+-- reasoning.
+example (Q : Prop) (h : Q → (p) |-tla- (q)) : (p) |-tla- (⌞ Q ⌟ → (q)) := by
+  tla_start hp
+  tla_intro hQ
+  show Entails [⟨"hp", p⟩] q
+  exact h hQ
+
+-- Mixed sequence: ∀, then ⌞..⌟→, then ∀ again. Starting from `⊤` on the
+-- premise side gives an empty hypothesis list after `tla_start`. The body
+-- of each `∀` parses at high tlafml precedence, so the `→` and inner `∀`
+-- need to be parenthesized to live inside the binder scope.
+example (P : Nat → Nat → pred σ) :
+    (⊤) |-tla- (∀ x : Nat, (⌞ x = x ⌟ → (∀ y : Nat, (P x y)))) →
+    (⊤) |-tla- (∀ x : Nat, (⌞ x = x ⌟ → (∀ y : Nat, (P x y)))) := by
+  intro h
+  tla_start
+  tla_intro x hxx y
+  show Entails [] (P x y)
+  intro e _
+  exact h e True.intro x hxx y
+
+-- Multiple ∀ introductions in one call.
+example (P : Nat → Nat → pred σ) :
+    (⊤) |-tla- (∀ x : Nat, (∀ y : Nat, (P x y))) →
+    (⊤) |-tla- (∀ x : Nat, (∀ y : Nat, (P x y))) := by
+  intro h
+  tla_start
+  tla_intro x y
+  show Entails [] (P x y)
+  intro e _
+  exact h e True.intro x y
+
+-- Error: goal is not an `Entails` (we never called `tla_start`).
+/--
+error: tla_intro: goal is not an Entails sequent, but (p) |-tla- (∀ n, p)
+-/
+#guard_msgs in
+example : (p) |-tla- (∀ n : Nat, (p)) := by
+  tla_intro n
+
+-- Error: goal predicate head is neither ∀ nor `⌞..⌟ →`.
+/--
+error: tla_intro: goal predicate is not a ∀ or a ⌞..⌟ →; got p
+-/
+#guard_msgs in
+example : (p) |-tla- (p) := by
+  tla_start hp
+  tla_intro x
+
+-- Intro a temporal implication antecedent into the temporal context.
+example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
+  intro h
+  tla_start hp
+  tla_intro hp'
+  show Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
+  intro e ⟨_, hp'⟩
+  exact h e hp' hp'
+
+-- Multiple temporal intros stack the new hypotheses at the end of the list,
+-- in the order they were introduced.
+example : (⊤) |-tla- (p → q → p) := by
+  tla_start
+  tla_intro hp hq
+  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
+  intro _ ⟨hp, _⟩ ; exact hp
+
+-- Mixed: temporal intro followed by ∀-intro and pure-intro.
+example (P : Nat → pred σ) :
+    (⊤) |-tla- (p → (∀ n : Nat, (⌞ n = n ⌟ → (P n)))) →
+    (⊤) |-tla- (p → (∀ n : Nat, (⌞ n = n ⌟ → (P n)))) := by
+  intro h
+  tla_start
+  tla_intro hp n heq
+  show Entails [⟨"hp", p⟩] (P n)
+  intro e hp
+  exact h e True.intro hp n heq
+
+end TLA.ProofMode.Test.Intro
