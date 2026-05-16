@@ -129,11 +129,12 @@ example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
 -- then prove the stronger one with the original `lem`.
 example (lem : (b) |-tla- (a)) : (b) |-tla- (a) := by
   tla_start hb
-  tla_suffices hsuff : a by
-    show Entails [⟨"hb", b⟩, ⟨"hsuff", a⟩] a
-    intro _ ⟨_, h⟩ ; exact h
-  show Entails [⟨"hb", b⟩] a
-  exact lem
+  tla_suffices hsuff : a ∧ a by
+    show Entails [⟨"hb", b⟩, ⟨"hsuff", [tlafml| a ∧ a]⟩] a
+    tla_rcases hsuff with ⟨h, h'⟩
+    tla_apply h
+  show Entails [⟨"hb", b⟩] [tlafml| a ∧ a]
+  tla_split_ands <;> tla_apply lem hb
 
 -- Use `tla_rcases` inside `tla_suffices`' `by`-block to destructure the new
 -- hypothesis and discharge the goal. The remaining main goal is the stronger

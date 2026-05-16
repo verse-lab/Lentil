@@ -156,7 +156,7 @@ elab_rules : tactic
   | `(tactic| tla_have $h:ident : $fml:tlafml by $tac:tacticSeq) => do
     haveOrSufficesCommon h fml
     -- Close the premise goal `Entails hyps fml` with the user's tac.
-    evalTactic <| ← `(tactic| ($tac))
+    Tactic.focusAndDone <| evalTactic <| ← `(tactic| ($tac))
     -- Remaining main goal: `Entails (hyps ++ [⟨h, fml⟩]) goal` — collapse the `++`.
     postDSimpAfterApplyingReflectionTheorem haveTacDSimps
   | `(tactic| tla_suffices $h:ident : $fml:tlafml by $tac:tacticSeq) => do
@@ -165,7 +165,7 @@ elab_rules : tactic
     -- then close it with the user's tac.
     evalTactic <| ← `(tactic| swap)
     postDSimpAfterApplyingReflectionTheorem haveTacDSimps
-    evalTactic <| ← `(tactic| ($tac))
+    Tactic.focusAndDone <| evalTactic <| ← `(tactic| ($tac))
     -- Remaining main goal: `Entails hyps fml` (no `++` to clean).
 
   | `(tactic| tla_have $h:ident := $t:term) => do

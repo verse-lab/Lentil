@@ -61,11 +61,6 @@ theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred �
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
   TLA.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal
 
-/-
-def EntailsWithHidden (hyps : List (NamedPred σ)) {hyps' : List (NamedPred σ)} {goal : pred σ} : Prop :=
-  Entails (hyps ++ hyps') goal
--/
-
 theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   (idx : Nat) (h : idx < hyps.length) (f : NamedPred σ → NamedPred σ) :
   ((repeatedAnd <| hyps.map NamedPred.pred) ∧ (f (hyps[idx]'h) |>.pred)) =tla=
