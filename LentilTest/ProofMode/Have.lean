@@ -60,6 +60,62 @@ example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
+-- Add a residual implication from a `pred_implies` theorem.
+example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have h := lem
+  show Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
+  tla_apply h ha
+
+-- Supply an existing temporal hypothesis directly to the theorem.
+example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have hb := lem ha
+  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  intro _ ⟨_, hb⟩ ; exact hb
+
+-- Lean arguments can be supplied before temporal proof-mode arguments.
+example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have hb := lem (0 + 1) ha
+  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  intro _ ⟨_, hb⟩ ; exact hb
+
+-- The direct theorem prefix can also be kept as a residual implication.
+example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have h := lem 0
+  show Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
+  tla_apply h ha
+
+-- Anonymous `tla_have := ...` appends an internal temporal hypothesis.
+example (lem : |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have := lem
+  show Entails [⟨"ha", a⟩, ⟨"this", b⟩] b
+  intro _ ⟨_, hb⟩ ; exact hb
+
+-- Valid implication chains share the same mixed-argument path as `tla_apply`.
+example (lem : |-tla- (a → b → c)) : (a ∧ b) |-tla- (c) := by
+  tla_start ha hb
+  tla_have hc := lem ha hb
+  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  intro _ ⟨_, _, hc⟩ ; exact hc
+
+-- Tuple temporal arguments conjunct multiple proof-mode hypotheses.
+example (lem : (a ∧ b) |-tla- (c)) : (a ∧ b) |-tla- (c) := by
+  tla_start ha hb
+  tla_have hc := lem ⟨ha, hb⟩
+  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  intro _ ⟨_, _, hc⟩ ; exact hc
+
+-- The head can be a temporal hypothesis already in the proof-mode context.
+example : ([tlafml| (a → b) ∧ a]) |-tla- (b) := by
+  tla_start h ha
+  tla_have hb := h ha
+  show Entails [⟨"h", [tlafml| a → b]⟩, ⟨"ha", a⟩, ⟨"hb", b⟩] b
+  intro _ ⟨_, _, hb⟩ ; exact hb
+
 -- The term can be an expression, and the new hypothesis is appended.
 example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   tla_start ha hc

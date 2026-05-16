@@ -11,6 +11,8 @@ structure NamedPred (σ : Type u) where
 -- FIXME: How to unify this with `tla_bigwedge`?
 def repeatedAnd (ps : List (pred σ)) : pred σ := (List.foldrD tla_and tla_true ps)
 
+def repeatedImplies (ps : List (pred σ)) (q : pred σ) : pred σ := ps.foldr tla_implies q
+
 -- FIXME: This is not satisfactory ...
 theorem repeatedAnd_eq_bigwedge (ps : List (pred σ)) :
   ((repeatedAnd ps)) =tla= (⋀ x ∈ ps, x) := by
@@ -29,17 +31,20 @@ theorem repeatedAnd_append (ps1 ps2 : List (pred σ)) :
   ((repeatedAnd (ps1 ++ ps2))) =tla= ((repeatedAnd ps1) ∧ (repeatedAnd ps2)) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_list_append]
 
+theorem repeatedAnd_cons (p : pred σ) (ps : List (pred σ)) :
+  ((repeatedAnd (p :: ps))) =tla= (p ∧ (repeatedAnd ps)) := by
+  rw [← List.singleton_append, repeatedAnd_append] ; rfl
+
 /-
 theorem repeatedAnd_reorder (ps1 ps2 : List (pred σ)) (p : pred σ) :
   ((repeatedAnd (ps1 ++ p :: ps2))) =tla= ((repeatedAnd (ps1 ++ ps2)) ∧ p) := by
   rw [repeatedAnd_eq_in_iff (ps2 := (ps1 ++ ps2) ++ [p]), repeatedAnd_append] ; rfl ; grind
+-/
 
-theorem repeatedAnd_add_duplicate (ps : List (pred σ)) (p : pred σ)
-  (h : p ∈ ps) :
+theorem repeatedAnd_add_duplicate {ps : List (pred σ)} {p : pred σ} (h : p ∈ ps) :
   ((repeatedAnd ps)) =tla= ((repeatedAnd ps) ∧ p) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
   funext e ; tla_unfold_simp ; grind
--/
 
 theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
   ps1 ⊆ ps2 → ((repeatedAnd ps2)) |-tla- ((repeatedAnd ps1)) := by
@@ -47,16 +52,19 @@ theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
   simp only [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
   tla_nontemporal_simp ; aesop
 
+theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred σ} :
+  ((repeatedAnd hs) ∧ (repeatedImplies hs goal)) |-tla- (goal) := by
+  induction hs with
+  | nil => intro e ⟨h1, h2⟩ ; exact h2
+  | cons p ps ih => rw [repeatedAnd_cons, repeatedImplies, List.foldr_cons] ; tla_unfold_simp ; aesop
+
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
   TLA.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal
 
+/-
 def EntailsWithHidden (hyps : List (NamedPred σ)) {hyps' : List (NamedPred σ)} {goal : pred σ} : Prop :=
   Entails (hyps ++ hyps') goal
-
-def modifyHypByName {σ : Type u} (hyps : List (NamedPred σ)) (name : String)
-  (f : NamedPred σ → NamedPred σ) : List (NamedPred σ) :=
-  letI idx? := hyps.findIdx? fun h => h.name == name
-  idx?.elim hyps fun idx => hyps.modify idx f
+-/
 
 theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   (idx : Nat) (h : idx < hyps.length) (f : NamedPred σ → NamedPred σ) :
@@ -67,6 +75,43 @@ theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   apply repeatedAnd_eq_in_iff
   have htmp := List.Perm.map NamedPred.pred <| LentilLib.List.modify_perm h f
   simp at htmp ; intro p ; apply List.Perm.mem_iff ; exact htmp
+
+def ModifyHypSpecWithIndex (hyps hyps' : List (NamedPred σ)) (f : NamedPred σ → NamedPred σ) (idx : Nat) :=
+  hyps = hyps' ∨ (idx < hyps.length ∧ hyps' = hyps.modify idx f)
+
+theorem ModifyHypSpecWithIndex_modify {σ : Type u} (hyps : List (NamedPred σ)) (f : NamedPred σ → NamedPred σ) (idx : Nat) :
+  ModifyHypSpecWithIndex hyps (hyps.modify idx f) f idx := by
+  unfold ModifyHypSpecWithIndex
+  by_cases h : idx < hyps.length
+  · grind
+  · left ; rw [List.modify_eq_self] ; omega
+
+def ModifyHypSpec (hyps hyps' : List (NamedPred σ)) (f : NamedPred σ → NamedPred σ) :=
+  hyps = hyps' ∨ ∃ (idx : Nat) (_ : idx < hyps.length), hyps' = hyps.modify idx f
+
+theorem ModifyHypSpecWithIndex_implies_ModifyHypSpec {hyps hyps' : List (NamedPred σ)} {f : NamedPred σ → NamedPred σ} :
+  ModifyHypSpecWithIndex hyps hyps' f idx → ModifyHypSpec hyps hyps' f := by
+  unfold ModifyHypSpecWithIndex ModifyHypSpec ; grind
+
+-- This is possible since `Nat` is inhabited
+theorem ModifyHypSpec_implies_ModifyHypSpecWithIndex {hyps hyps' : List (NamedPred σ)} {f : NamedPred σ → NamedPred σ} :
+  ModifyHypSpec hyps hyps' f → ∃ idx, ModifyHypSpecWithIndex hyps hyps' f idx := by
+  unfold ModifyHypSpecWithIndex ModifyHypSpec ; aesop
+
+def modifyHypByName {σ : Type u} (hyps : List (NamedPred σ)) (name : String)
+  (f : NamedPred σ → NamedPred σ) : List (NamedPred σ) :=
+  letI idx? := hyps.findIdx? fun h => h.name == name
+  idx?.elim hyps fun idx => hyps.modify idx f
+
+theorem modifyHypByName_spec {σ : Type u} (hyps : List (NamedPred σ)) (name : String)
+  (f : NamedPred σ → NamedPred σ) :
+  ModifyHypSpec hyps (modifyHypByName hyps name f) f := by
+  unfold ModifyHypSpec modifyHypByName
+  cases hidx : hyps.findIdx? (fun h => h.name == name) with
+  | none => left ; rfl
+  | some idx =>
+    dsimp only [Option.elim]
+    rw [List.findIdx?_eq_some_iff_findIdx_eq] at hidx ; grind
 
 open Lean Meta Elab Tactic
 
@@ -107,7 +152,11 @@ def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Exp
 
 def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr))) := do
   let g ← getMainTarget
-  let g := g.headBeta.cleanupAnnotations
+  let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
   recognizeEntailsHyps g
+
+def goalHypsLength : TacticM (Option Nat) := do
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal | return none
+  return some hyps.length
 
 end TLA.ProofMode

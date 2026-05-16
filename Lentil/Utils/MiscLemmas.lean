@@ -34,6 +34,17 @@ theorem modify_perm {α : Type u} {l : List α} {idx : Nat} (h : idx < l.length)
   apply List.Perm.append ; rfl
   exact List.cons_append_cons_perm
 
+theorem find?_findIdx? {α : Type u} {l : List α} {p : α → Bool} {res : α}
+  (hpred : l.find? p = some res) :
+  p res = true ∧ ∃ (idx : Nat) (hidx : idx < l.length), (l[idx]'hidx) = res ∧ l.findIdx? p = idx := by
+  rw [List.find?_eq_some_iff_getElem] at hpred
+  rcases hpred with ⟨ht, ⟨idx, hidx, rfl, h⟩⟩
+  constructor
+  · assumption
+  · exists idx, hidx ; constructor
+    · rfl
+    · rw [List.findIdx?_eq_some_iff_getElem] ; grind
+
 def foldrD {β : Type v} (f : β → β → β) (d : β) : List β → β
   | [a] => a
   | a :: as => f a (foldrD f d as)

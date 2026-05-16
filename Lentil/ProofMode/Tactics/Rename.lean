@@ -4,38 +4,70 @@ namespace TLA.ProofMode
 
 open Lean Meta Elab Tactic
 
+local macro "renameFun" : term => `((fun ⟨_, pred⟩ => ⟨$(mkIdent `newName), pred⟩))
+
+section
+
+variable {σ : Type u} {hyps hyps' : List (NamedPred σ)} {goal : pred σ} (newName : String)
+  (idx : Nat) (h : ModifyHypSpecWithIndex hyps hyps' renameFun idx)
+include h
+
+private theorem renameHyp_pred_same : hyps'.map NamedPred.pred = hyps.map NamedPred.pred := by
+  rcases h with rfl | ⟨hidx, rfl⟩
+  on_goal 1=> rfl
+  dsimp ; rw [List.modify_eq_take_cons_drop hidx]
+  conv => enter [2, 2] ; rw [← LentilLib.List.take_getElem_drop hidx]
+  simp only [List.map_append, List.map_take, List.map_cons, List.map_drop]
+
+private theorem Entails_rename_aux : Entails hyps' goal = Entails hyps goal := by
+  unfold Entails ; congr 1 ; rw [renameHyp_pred_same newName idx h]
+
+end
+
 def renameHyp {σ : Type u} (hyps : List (NamedPred σ)) (oldName newName : String) :=
-  modifyHypByName hyps oldName fun ⟨_, pred⟩ => ⟨newName, pred⟩
+  modifyHypByName hyps oldName renameFun
 
-theorem renameHyp_pred_same {σ : Type u} (hyps : List (NamedPred σ)) (oldName newName : String) :
-  (renameHyp hyps oldName newName).map NamedPred.pred = hyps.map NamedPred.pred := by
-  unfold renameHyp modifyHypByName
-  cases hidx : hyps.findIdx? (fun h => h.name == oldName) with
-  | none => rfl
-  | some idx =>
-    have hidx' := hidx ; rw [List.findIdx?_eq_some_iff_findIdx_eq] at hidx'
-    replace hidx' := hidx'.left
-    dsimp only [Option.elim] ; rw [List.modify_eq_take_cons_drop hidx']
-    conv => enter [2, 2] ; rw [← LentilLib.List.take_getElem_drop hidx']
-    simp only [List.map_append, List.map_take, List.map_cons, List.map_drop]
+section
 
-theorem Entails_rename {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-  (oldName newName : String) :
+variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ} (newName : String)
+
+theorem Entails_rename_by_name (oldName : String) :
   Entails (renameHyp hyps oldName newName) goal = Entails hyps goal := by
-  unfold Entails ; congr 1 ; rw [renameHyp_pred_same]
+  obtain ⟨idx, hspec⟩ := ModifyHypSpec_implies_ModifyHypSpecWithIndex <| modifyHypByName_spec hyps oldName renameFun
+  exact Entails_rename_aux newName idx hspec
+
+theorem Entails_rename_by_idx (idx : Nat) :
+  Entails (hyps.modify idx renameFun) goal = Entails hyps goal := Entails_rename_aux newName idx (ModifyHypSpecWithIndex_modify _ _ _)
+
+end
 
 private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?, ``List.findIdx?.go, ``String.reduceBEq, ``String.reduceBNe,
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
     ``List.modifyTailIdx.go, ``List.modifyHead]
 
-syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt ident) " => " ident : tactic
+syntax tlaRenamePos := (ident <|> num)
+syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt tlaRenamePos) " => " ident : tactic
+
+abbrev RenamePos := Sum String Nat
+
+def parseRenamePos (pos : TSyntax `TLA.ProofMode.tlaRenamePos) (errorMsg : MessageData) : TacticM RenamePos := do
+  match pos with
+  | `(tlaRenamePos| $id:ident) => pure <| Sum.inl <| toString id.getId
+  | `(tlaRenamePos| $num:num) => pure <| Sum.inr <| num.getNat
+  | _ => throwError errorMsg
+
+def quoteRenamePos (pos : RenamePos) : TSyntax `term := pos.elim quote quote
+
+def findByRenamePos (xs : List (String × α)) (pos : RenamePos) : Option (String × α) :=
+  pos.elim (fun name => xs.find? fun x => x.1 == name) (xs[·]?)
 
 elab_rules : tactic
-  | `(tactic| tla_rename $old:ident => $new:ident) => do
-    let oldStr := toString old.getId
+  | `(tactic| tla_rename $old:tlaRenamePos => $new:ident) => do
+    let old ← parseRenamePos old "tla_rename: invalid syntax for renaming position"
+    let thm := if old.isLeft then ``Entails_rename_by_name else ``Entails_rename_by_idx
     let newStr := toString new.getId
     evalTactic <| ← `(tactic|
-      refine ($(mkIdent ``Entails_rename) ($(quote oldStr)) ($(quote newStr))).$(mkIdent `mp) ?_)
+      refine ($(mkIdent thm) ($(quoteRenamePos old)) ($(quote newStr))).$(mkIdent `mp) ?_)
     postDSimpAfterApplyingReflectionTheorem renameTacDSimps
 
 end TLA.ProofMode

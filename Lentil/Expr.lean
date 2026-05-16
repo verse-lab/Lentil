@@ -13,10 +13,10 @@ partial def splitAndIntoParts (p : Expr) : MetaM (List Expr) := do
     pure (as ++ bs)
   | _ => pure [p]
 
-partial def splitImplicationsIntoParts (p : Expr) : MetaM (List Expr × Expr) := do
+partial def splitImplicationsIntoParts (p : Expr) (cutAnd? : Bool := true) : MetaM (List Expr × Expr) := do
   match_expr p with
   | TLA.tla_implies _ p q =>
-    let ps ← splitAndIntoParts p
+    let ps ← if cutAnd? then splitAndIntoParts p else pure [p]
     let (ps', q') ← splitImplicationsIntoParts q
     pure (ps ++ ps', q')
   | _ => pure ([], p)

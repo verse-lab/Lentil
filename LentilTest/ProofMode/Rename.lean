@@ -44,10 +44,10 @@ example : (a ∧ b) |-tla- (a) := by
   show Entails [⟨"x", a⟩, ⟨"y", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
--- Renaming after forward-apply: the freshly-derived hypothesis can be renamed.
+-- Renaming after `tla_have`: the freshly-derived hypothesis can be renamed.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
-  tla_apply lem at ha as hb
+  tla_have hb := lem ha
   tla_rename hb => result
   show Entails [⟨"ha", a⟩, ⟨"result", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb

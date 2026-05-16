@@ -21,8 +21,8 @@ NOTE: On the soundness theorems corresponding to these tactics:
 - `pull_pure`: `revert` + `intro`
 - `rename`: a very special case of inclusion reasoning (eq)
 - `rcases`: reducing to `revert`
-- `apply`: kind of new and complicated, not quite depending on the others
-- `have`/`suffices`: reducing to `apply`
-- `specialize`: reducing to `apply`
+- `specialize`: general logic of filling in the LHS of an implication
+- `have`/`suffices`: reducing to `specialize`
+- `apply`: reducing to `have` then `specialize`
 
 -/

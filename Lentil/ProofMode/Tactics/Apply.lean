@@ -1,77 +1,73 @@
-import Lentil.ProofMode.Basic
-import Lentil.ProofMode.Tactics.Clear
+import Lentil.ProofMode.Tactics.Have
+import Lentil.Expr
 
 namespace TLA.ProofMode
 
-open Lean Meta Elab Tactic
+open Lean Meta Elab Tactic LentilLib
 
 theorem Entails_trans {σ : Type u} {hyps : List (NamedPred σ)} {mid goal : pred σ} :
   (mid) |-tla- (goal) → Entails hyps mid → Entails hyps goal := by
   intro h1 h2 ; revert h1 ; revert h2 ; apply pred_implies_trans
 
-/-- The general thing used in `apply`, `have` and `suffices`. -/
-theorem Entails_add_new {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-  (subHyps : List (pred σ)) (hinc : subHyps ⊆ hyps.map NamedPred.pred)
-  (newHypName : String) (newHyp : pred σ) :
-  ((repeatedAnd subHyps)) |-tla- (newHyp) →
-  Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
-  Entails hyps goal := by
-  intro h1 h2
-  refine pred_implies_trans ?_ (by apply h2) ; clear h2
-  simp [repeatedAnd_append, and_pred_implies_split] ; constructor
-  · rfl
-  · refine pred_implies_trans ?_ (by apply h1) ; clear h1
-    apply repeatedAnd_subset_implies ; grind
+/-
+`tla_apply t` is implemented through `tla_have := t`.
 
--- CHECK Maybe working on `chosen.map Prod.fst` would be better?
-def chooseHyps (hyps : List (NamedPred σ)) (chosen : List (String × Bool)) : List (pred σ) :=
-  chosen.filterMap fun (name, _) => Option.map NamedPred.pred <| hyps.find? fun h => h.name == name
+First, `tlaHaveTerm` introduces the theorem to apply as the newest temporal
+hypothesis and delegates all supplied arguments to `tla_specialize`. Then this
+file inspects that newest hypothesis, splits its remaining implication chain
+with `TLA.Expr.splitImplicationsIntoParts`, and applies `Entails_apply_hyp` with
+an explicit list of premise metavariables of the same length. This avoids the
+old residual-premise guessing loop.
+-/
 
-theorem chosenHyps_subset (hyps : List (NamedPred σ)) (chosen : List (String × Bool)) :
-  chooseHyps hyps chosen ⊆ hyps.map NamedPred.pred := by
-  unfold chooseHyps ; rw [List.subset_def]
-  simp only [List.mem_filterMap, Option.map_eq_some_iff, List.mem_map]
-  grind
+section
 
-theorem Entails_apply_forward_noclear {σ : Type u} {hyps : List (NamedPred σ)} {newHyp goal : pred σ}
-  (newHypName : String) (chosen : List (String × Bool)) :
-  ((repeatedAnd <| chooseHyps hyps chosen)) |-tla- (newHyp) →
-  -- NOTE: If we add the new hypothesis at the beginning then the diff in the
-  -- info view will look very weird, so we add it at the end instead.
-  -- This of course is going to have worse time complexity, but since
-  -- the computation of `hyps'` is already linear, so anyway ...
-  Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
-  Entails hyps goal := Entails_add_new _ (chosenHyps_subset _ _) newHypName newHyp
+variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
 
-theorem Entails_apply_forward {σ : Type u} {hyps : List (NamedPred σ)} {newHyp goal : pred σ}
-  (newHypName : String) (chosen : List (String × Bool)) :
-  letI hyps' := hyps.filter fun h => chosen.all fun (name, toClear) => h.name != name || !toClear
-  ((repeatedAnd <| chooseHyps hyps chosen)) |-tla- (newHyp) →
-  Entails (hyps' ++ [⟨newHypName, newHyp⟩]) goal →
-  Entails hyps goal := by
-  intro h1 h2 ; apply Entails_apply_forward_noclear (newHypName := newHypName) ; apply h1
-  revert h2 ; apply Entails_drop_hyps ; grind
+-- Well, this "last" thing might be too specific?
 
-private def applyTacDSimps := #[``List.filter, ``List.all, ``or, ``and, ``not, ``chooseHyps, ``List.filterMap,
-  ``Option.map, ``List.find?, ``repeatedAnd, ``LentilLib.List.foldrD,
-  ``String.reduceBEq, ``String.reduceBNe, ``List.cons_append, ``List.nil_append]
+theorem Entails_apply_hyp (hs : List (pred σ)) (h : hyps.getLast?.map NamedPred.pred = some (repeatedImplies hs goal)) :
+  Entails hyps.dropLast (repeatedAnd hs) → Entails hyps goal := by
+  unfold Entails
+  simp [List.getLast?_eq_some_iff] at h ; rcases h with ⟨a, ⟨hyps, rfl⟩, heq⟩
+  simp [heq, repeatedAnd_append, repeatedAnd_singleton, ← impl_intro_add_r]
+  intro h ; apply pred_implies_trans h ; simp [impl_intro_add_r]
+  apply repeatedImplies_apply
+
+-- FIXME: Generalize this to allow `tla_assumption`
+theorem Entails_apply_hyp_closing_goal (h : hyps.getLast?.map NamedPred.pred = some goal) :
+  Entails hyps goal := Entails_apply_hyp [] h (by intro _ _ ; exact True.intro)
+
+end
+
+private def applyTacDSimps := #[``repeatedAnd, ``LentilLib.List.foldrD, ``List.dropLast]
+
+private def getHypByIdx (idx : Nat) : TacticM Expr := do
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal
+    | throwError "tla_apply: failed to read the hypotheses from the goal"
+  let some (_, pred) := hyps[idx]?
+    | throwError "tla_apply: failed to find the introduced theorem hypothesis"
+  return pred
 
 syntax (name := tlaApplyBackwardTac) "tla_apply " term : tactic
-syntax tlaApplyForwardPremise := ppSpace colGt ("-")? ident
-syntax (name := tlaApplyForwardTac) "tla_apply " term " at " tlaApplyForwardPremise+ " as " ident : tactic
 
 elab_rules : tactic
   | `(tactic| tla_apply $tm:term) => withMainContext do
-    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_trans) (by apply $tm) ?_)
-  | `(tactic| tla_apply $tm:term at $locs:tlaApplyForwardPremise* as $out:ident) => do
-    -- FIXME: should prohibit `out` taking existing name
-    let chosen ← locs.mapM fun l =>
-      match l with
-      | `(tlaApplyForwardPremise| -$name:ident) => pure (toString name.getId, true)
-      | `(tlaApplyForwardPremise| $name:ident) => pure (toString name.getId, false)
-      | _ => throwUnsupportedSyntax
-    let newHypName := toString out.getId
-    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_apply_forward) ($(quote newHypName)) ($(quote chosen.toList)) (by apply $tm) ?_)
-    postDSimpAfterApplyingReflectionTheorem applyTacDSimps
+    (do evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_trans) (by apply $tm) ?_))
+    <|>
+    (do
+      let idx ← tlaHaveTerm default /- the name does not matter here -/ tm
+      withMainContext do
+      let pred ← getHypByIdx idx
+      -- NOTE: For convenience, do not cut inner `∧`s
+      let (premises, _) ← TLA.Expr.splitImplicationsIntoParts pred (cutAnd? := false)
+      if premises.isEmpty then
+        evalTactic <| ← `(tactic| apply $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
+      else
+        let holesListStx ← do
+          let holes := Array.replicate premises.length (← `(_))
+          `([$holes,*])
+        evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_apply_hyp) $holesListStx (by rfl) ?_)
+        postDSimpAfterApplyingReflectionTheorem applyTacDSimps)
 
 end TLA.ProofMode

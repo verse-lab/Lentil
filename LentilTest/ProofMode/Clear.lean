@@ -54,11 +54,10 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   show Entails [⟨"hp", p⟩, ⟨"hq", q⟩] q
   exact h
 
--- Mid-proof use: combine with `tla_apply` forward form, then drop the
--- newly-derived hypothesis.
+-- Mid-proof use: derive a hypothesis with `tla_have`, then drop it.
 example (lem : (p) |-tla- (q)) : (p) |-tla- (p) := by
   tla_start hp
-  tla_apply lem at hp as hq
+  tla_have hq := lem hp
   tla_clear hq
   show Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _

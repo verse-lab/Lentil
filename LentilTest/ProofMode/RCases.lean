@@ -10,7 +10,7 @@ import Lentil.ProofMode.Display
    Note: `tla_start` flattens conjunctions in the premise (via
    `splitAndIntoParts`), so a single hypothesis with an `a ∧ b` pred cannot
    appear right after `tla_start`. The and-destructure tests below construct
-   one via `tla_apply <lem> at -h as hab` first.
+   one via `tla_have hab := <lem> h` first.
 -/
 
 namespace TLA.ProofMode.Test.RCases
@@ -24,7 +24,8 @@ variable {σ : Type u} (a b c : pred σ)
 -- Single level: `tla_rcases hab with ⟨ha, hb⟩` on `hab : a ∧ b`.
 example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tla_start ha0
-  tla_apply lem at -ha0 as hab
+  tla_have hab := lem ha0
+  tla_clear ha0
   tla_rcases hab with ⟨ha, hb⟩
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
@@ -32,7 +33,8 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
 -- N-ary tuple on a right-associated chain: `⟨ha, hb, hc⟩` on `h : a ∧ b ∧ c`.
 example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
   tla_start ha0
-  tla_apply lem at -ha0 as h
+  tla_have h := lem ha0
+  tla_clear ha0
   tla_rcases h with ⟨ha, hb, hc⟩
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
@@ -41,7 +43,8 @@ example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
 -- still lands in the temporal context, just with a hygienic name).
 example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
   tla_start ha0
-  tla_apply lem at -ha0 as hab
+  tla_have hab := lem ha0
+  tla_clear ha0
   tla_rcases hab with ⟨_, hb⟩
   intro _ ⟨_, hb⟩ ; exact hb
 
@@ -136,7 +139,8 @@ error: tla_rcases: alternation '|' is not supported
 #guard_msgs in
 example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tla_start ha0
-  tla_apply lem at -ha0 as hab
+  tla_have hab := lem ha0
+  tla_clear ha0
   tla_rcases hab with ⟨p | q, hb⟩
 
 -- Reference to a hypothesis not in the Entails list.
@@ -146,7 +150,8 @@ error: tla_rcases: hypothesis 'noSuchHyp' not found in the goal's Entails list
 #guard_msgs in
 example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tla_start ha0
-  tla_apply lem at -ha0 as hab
+  tla_have hab := lem ha0
+  tla_clear ha0
   tla_rcases noSuchHyp with ⟨_, _⟩
 
 end TLA.ProofMode.Test.RCases

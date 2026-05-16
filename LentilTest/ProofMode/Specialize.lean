@@ -89,10 +89,9 @@ example : (a) |-tla- (a) := by
   tla_start ha
   tla_specialize ha 0
 
--- Error: Lean locals win over temporal hypotheses, and a non-Prop local cannot
--- discharge an implication antecedent.
+-- Error: temporal implication arguments must name proof-mode hypotheses.
 /--
-error: tla_specialize: Lean-local argument 'n' is not a proof
+error: tla_specialize: temporal hypothesis 'n' not found in the goal's Entails list
 -/
 #guard_msgs in
 example (n : Nat) : (a → b) |-tla- (b) := by

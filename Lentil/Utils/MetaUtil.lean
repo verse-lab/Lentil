@@ -1,6 +1,6 @@
 import Lean
 
-open Lean Meta Elab
+open Lean Meta Elab Tactic
 
 namespace LentilLib
 
@@ -40,5 +40,11 @@ partial def mkUnusedName (names : List Name) (baseName : Name) : Name :=
       else
         w
     loop 1
+
+/-- Is `stx`, a `Term`, an `Ident`? -/
+def termIdent? (stx : TSyntax `term) : TacticM (Option (TSyntax `ident)) := do
+  match stx with
+  | `(term| $id:ident) => pure (some id)
+  | _ => pure none
 
 end LentilLib
