@@ -131,8 +131,7 @@ def postDSimpAfterApplyingReflectionTheorem (l : Array Name) : TacticM Unit := d
     else pure g
   setGoals gs'
 
-def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Expr))) := do
-  let_expr TLA.ProofMode.Entails _ hyps _ := e | return none
+def recognizeHypsList (hyps : Expr) : MetaM (Option (Expr × List (String × Expr))) := do
   let some (ty, hyps) := hyps.listLit? | return none
   let hyps ← hyps.foldrM (init := some []) fun hyp acc => do
     match acc with
@@ -145,10 +144,18 @@ def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Exp
   let some hyps := hyps | return none
   return some (ty, hyps)
 
+def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Expr))) := do
+  let_expr TLA.ProofMode.Entails _ hyps _ := e | return none
+  recognizeHypsList hyps
+
 def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr))) := do
   let g ← getMainTarget
   let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
   recognizeEntailsHyps g
+
+def toHypsList (hypTy : Expr) (hyps : List (String × Expr)) : MetaM Expr := do
+  let elems ← hyps.mapM fun (name, pred) => mkAppM ``TLA.ProofMode.NamedPred.mk #[toExpr name, pred]
+  mkListLit hypTy elems
 
 def goalHypsLength : TacticM (Option Nat) := do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | return none

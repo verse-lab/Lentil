@@ -15,8 +15,7 @@ private def getPremiseList (lhs : Expr) : MetaM (List Expr) := do
 
 private def mkNamedPredListExpr (σ : Expr) (hyps : List (String × Expr)) : MetaM Expr := do
   let elemTy ← mkAppM ``TLA.ProofMode.NamedPred #[σ]
-  let elems ← hyps.mapM fun (name, pred) => mkAppM ``TLA.ProofMode.NamedPred.mk #[mkStrLit name, pred]
-  mkListLit elemTy elems
+  toHypsList elemTy hyps
 
 syntax (name := tlaStartTac) "tla_start" (ppSpace colGt term:max)* : tactic
 

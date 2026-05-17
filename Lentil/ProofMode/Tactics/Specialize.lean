@@ -38,7 +38,7 @@ theorem Entails_add_new {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred 
   · refine pred_implies_trans ?_ (by apply h1) ; clear h1
     apply repeatedAnd_subset_implies ; grind
 
-local macro "replaceFun" : term => `((fun ⟨name, _⟩ => ⟨name, $(mkIdent `newHyp)⟩))
+local macro "replaceFun" : term => `((fun h => { h with pred := $(mkIdent `newHyp) }))
 
 section
 
