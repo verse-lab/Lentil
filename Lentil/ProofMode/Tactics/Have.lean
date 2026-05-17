@@ -81,7 +81,8 @@ private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := 
   let g ← getMainGoal
   let target ← g.getType
   let target ← cleanupAnnotAndMore target
-  let_expr Entails σ hypsExpr goal := target | unreachable!   -- This is checked at the beginning
+  let_expr Entails σ hypsExpr goal := target
+    | throwError "tla_have: goal is not an Entails sequent, but {target}"
   let newHypNameExpr := mkStrLit newHypName
   -- NOTE: The following restricts that `e` must be directly a TLA theorem,
   -- not a theorem whose conclusion is a TLA theorem. This is just for convenience.
