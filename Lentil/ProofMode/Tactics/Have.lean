@@ -136,7 +136,7 @@ where
     return if hyps.any (fun ⟨n, _⟩ => n == name) then some name else none
   specializeByIdx (idx : Nat) (args : Array (Term)) : TacticM Unit := do
     for arg in args do
-      tlaSpecializeStep (Sum.inr idx) arg
+      tlaSpecializeStep (.byIdx idx) arg
 
 declare_syntax_cat tlaHaveClause
 syntax " : " tlafml " by " tacticSeq : tlaHaveClause

@@ -18,7 +18,7 @@ and consumes one user argument according to that predicate shape:
   hypotheses, written either as a single identifier or as a flat tuple.
 
 This file supports both name-based and index-based positions through
-`RenamePos`. The index form is important for callers such as `tla_have := ...`,
+`TemporalHypLoc`. The index form is important for callers such as `tla_have := ...`,
 which can append an anonymous/internal temporal hypothesis and immediately
 specialize exactly that newly-added hypothesis without relying on a user-visible
 name.
@@ -172,20 +172,20 @@ private def specializeTacDSimps := #[``replaceChosenPred, ``modifyHypByName, ``L
 hypothesis list back to the literal proof-mode context. Callers build repeated
 specialization by invoking this after each argument, so each step sees the
 predicate produced by the previous step. -/
-def tlaSpecializeStep (pos : RenamePos) (arg : TSyntax `term) : TacticM Unit := withMainContext do
+def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Unit := withMainContext do
   -- FIXME: Repetitively running `recognizeEntailsHypsFromGoal` and `find?` on it
   -- might be slow in some extreme cases?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_specialize: failed to read the hypotheses from the goal"
-  let some (_, pred) := findByRenamePos hyps pos | throwError (specializeTargetMissingMsg pos)
+  let some (_, pred) := findByTemporalHypLoc hyps pos | throwError (specializeTargetMissingMsg pos)
   match_expr pred with
   | TLA.tla_forall _ _ _ =>
-    let thm := if pos.isLeft then ``Entails_specialize_forall_by_name else ``Entails_specialize_forall_by_idx
-    evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteRenamePos pos)) (by rfl) ?_)
+    let thm := if pos matches .byName .. then ``Entails_specialize_forall_by_name else ``Entails_specialize_forall_by_idx
+    evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
   | TLA.tla_implies _ lhs _ =>
     if lhs.isAppOfArity' ``TLA.pure_pred 2 then
       -- Treat `arg` as a Lean term
-      let thm := if pos.isLeft then ``Entails_specialize_pure_by_name else ``Entails_specialize_pure_by_idx
-      evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteRenamePos pos)) (by rfl) ?_)
+      let thm := if pos matches .byName .. then ``Entails_specialize_pure_by_name else ``Entails_specialize_pure_by_idx
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
     else
       let premises ← match arg with
         | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
@@ -197,23 +197,23 @@ def tlaSpecializeStep (pos : RenamePos) (arg : TSyntax `term) : TacticM Unit := 
       for premise in premises do
         unless hyps.any (fun ⟨name, _⟩ => name == premise) do
           throwError "tla_specialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
-      let thm := if pos.isLeft then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
-      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteRenamePos pos)) (by rfl) ?_)
+      let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
   | _ => throwError (specializeTargetBadShapeMsg pred pos)
   postDSimpAfterApplyingReflectionTheorem specializeTacDSimps
 where
-  specializeTargetMissingMsg : RenamePos → MessageData
-    | .inl name => m!"tla_specialize: hypothesis '{name}' not found in the goal's Entails list"
-    | .inr idx => m!"tla_specialize: hypothesis index {idx} not found in the goal's Entails list"
-  specializeTargetBadShapeMsg (pred : Expr) : RenamePos → MessageData
-    | .inl name => m!"tla_specialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
-    | .inr idx => m!"tla_specialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"
+  specializeTargetMissingMsg : TemporalHypLoc → MessageData
+    | .byName name => m!"tla_specialize: hypothesis '{name}' not found in the goal's Entails list"
+    | .byIdx idx => m!"tla_specialize: hypothesis index {idx} not found in the goal's Entails list"
+  specializeTargetBadShapeMsg (pred : Expr) : TemporalHypLoc → MessageData
+    | .byName name => m!"tla_specialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
+    | .byIdx idx => m!"tla_specialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"
 
-syntax (name := tlaSpecializeTac) "tla_specialize" (ppSpace colGt tlaRenamePos) (ppSpace colGt term:arg)+ : tactic
+syntax (name := tlaSpecializeTac) "tla_specialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_specialize $h:tlaRenamePos $[$args:term]*) => do
-    let pos ← parseRenamePos h "tla_specialize: invalid syntax for specialization position"
+  | `(tactic| tla_specialize $h:temporalHypLoc $[$args:term]*) => do
+    let pos ← parseTemporalHypLoc h "tla_specialize: invalid syntax for specialization position"
     for arg in args do
       tlaSpecializeStep pos arg
 

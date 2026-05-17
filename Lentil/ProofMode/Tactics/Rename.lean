@@ -1,4 +1,4 @@
-import Lentil.ProofMode.Basic
+import Lentil.ProofMode.Location
 
 namespace TLA.ProofMode
 
@@ -45,29 +45,15 @@ private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
     ``List.modifyTailIdx.go, ``List.modifyHead]
 
-syntax tlaRenamePos := (ident <|> num)
-syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt tlaRenamePos) " => " ident : tactic
-
-abbrev RenamePos := Sum String Nat
-
-def parseRenamePos (pos : TSyntax `TLA.ProofMode.tlaRenamePos) (errorMsg : MessageData) : TacticM RenamePos := do
-  match pos with
-  | `(tlaRenamePos| $id:ident) => pure <| Sum.inl <| toString id.getId
-  | `(tlaRenamePos| $num:num) => pure <| Sum.inr <| num.getNat
-  | _ => throwError errorMsg
-
-def quoteRenamePos (pos : RenamePos) : TSyntax `term := pos.elim quote quote
-
-def findByRenamePos (xs : List (String × α)) (pos : RenamePos) : Option (String × α) :=
-  pos.elim (fun name => xs.find? fun x => x.1 == name) (xs[·]?)
+syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rename $old:tlaRenamePos => $new:ident) => do
-    let old ← parseRenamePos old "tla_rename: invalid syntax for renaming position"
-    let thm := if old.isLeft then ``Entails_rename_by_name else ``Entails_rename_by_idx
+  | `(tactic| tla_rename $old:temporalHypLoc => $new:ident) => do
+    let old ← parseTemporalHypLoc old "tla_rename: invalid syntax for renaming position"
+    let thm := if old matches .byName .. then ``Entails_rename_by_name else ``Entails_rename_by_idx
     let newStr := toString new.getId
     evalTactic <| ← `(tactic|
-      refine ($(mkIdent thm) ($(quoteRenamePos old)) ($(quote newStr))).$(mkIdent `mp) ?_)
+      refine ($(mkIdent thm) ($(quoteTemporalHypLoc old)) ($(quote newStr))).$(mkIdent `mp) ?_)
     postDSimpAfterApplyingReflectionTheorem renameTacDSimps
 
 end TLA.ProofMode
