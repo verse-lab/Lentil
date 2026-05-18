@@ -16,6 +16,21 @@ theorem Entails_clear {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ
   letI hyps' := hyps.filter fun h => !toClear.contains h.name
   Entails hyps' goal → Entails hyps goal := Entails_drop_hyps _ (by grind)
 
+theorem Entails_clear_except {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+  (toKeep : List String) :
+  letI hyps' := hyps.filter fun h => toKeep.contains h.name
+  Entails hyps' goal → Entails hyps goal := Entails_drop_hyps _ (by grind)
+
+/--
+`tla_clear * - h₁ h₂ ...` removes every temporal hypothesis except the named
+ones. The kept hypotheses stay in their original order. For example, from
+`hp : p`, `hq : q`, `hr : r`,
+```lean
+tla_clear * - hq
+```
+leaves only `hq : q`.
+-/
+syntax (name := tlaClearExceptTac) "tla_clear" "*" " -" (ppSpace colGt ident)* : tactic
 /--
 `tla_clear h₁ h₂ ...` removes temporal hypotheses from the proof-mode context.
 The target predicate is unchanged, but the remaining proof must not use the
@@ -33,7 +48,11 @@ private def clearTacDSimps := #[``List.filter, ``List.contains, ``List.elem, ``o
   ``String.reduceBEq, ``String.reduceBNe, ``Bool.false_or, ``Bool.or_false]
 
 elab_rules : tactic
-  | `(tactic| tla_clear $[$names:ident]*) => do
+  | `(tactic| tla_clear * - $[$names:ident]*) => withMainContext do
+    let toKeep := names.toList.map fun name => toString name.getId
+    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear_except) ($(quote toKeep)) ?_)
+    postDSimpAfterApplyingReflectionTheorem clearTacDSimps
+  | `(tactic| tla_clear $[$names:ident]*) => withMainContext do
     let toClear := names.toList.map fun name => toString name.getId
     evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear) ($(quote toClear)) ?_)
     postDSimpAfterApplyingReflectionTheorem clearTacDSimps

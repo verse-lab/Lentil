@@ -46,6 +46,29 @@ example : (p ∧ q ∧ r) |-tla- (q) → (p ∧ q ∧ r) |-tla- (q) := by
   show Entails [⟨"hq", q⟩] q
   exact pred_implies_refl _
 
+-- `tla_clear * - ...` clears every hypothesis except the listed ones.
+example : (p ∧ q ∧ r) |-tla- (q) → (p ∧ q ∧ r) |-tla- (q) := by
+  intro h
+  tla_start hp hq hr
+  tla_clear * - hq
+  show Entails [⟨"hq", q⟩] q
+  exact pred_implies_refl _
+
+-- The clear-except form preserves the original order of the kept hypotheses.
+example : (p ∧ q ∧ r) |-tla- ([tlafml| p ∧ r]) → (p ∧ q ∧ r) |-tla- ([tlafml| p ∧ r]) := by
+  intro h
+  tla_start hp hq hr
+  tla_clear *- hp hr
+  show Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| p ∧ r]
+  exact pred_implies_refl _
+
+-- With no names after the minus, the clear-except form clears all hypotheses.
+example : (p ∧ q) |-tla- (⊤) := by
+  tla_start hp hq
+  tla_clear * -
+  show Entails [] [tlafml| ⊤]
+  intro _ _ ; trivial
+
 -- Clearing a name that isn't in the context is a no-op.
 example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
