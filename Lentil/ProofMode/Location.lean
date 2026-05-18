@@ -31,20 +31,21 @@ def findByTemporalHypLoc (xs : List (String × α)) : TemporalHypLoc → Option 
 structure RewriteLocation where
   idxs : Array Nat
   includeGoal : Bool
+  isWildCard : Bool
 
 def parseRewriteLocation
     (hyps : List (String × Expr))
     (loc? : Option (TSyntax ``Lean.Parser.Tactic.location))
     (errorMsgPrefix : String) : TacticM RewriteLocation := do
   match loc? with
-  | none => return ⟨#[], true⟩
+  | none => return ⟨#[], true, false⟩
   | some loc =>
     -- Reuse the logic for location expansion from Lean
     -- NOTE: `expandOptLocation` does not work here, it seems
     let loc := expandLocation loc
     match loc with
     | Location.wildcard =>
-      return ⟨Array.range hyps.length, true⟩
+      return ⟨Array.range hyps.length, true, true⟩
     | Location.targets stxs includeGoal =>
       let idxs ← stxs.mapM fun x => do
         let hypLoc ← parseTemporalHypLoc x m!"{errorMsgPrefix}: unsupported location {x}; expected a proof-mode hypothesis name or index"
@@ -55,6 +56,6 @@ def parseRewriteLocation
           pure idx
         | .byIdx idx =>
           if idx < hyps.length then pure idx else throwError "{errorMsgPrefix}: hypothesis index {idx} is out of bounds"
-      return ⟨idxs, includeGoal⟩
+      return ⟨idxs, includeGoal, false⟩
 
 end TLA.ProofMode

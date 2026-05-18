@@ -53,6 +53,20 @@ example (heq : p = q) : (p) |-tla- (q) := by
   show Entails [⟨"hp", q⟩] q
   exact pred_implies_refl _
 
+-- `tla_rewrite` follows Lean's location semantics: selected hypotheses are
+-- rewritten one by one, not as one combined list of locations.
+example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
+  tla_start hp hq hr
+  tla_rewrite [always_idem] at *
+  show Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
+  intro _ h ; exact h.2.1
+
+example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
+  tla_start hp hq hr
+  tla_rewrite [always_idem] at hp hr
+  show Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
+  intro _ h ; exact h.2.1
+
 -- Lean-style locations can include both selected hypotheses and the target.
 example (heq : p = q) : (p) |-tla- (p) := by
   tla_start hp

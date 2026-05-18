@@ -26,12 +26,19 @@ The current implementation instead follows the shape of the manual script
   `revert cont`
   `change Entails [updated hypotheses] updatedGoal`
 
+for one selected location at a time. An earlier version exposed all selected
+hypotheses together as one list argument, but that did not match Lean's
+`rewrite` location semantics: Lean rewrites each selected hypothesis separately,
+so `rewrite [h] at *` can rewrite both `hp` and `hr` even if `hq` has no
+matching occurrence. Rewriting the whole selected list only rewrites the first
+matching occurrence in that list.
+
 If the goal itself is selected, `cont` takes a second explicit argument for it.
-The body of the local `let` is opaque to `rewrite`, while the explicit arguments
-remain normal Lean expressions. After rewriting, reverting and unfolding `cont`
-restores a literal `Entails` target with the original hypothesis order and names.
-The final target is computed here at the meta level; we do not rely on `dsimp`
-to clean up `replacePredsAtIndices`.
+The body of the local `let` is opaque to `rewrite`, while the explicit argument
+for the current location remains a normal Lean expression. After rewriting,
+reverting and unfolding `cont` restores a literal `Entails` target with the
+original hypothesis order and names. The final target is computed here at the
+meta level; we do not rely on `dsimp` to clean up `replacePredsAtIndices`.
 
 `tla_simp` and `tla_dsimp` deliberately do not use this helper. They are
 implemented as direct `conv` visits to the selected expressions because
@@ -88,6 +95,8 @@ private def restorePartiallyHiddenGoals (contFVar : FVarId) : TacticM Unit := do
       pure g'
   setGoals gs'
 
+-- NOTE: This is an overkill for the current `tla_rewrite`, but might be useful
+-- in the future for other things? So just keep it for now.
 private def exposeSelectedLocations (hypsExpr goal : Expr)
     (hyps : List (String × Expr)) (loc : RewriteLocation) (mainGoal : MVarId) :
     TacticM (FVarId × MVarId) := do
@@ -115,23 +124,53 @@ private def exposeSelectedLocations (hypsExpr goal : Expr)
     g'.change newTarget
   return (contFVar, g'')
 
-/-- Expose the proof-mode locations selected by Lean's location syntax, run `k`,
-then restore all generated goals back from the local-`let` view to `Entails`.
-The continuation receives the parsed locations for rewrite-specific bookkeeping;
-this helper is intentionally private to `tla_rewrite`. -/
-private def withExposedLocations (loc? : Option (TSyntax ``Lean.Parser.Tactic.location))
-    (k : RewriteLocation → TacticM Unit) : TacticM Unit := do
+private inductive RewriteOneLocation where
+  | hyp (idx : Nat)
+  | goal
+
+private def exposeOneLocation (hypsExpr goal : Expr)
+    (hyps : List (String × Expr)) (loc : RewriteOneLocation) (mainGoal : MVarId) :
+    TacticM (FVarId × MVarId) := do
+  match loc with
+  | .hyp idx => exposeSelectedLocations hypsExpr goal hyps ⟨#[idx], false, true⟩ mainGoal
+  | .goal => exposeSelectedLocations hypsExpr goal hyps ⟨#[], true, true⟩ mainGoal
+
+/-- Expose one proof-mode location, run `k`, then restore all generated goals
+back from the local-`let` view to `Entails`. -/
+private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : TacticM Unit := do
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
   let_expr Entails _ hypsExpr goal := target
     | throwError "tla_rewrite: goal is not an Entails sequent, but {target}"
+  -- CHECK `recognizeEntailsHyps` is repetitively called. Will this be slow?
   let some (_, hyps) ← recognizeEntailsHyps target
     | throwError "tla_rewrite: failed to read the hypotheses from the goal"
-  let loc ← parseRewriteLocation hyps loc? "tla_rewrite"
-  let (contFVar, g') ← exposeSelectedLocations hypsExpr goal hyps loc g
+  let (contFVar, g') ← exposeOneLocation hypsExpr goal hyps loc g
   replaceMainGoal [g']
-  g'.withContext <| k loc
+  g'.withContext k
   restorePartiallyHiddenGoals contFVar
+
+private def rewriteAtProofModeLocations
+    (loc? : Option (TSyntax ``Lean.Parser.Tactic.location)) (k : TacticM Unit) : TacticM Unit := do
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal
+    | throwError "tla_rewrite: goal is not an Entails sequent"
+  let loc ← parseRewriteLocation hyps loc? "tla_rewrite"
+  if loc.isWildCard then
+    let mut worked := false
+    let ok ← tryTactic <| withMainContext <| withExposedLocation .goal k
+    worked := worked || ok
+    -- NOTE: In Lean's `rewrite`, local declarations are processed in the _reverse_ order,
+    -- but here we don't follow that, since there is no dependency between temporal hypotheses
+    for idx in loc.idxs do
+      let ok ← tryTactic <| withMainContext <| withExposedLocation (.hyp idx) k
+      worked := worked || ok
+    unless worked do
+      throwTacticEx `rewrite (← getMainGoal) "Did not find an occurrence of the pattern in the current goal"
+  else
+    for idx in loc.idxs do
+      withExposedLocation (.hyp idx) k
+    if loc.includeGoal then
+      withExposedLocation .goal k
 
 /--
 `tla_rewrite [rules]` rewrites predicates in a proof-mode goal or selected
@@ -150,12 +189,15 @@ tla_rewrite [heq] at hp
 tla_rewrite [← heq] at hp hq ⊢
 ```
 The first rewrites only `hp`; the second rewrites `hp`, `hq`, and the goal.
+With `at *`, each proof-mode hypothesis and the goal are considered separately;
+locations that do not contain a matching occurrence are skipped as in Lean's
+`rewrite`.
 -/
 syntax (name := tlaRewrite) "tla_rewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic
   | `(tactic| tla_rewrite $cfg:optConfig $rules:rwRuleSeq $[$loc]?) => do
-    withExposedLocations loc fun _ => do
+    rewriteAtProofModeLocations loc do
       evalTactic <| ← `(tactic| rewrite $cfg:optConfig $rules:rwRuleSeq)
 
 end TLA.ProofMode
