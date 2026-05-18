@@ -36,10 +36,35 @@ where
   hypPredConvPath (idx : Nat) : Array Nat :=
     [1] ++ List.replicate idx 2 ++ [1, 2] |>.toArray
 
+/--
+`tla_simp` simplifies predicates in a proof-mode goal or selected proof-mode
+hypotheses, using Lean's `simp` arguments.
+
+With no location, it simplifies the goal predicate. For example,
+```lean
+tla_simp [heq]
+```
+simplifies the goal using `heq`. With a location,
+```lean
+tla_simp [heq] at hp hq
+```
+simplifies only the temporal hypotheses `hp` and `hq`.
+-/
 syntax (name := tlaSimp) "tla_simp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
+/--
+`tla_dsimp` definitionally simplifies predicates in a proof-mode goal or
+selected proof-mode hypotheses, using Lean's `dsimp` arguments.
+
+For example, if `hp` has predicate `wrap p` and `wrap` unfolds to the identity,
+then
+```lean
+tla_dsimp [wrap] at hp
+```
+changes `hp` to have predicate `p`.
+-/
 syntax (name := tlaDsimp) "tla_dsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic

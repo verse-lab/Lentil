@@ -21,6 +21,21 @@ theorem Entails_intro_temporal {σ : Type u} {hyps : List (NamedPred σ)}
 
 private def introTacDSimps := #[``List.cons_append, ``List.nil_append]
 
+/--
+`tla_intro x₁ x₂ ...` introduces binders from the proof-mode goal.
+
+If the goal starts with a temporal implication `p → q`, then `tla_intro hp`
+adds `hp : p` to the proof-mode context and changes the goal to `q`.
+If the goal starts with a universal quantifier, the introduced name becomes a
+Lean local. If the goal starts with a pure implication `⌞P⌟ → q`, the introduced
+name is a Lean proof of `P`.
+
+Examples:
+```lean
+tla_intro hp    -- p → q  becomes  hp : p ⊢ q
+tla_intro n hp -- ∀ n, p n → q n  introduces `n`, then `hp`
+```
+-/
 syntax (name := tlaIntroTac) "tla_intro" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic

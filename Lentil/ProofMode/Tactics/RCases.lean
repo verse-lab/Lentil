@@ -132,6 +132,20 @@ partial def tlaRcasesCore (currentHypStr : String) (pat : TSyntax `rcasesPat) : 
   | _ =>
     throwError "tla_rcases: unsupported pattern (use ident, '_', or ⟨..⟩ tuples)"
 
+/--
+`tla_rcases h with pat` destructures a temporal hypothesis in the proof-mode
+context.
+
+If `h : p ∧ q`, then
+```lean
+tla_rcases h with ⟨hp, hq⟩
+```
+removes `h` and adds `hp : p` and `hq : q`. If `h : ∃ x, P x`, then
+```lean
+tla_rcases h with ⟨x, hx⟩
+```
+introduces a Lean witness `x` and a temporal hypothesis `hx : P x`.
+-/
 syntax (name := tlaRcasesTac) "tla_rcases" ident " with " rcasesPat : tactic
 
 elab_rules : tactic

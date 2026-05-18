@@ -49,6 +49,23 @@ private def getHypByIdx (idx : Nat) : TacticM Expr := do
     | throwError "tla_apply: failed to find the introduced theorem hypothesis"
   return pred
 
+/--
+`tla_apply t` proves the current proof-mode goal using a TLA theorem or a
+temporal hypothesis. If the theorem concludes the current goal but still has
+unsupplied temporal premises, those premises become new proof-mode goals.
+
+For example, if the context contains `hp : p` and the goal is `q`, then
+`tla_apply h hp` closes the goal when `h` proves `p |-tla- q`:
+```lean
+tla_apply lemma hp
+```
+
+If the goal is `r` and `lemma hp` has type `q |-tla- r`, then
+```lean
+tla_apply lemma hp
+```
+changes the goal to `q`.
+-/
 syntax (name := tlaApplyBackwardTac) "tla_apply " term : tactic
 
 elab_rules : tactic

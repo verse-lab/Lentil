@@ -45,6 +45,20 @@ private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
     ``List.modifyTailIdx.go, ``List.modifyHead]
 
+/--
+`tla_rename h => h'` renames a proof-mode temporal hypothesis. The predicate
+and the hypothesis position are unchanged.
+
+For example, if the context contains `hp : p`, then
+```lean
+tla_rename hp => hp'
+```
+changes the context entry to `hp' : p`. A numeric index can be used instead of
+a name:
+```lean
+tla_rename 0 => hHead
+```
+-/
 syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
 
 elab_rules : tactic

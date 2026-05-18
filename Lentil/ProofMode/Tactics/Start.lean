@@ -17,6 +17,18 @@ private def mkNamedPredListExpr (σ : Expr) (hyps : List (String × Expr)) : Met
   let elemTy ← mkAppM ``TLA.ProofMode.NamedPred #[σ]
   toHypsList elemTy hyps
 
+/--
+`tla_start h₁ h₂ ...` enters proof mode for a raw TLA sequent. It splits the
+left-hand side conjunction into named temporal hypotheses and keeps the right
+hand side as the proof-mode goal.
+
+For example, from a raw goal `(p ∧ q) |-tla- r`,
+```lean
+tla_start hp hq
+```
+changes the proof state to a proof-mode context with `hp : p`, `hq : q`, and
+goal `r`.
+-/
 syntax (name := tlaStartTac) "tla_start" (ppSpace colGt term:max)* : tactic
 
 elab_rules : tactic

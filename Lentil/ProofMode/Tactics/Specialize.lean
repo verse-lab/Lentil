@@ -209,6 +209,22 @@ where
     | .byName name => m!"tla_specialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
     | .byIdx idx => m!"tla_specialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"
 
+/--
+`tla_specialize h arg₁ arg₂ ...` specializes a proof-mode temporal hypothesis
+in place.
+
+If `h : ∀ n, P n`, then
+```lean
+tla_specialize h 0
+```
+changes `h` to `P 0`. If `h : p → q` and `hp : p` is a temporal hypothesis,
+then
+```lean
+tla_specialize h hp
+```
+changes `h` to `q` and keeps `hp` in the context. Numeric hypothesis indices
+may be used in place of names.
+-/
 syntax (name := tlaSpecializeTac) "tla_specialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
 
 elab_rules : tactic

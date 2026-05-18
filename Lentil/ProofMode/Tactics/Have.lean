@@ -141,8 +141,48 @@ where
 declare_syntax_cat tlaHaveClause
 syntax " : " tlafml " by " tacticSeq : tlaHaveClause
 syntax " := " term : tlaHaveClause
+/--
+`tla_have h : p by tac` adds a new temporal hypothesis `h : p` to the
+proof-mode context, after `tac` proves `p` from the current context.
+
+For example, if the current context can prove `p`, then
+```lean
+tla_have hp : p by
+  exact pred_implies_refl _
+```
+adds `hp : p` to the proof-mode context and returns to the original goal.
+
+`tla_have h := t` adds the temporal fact obtained from `t`. For example,
+```lean
+tla_have hq := lemma hp
+```
+adds the result of applying `lemma` to the temporal hypothesis `hp`.
+-/
 syntax (name := tlaHaveTac) "tla_have" (ppSpace colGt ident) tlaHaveClause : tactic
+/--
+`tla_have := t` adds the temporal fact obtained from `t` under the default
+proof-mode name `"this"`.
+
+For example,
+```lean
+tla_have := lemma hp
+```
+adds a new hypothesis named `this` containing the result of `lemma hp`.
+-/
 syntax (name := tlaHaveAnonTac) "tla_have" " := " term : tactic
+/--
+`tla_suffices h : p by tac` changes the main goal to proving `p`. The block
+`tac` must show that the original goal follows after adding `h : p` to the
+proof-mode context.
+
+For example,
+```lean
+tla_suffices h : p ∧ q by
+  tla_rcases h with ⟨hp, hq⟩
+```
+leaves the new main goal `p ∧ q`; inside the `by` block, the original goal is
+available with an extra temporal hypothesis `h : p ∧ q`.
+-/
 syntax (name := tlaSufficesTac) "tla_suffices" (ppSpace colGt ident) " : " tlafml " by " tacticSeq : tactic
 
 private def haveOrSufficesCommon (h : Ident) (fml : TSyntax `tlafml) : TacticM Unit := do

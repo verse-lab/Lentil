@@ -124,6 +124,25 @@ private def proofModeMonotone : TacticM Unit := withMainContext do
   let gs ← g.apply thm
   replaceMainGoal gs
 
+/--
+`tla_monotone` removes a common monotone temporal prefix from the proof-mode
+context and goal.
+
+For example, if every temporal hypothesis and the goal are prefixed by `□`, then
+```lean
+tla_monotone
+```
+turns a context such as `hp : □ p`, `hq : □ q` with goal `□ r` into
+`hp : p`, `hq : q` with goal `r`.
+
+It also supports `◯` and `◇□` over multiple hypotheses, and the single-hypothesis
+cases for `◇` and `□◇`. Outside proof mode it applies the corresponding raw
+monotonicity theorem:
+```lean
+tla_monotone
+```
+changes a raw goal `□ p |-tla- □ q` to `p |-tla- q`.
+-/
 syntax (name := tlaMonotoneTac) "tla_monotone" : tactic
 
 elab_rules : tactic

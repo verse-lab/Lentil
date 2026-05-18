@@ -58,6 +58,19 @@ private def restoreBinderNameInForallCase : TacticM Unit := do
     let g' ← g.replaceTargetDefEq ty
     replaceMainGoal [g']
 
+/--
+`tla_revert h₁ h₂ ...` moves assumptions back into the proof-mode goal.
+
+If `hp : p` is a temporal hypothesis and the current goal is `q`, then
+```lean
+tla_revert hp
+```
+removes `hp` from the proof-mode context and changes the goal to `p → q`.
+
+Lean locals can also be reverted: a proof `hP : P` becomes a pure implication
+`⌞P⌟ → q`, while a non-Prop local such as `n : Nat` becomes a universal
+quantifier in the goal.
+-/
 syntax (name := tlaRevertTac) "tla_revert" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic

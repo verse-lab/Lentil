@@ -133,6 +133,24 @@ private def withExposedLocations (loc? : Option (TSyntax ``Lean.Parser.Tactic.lo
   g'.withContext <| k loc
   restorePartiallyHiddenGoals contFVar
 
+/--
+`tla_rewrite [rules]` rewrites predicates in a proof-mode goal or selected
+proof-mode hypotheses.
+
+With no location, it rewrites the goal predicate. For example, if the goal is
+`q` and `heq : q = r`, then
+```lean
+tla_rewrite [heq]
+```
+changes the goal to `r`.
+
+Locations use Lean's location syntax, but refer to proof-mode hypotheses:
+```lean
+tla_rewrite [heq] at hp
+tla_rewrite [← heq] at hp hq ⊢
+```
+The first rewrites only `hp`; the second rewrites `hp`, `hq`, and the goal.
+-/
 syntax (name := tlaRewrite) "tla_rewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic

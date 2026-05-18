@@ -28,6 +28,17 @@ theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pre
 private def pullPureTacDSimps := #[``List.find?, ``List.eraseP, ``String.reduceBEq,
   ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
 
+/--
+`tla_pull_pure h₁ h₂ ...` moves pure temporal hypotheses into Lean's local
+context.
+
+For example, if the proof-mode context contains `hP : ⌞P⌟`, then
+```lean
+tla_pull_pure hP
+```
+removes `hP` from the temporal context and introduces a Lean local
+`hP : P`.
+-/
 syntax (name := tlaPullPureTac) "tla_pull_pure" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic
@@ -38,6 +49,16 @@ elab_rules : tactic
         refine $(mkIdent ``Entails_pull_pure) ($(quote nameStr)) (by rfl) ?_ ; intro $h:ident)
       postDSimpAfterApplyingReflectionTheorem pullPureTacDSimps
 
+/--
+`tla_prove_pure` proves a pure TLA entailment by reducing it to an ordinary Lean
+proposition.
+
+For example, on a goal whose temporal conclusion is `⌞P⌟`,
+```lean
+tla_prove_pure
+```
+changes the remaining obligation to the Lean proposition `P`.
+-/
 macro "tla_prove_pure" : tactic => `(tactic| refine $(mkIdent ``pred_implies_pure) ?_)
 
 end TLA.ProofMode

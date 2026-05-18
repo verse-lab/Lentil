@@ -16,6 +16,17 @@ theorem Entails_clear {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ
   letI hyps' := hyps.filter fun h => !toClear.contains h.name
   Entails hyps' goal → Entails hyps goal := Entails_drop_hyps _ (by grind)
 
+/--
+`tla_clear h₁ h₂ ...` removes temporal hypotheses from the proof-mode context.
+The target predicate is unchanged, but the remaining proof must not use the
+cleared hypotheses.
+
+For example, from a context containing `hp : p`, `hq : q`, and goal `q`,
+```lean
+tla_clear hp
+```
+leaves only `hq : q` in the proof-mode context.
+-/
 syntax (name := tlaClearTac) "tla_clear" (ppSpace colGt ident)+ : tactic
 
 private def clearTacDSimps := #[``List.filter, ``List.contains, ``List.elem, ``or, ``and, ``not,

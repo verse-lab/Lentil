@@ -8,6 +8,17 @@ theorem Entails_exists {σ : Type u} {hyps : List (NamedPred σ)}
     {α : Type v} {p : α → pred σ} (witness : α) :
     Entails hyps (p witness) → Entails hyps (TLA.tla_exists p) := exists_elim witness
 
+/--
+`tla_exists w₁, w₂, ...` supplies witnesses for existential quantifiers in the
+proof-mode goal.
+
+For example, if the goal is `∃ n : Nat, P n`, then
+```lean
+tla_exists 0
+```
+changes the goal to `P 0`. Multiple witnesses are applied from left to right,
+so `tla_exists n, m` handles a goal such as `∃ n, ∃ m, P n m`.
+-/
 syntax (name := tlaExistsTac) "tla_exists" (ppSpace colGt term),+ : tactic
 
 elab_rules : tactic
