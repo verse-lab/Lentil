@@ -45,6 +45,10 @@ theorem bigwedge_forall_fintype_list : (⋀ x ∈ l, (f x)) =tla= (∀ x : Fin l
   rw [bigwedge_forall_list]
   funext e ; tla_unfold_simp ; apply List.mem_forall_iff_fin_index
 
+omit f in
+theorem bigwedge_forall_swap {γ : Type w} (f : β → γ → pred α) : (∀ c : γ, (⋀ x ∈ l, (f x c))) =tla= (⋀ x ∈ l, ∀ c : γ, ((f x c))) := by
+  simp only [bigwedge_forall_fintype_list] ; apply TLA.forall_comm
+
 theorem bigwedge_inner_and_split : (⋀ x ∈ l, (f x) ∧ (g x)) =tla= ((⋀ x ∈ l, (f x)) ∧ (⋀ x ∈ l, (g x))) := by
   (repeat rw [bigwedge_forall_list]) ; funext e ; tla_unfold_simp ; aesop
 

@@ -71,6 +71,15 @@ theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   have htmp := List.Perm.map NamedPred.pred <| LentilLib.List.modify_perm h f
   simp at htmp ; intro p ; apply List.Perm.mem_iff ; exact htmp
 
+theorem repeatedAnd_map_comm {σ : Type u} (hyps : List (pred σ)) (f : pred σ → pred σ)
+  (htrue : tla_true = f tla_true)
+  (h : ∀ (p q : pred σ), tla_and (f p) (f q) = f (tla_and p q)) :
+  ((repeatedAnd (hyps.map f))) = (f (repeatedAnd hyps)) := by
+  simp [repeatedAnd_eq_bigwedge]
+  induction hyps with
+  | nil => simp [bigwedge_list_nil] ; exact htrue
+  | cons p hyps ih => simp [bigwedge_list_cons, ih] ; rw [h]
+
 def ModifyHypSpecWithIndex (hyps hyps' : List (NamedPred σ)) (f : NamedPred σ → NamedPred σ) (idx : Nat) :=
   hyps = hyps' ∨ (idx < hyps.length ∧ hyps' = hyps.modify idx f)
 

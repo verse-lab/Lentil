@@ -3,6 +3,7 @@ import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Exists
 import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Intro
+import Lentil.ProofMode.Tactics.Monotone
 import Lentil.ProofMode.Tactics.Normalize
 import Lentil.ProofMode.Tactics.PurePred
 import Lentil.ProofMode.Tactics.RCases
@@ -26,6 +27,8 @@ NOTE: On the soundness theorems corresponding to these tactics:
 - `specialize`: general logic of filling in the LHS of an implication
 - `have`/`suffices`: reducing to `specialize`
 - `apply`: reducing to `have` then `specialize`
+- `monotone`: distributing a supported modality over the proof-mode context,
+  then using the corresponding `_monotone` rule
 - `rewrite`: hide unselected proof-mode locations behind a local continuation,
   run Lean's `rewrite`, then reconstruct the `Entails` sequent
 - `simp`/`dsimp`: run Lean's simplifiers as direct `conv` visits to selected
