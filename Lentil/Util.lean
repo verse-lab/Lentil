@@ -24,6 +24,9 @@ register_simp_attr tlasimp_def
 /-- Marking the things to simplify when explicitly reasoning about `exec`. -/
 register_simp_attr execsimp
 
+/-- Marking the definitions unfolded by `tla_finite_window`. -/
+register_simp_attr tla_finite_window_def
+
 /-- Marking the theorems that can be simplify reasoning at the TLA level. -/
 register_simp_attr tlasimp
 

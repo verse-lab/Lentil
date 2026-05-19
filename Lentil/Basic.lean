@@ -57,6 +57,9 @@ def always {α : Type u} (p : pred α) : pred α := λ σ => ∀ k, p <| σ.drop
 def eventually {α : Type u} (p : pred α) : pred α := λ σ => ∃ k, p <| σ.drop k
 def later {α : Type u} (p : pred α) : pred α := λ σ => p <| σ.drop 1
 
+theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).length = k := by
+  simp [exec.take]
+
 theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by
   funext n ; simp [exec.drop] ; ac_rfl
 
