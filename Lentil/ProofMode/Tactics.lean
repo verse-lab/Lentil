@@ -1,4 +1,5 @@
 import Lentil.ProofMode.Tactics.Apply
+import Lentil.ProofMode.Tactics.Assumption
 import Lentil.ProofMode.Tactics.CheckGoalForm
 import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Exists
@@ -20,6 +21,7 @@ import Lentil.ProofMode.Tactics.Start
 NOTE: On the soundness theorems corresponding to these tactics:
 (not including `normalize` and `start`)
 - `clear`: simple inclusion reasoning
+- `assumption`: inclusion reasoning for a singleton sub-context
 - `exists`, `intro`: basically reducing to existing rules
 - `revert`: basically the inversion of `intro`
 - `pull_pure`: `revert` + `intro`
