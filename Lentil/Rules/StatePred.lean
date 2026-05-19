@@ -1,5 +1,5 @@
 import Lentil.Rules.WF
-import Lentil.Tactics.StateFinite
+import Lentil.Tactics.FiniteWindow
 
 /-! Theorems specialized for state predicates.
     Their premises are typically pure Lean propositions involving
@@ -21,10 +21,15 @@ theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Pro
     (hinit : ∀ s, init s → inv s)
     (hnext : ∀ s s', next s s' → inv s → inv s') :
   (⌜ init ⌝ ∧ □ ⟨next⟩) |-tla- (□ ⌜ inv ⌝) := by
+  have hstep : (⌜ inv ⌝ ∧ ⟨next⟩) |-tla- (◯ ⌜ inv ⌝) := by
+    tla_finite_window
+    aesop
   rw (occs := .pos [2]) [always_induction]
   rw [and_pred_implies_split] ; apply And.intro
-  · tla_nontemporal_simp ; aesop
-  · intro e ⟨_, hnext⟩ ; simp_finite_exec_goal ; aesop
+  · intro e ⟨hinit', _⟩
+    exact hinit _ hinit'
+  · intro e ⟨_, hnext'⟩ k hinv
+    exact hstep (e.drop k) ⟨hinv, hnext' k⟩
 /-
 set_option maxHeartbeats 800000 in
 /-- `wf1` with `p`, `q`, `init` and `inv` being state predicates. -/

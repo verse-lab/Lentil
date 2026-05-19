@@ -10,6 +10,3 @@ import «Lentil».ProofMode.Tactics
 import «Lentil».ProofMode.Display
 import «Lentil».Tactics.Basic
 import «Lentil».Tactics.FiniteWindow
-import «Lentil».Tactics.Modality
-import «Lentil».Tactics.Structural
-import «Lentil».Tactics.StateFinite

@@ -363,19 +363,6 @@ private def finiteWindowOf (p : Expr) : MetaM (Expr × Nat) := do
     | throwError "tla_finite_window: synthesized finite window did not reduce to a numeral: {win}"
   return (inst, n)
 
--- NOTE: This might be useful in other places?
-/-- Normalize a sequent goal into a validity goal, by definitional equality. -/
-private def changePredImpliesToValid : TacticM Unit := withMainContext do
-  let target ← getMainTarget
-  match_expr target.headBeta.cleanupAnnotations with
-  | TLA.pred_implies _ p q =>
-    let imp ← mkAppM ``TLA.tla_implies #[p, q]
-    let target' ← mkAppM ``TLA.valid #[imp]
-    let goal ← getMainGoal
-    replaceMainGoal [← goal.change target']
-  | _ =>
-    pure ()
-
 private def introFiniteStates (n : Nat) : TacticM Unit := do
   for idx in 0...n do
     discard <| introFresh (stateName idx)
