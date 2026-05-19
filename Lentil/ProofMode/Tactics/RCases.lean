@@ -6,42 +6,71 @@ namespace TLA.ProofMode
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
 
-theorem Entails_rcases_and {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-    (chosen name1 name2 : String) {a b : pred σ}
-    (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, tla_and a b⟩) :
-    letI hyps' := hyps.eraseP fun h => h.name == chosen
-    Entails (hyps' ++ [⟨name1, a⟩, ⟨name2, b⟩]) goal → Entails hyps goal := by
-  unfold Entails
-  simp only [List.map_append, repeatedAnd_append, ← impl_intro_add_r]
-  intro h
-  conv at h => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
-  apply Entails_revert (toRevert := chosen)
-  rw [hpred] ; dsimp only [Option.elim] ; exact h
-
 -- Not sure if this is generally useful, so just make it as a `private theorem` for now
 private theorem exists_put_witness_back {α : Type v} {p : α → pred σ} {Γ g : pred σ} :
   (∀ x, ((Γ) |-tla- ((p x) → g))) = ((Γ) |-tla- ((∃ x, (p x)) → g)) := by tla_unfold_simp ; grind
 
+section
+
+variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+
+section
+
+variable (name1 name2 : String) {a b : pred σ}
+
+theorem Entails_rcases_and_by_idx (idx : Nat)
+  (heq : hyps[idx]?.map NamedPred.pred = some (tla_and a b)) :
+  letI hyps' := hyps.eraseIdx idx
+  Entails (hyps' ++ [⟨name1, a⟩, ⟨name2, b⟩]) goal → Entails hyps goal := by
+  unfold Entails
+  simp only [List.map_append, repeatedAnd_append, ← impl_intro_add_r]
+  intro h
+  conv at h => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
+  apply Entails_revert_by_idx idx
+  simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
+  rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2] ; exact h
+
+theorem Entails_rcases_and_by_name (chosen : String) :
+  letI idx := hyps.findIdx fun h => h.name == chosen
+  (type_of% (@Entails_rcases_and_by_idx _ hyps goal name1 name2 a b idx)) :=
+  Entails_rcases_and_by_idx _ _ _
+
+end
+
+section
+
+variable (newName : String) {α : Type v} {p : α → pred σ}
+
 -- NOTE: This proof is slightly repetitive with the one above
-theorem Entails_rcases_exists {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-    (chosen : String) (newName : String)
-    {α : Type v} {p : α → pred σ}
-    (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, tla_exists p⟩) :
-    letI hyps' := hyps.eraseP fun h => h.name == chosen
-    (∀ x : α, Entails (hyps' ++ [⟨newName, p x⟩]) goal) → Entails hyps goal := by
+theorem Entails_rcases_exists_by_idx (idx : Nat)
+  (heq : hyps[idx]?.map NamedPred.pred = some (tla_exists p)) :
+  letI hyps' := hyps.eraseIdx idx
+  (∀ x : α, Entails (hyps' ++ [⟨newName, p x⟩]) goal) → Entails hyps goal := by
   unfold Entails
   simp only [List.map_append, repeatedAnd_append, ← impl_intro_add_r]
   intro h
   conv at h => enter [x, 2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
   rw [exists_put_witness_back] at h
-  apply Entails_revert (toRevert := chosen)
-  rw [hpred] ; dsimp only [Option.elim] ; exact h
+  apply Entails_revert_by_idx idx
+  simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
+  rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2] ; exact h
+
+theorem Entails_rcases_exists_by_name (chosen : String) :
+  letI idx := hyps.findIdx fun h => h.name == chosen
+  (type_of% (@Entails_rcases_exists_by_idx _ hyps goal newName _ p idx)) :=
+  Entails_rcases_exists_by_idx _ _
+
+end
+
+end
 
 private def rcasesTacDSimps : Array Name :=
-  #[``List.find?, ``List.eraseP, ``List.cons_append, ``List.nil_append,
+  #[``List.findIdx, ``List.findIdx.go, ``List.get?Internal,
+  ``List.eraseIdx, ``List.cons_append, ``List.nil_append,
   ``String.reduceBEq, ``String.reduceBNe,
   ``or, ``and, ``not, ``cond_true, ``cond_false]
 
+-- FIXME: The naming issue might be partially resolved by using indices?
 /-- Generate a name for the hyp slot consumed by this pattern: idents land their
     own name; `_` and tuples get fresh hygienic names that may be re-targeted on
     the recursive call. -/
@@ -90,22 +119,24 @@ private def splitBinaryRightAssoc (pats : Array (TSyntax ``Lean.Parser.Tactic.rc
     let tup ← `(rcasesPat| ⟨ $[$restArr],* ⟩)
     return (← unwrapPatLo p1, tup)
 
-partial def tlaRcasesCore (currentHypStr : String) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+partial def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+  -- FIXME: This handling also appears in the implementation of `tla_specialize`,
+  -- so maybe reuse it?
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_rcases: failed to read the hypotheses from the goal"
+  let (currentHypStr, pred) ← findByTemporalHypLoc hyps currentHyp "tla_rcases" "the goal's Entails list"
   match pat with
   | `(rcasesPat| $name:ident) =>
     let nameStr := toString name.getId
     -- Essentially renaming
     if nameStr != currentHypStr then
-      let hypIdent := mkIdent (.mkSimple currentHypStr)
-      evalTactic <| ← `(tactic| tla_rename $hypIdent:ident => $name:ident)
+      let currentHypStx ← quoteTemporalHypLoc currentHyp
+      evalTactic <| ← `(tactic| tla_rename $currentHypStx:temporalHypLoc => $name:ident)
   | `(rcasesPat| _) =>
     -- FIXME: This is not very good, since the generated names are not readable.
     -- A better design should be to only support `-` at the tail positions.
     pure ()
   | `(rcasesPat| ⟨ $pats,* ⟩) =>
     let (pat1, pat2) ← splitBinaryRightAssoc pats.getElems
-    let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_rcases: failed to read the hypotheses from the goal"
-    let some (_, pred) := hyps.find? (fun ⟨n, _⟩ => n == currentHypStr) | throwError "tla_rcases: hypothesis '{currentHypStr}' not found in the goal's Entails list"
     match_expr pred with
     | TLA.tla_and _ _ _ =>
       let n1Str ← nameStrForPat pat1
@@ -113,20 +144,19 @@ partial def tlaRcasesCore (currentHypStr : String) (pat : TSyntax `rcasesPat) : 
       -- Inline `hpred := by rfl` so Lean can pin down the implicit `a, b` at
       -- the time `refine` is elaborated (they don't otherwise appear in the
       -- visible conclusion).
-      evalTactic <| ← `(tactic|
-        refine $(mkIdent ``Entails_rcases_and)
-          ($(quote currentHypStr)) ($(quote n1Str)) ($(quote n2Str)) (by rfl) ?_)
+      let thm := if currentHyp matches .byName .. then ``Entails_rcases_and_by_name else ``Entails_rcases_and_by_idx
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote n1Str)) ($(quote n2Str))
+          ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
-      if isTuple pat1 then tlaRcasesCore n1Str pat1
-      if isTuple pat2 then tlaRcasesCore n2Str pat2
+      if isTuple pat1 then tlaRcasesCore (.byName n1Str) pat1
+      if isTuple pat2 then tlaRcasesCore (.byName n2Str) pat2
     | TLA.tla_exists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
-      evalTactic <| ← `(tactic|
-        refine $(mkIdent ``Entails_rcases_exists)
-          ($(quote currentHypStr)) ($(quote nInnerStr)) (by rfl) ?_)
-      evalTactic <| ← `(tactic| rintro $pat1)
+      let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote nInnerStr))
+          ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_ ; rintro $pat1)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
-      if isTuple pat2 then tlaRcasesCore nInnerStr pat2
+      if isTuple pat2 then tlaRcasesCore (.byName nInnerStr) pat2
     | _ =>
       throwError "tla_rcases: cannot destructure pred {pred} with pattern {pat}"
   | _ =>
@@ -145,11 +175,52 @@ removes `h` and adds `hp : p` and `hq : q`. If `h : ∃ x, P x`, then
 tla_rcases h with ⟨x, hx⟩
 ```
 introduces a Lean witness `x` and a temporal hypothesis `hx : P x`.
+A numeric index can be used instead of a name:
+```lean
+tla_rcases 0 with ⟨hp, hq⟩
+```
 -/
-syntax (name := tlaRcasesTac) "tla_rcases" ident " with " rcasesPat : tactic
+syntax (name := tlaRcasesTac) "tla_rcases" temporalHypLoc " with " rcasesPat : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rcases $hyp:ident with $pat) => withMainContext do
-    tlaRcasesCore (toString hyp.getId) pat
+  | `(tactic| tla_rcases $hyp:temporalHypLoc with $pat) => withMainContext do
+    let hyp ← parseTemporalHypLoc hyp "tla_rcases: invalid syntax for hypothesis position"
+    tlaRcasesCore hyp pat
+
+/--
+`tla_rintro pat₁ pat₂ ...` introduces proof-mode goal binders like
+`tla_intro`, but each introduced item may be immediately destructured.
+
+For Lean binders and pure antecedents, the pattern is handled by Lean's
+`rintro`. For a temporal implication, the antecedent is introduced as a new
+temporal hypothesis and then destructured by `tla_rcases`.
+
+For example, if the goal is `(p ∧ q) → r`, then
+```lean
+tla_rintro ⟨hp, hq⟩
+```
+adds `hp : p` and `hq : q` to the proof-mode context and changes the goal to
+`r`. If the goal is `∀ x, P x`, then
+```lean
+tla_rintro x
+```
+introduces `x` as a Lean local and changes the goal to `P x`.
+-/
+syntax (name := tlaRintroTac) "tla_rintro" (ppSpace colGt rintroPat)+ : tactic
+
+elab_rules : tactic
+  | `(tactic| tla_rintro%$tk $[$pats:rintroPat]*) => do
+    let tacNonTemporal (pat : TSyntax `rintroPat) : TacticM (TSyntax `tactic) := `(tactic| rintro $pat:rintroPat)
+    for pat in pats, i in 0...* do
+      let ctxRef := if i == 0 then Lean.mkNullNode #[tk, pat] else pat
+      withTacticInfoContext ctxRef <| withRef pat do
+        let isTemporal? ← tlaIntroCoreStep `rintroPat pat "tla_rintro" tacNonTemporal
+        if isTemporal? then
+          -- FIXME: This "getting the last index" also appears frequently ...
+          let some hypCount ← goalHypsLength
+            | throwError "tla_rintro: failed to read the hypotheses after temporal introduction"
+          match pat with
+          | `(rintroPat| $pat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) pat
+          | _ => throwError "tla_rintro: unsupported pattern (only rcasesPat is supported for `tla_rintro` temporal hypotheses)"
 
 end TLA.ProofMode

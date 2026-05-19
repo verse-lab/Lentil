@@ -15,17 +15,19 @@ open Lean Meta Elab Tactic
     `Entails Γ (⌞q⌟ → goal)` to a Lean-level `q → Entails Γ goal`). Inlining
     the composition here keeps the proof term short. -/
 theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-    (toPull : String) {q : Prop}
-    (hfound : hyps.find? (fun h => h.name == toPull) = some ⟨toPull, [tlafml| ⌞ q ⌟]⟩) :
-    letI hyps' := hyps.eraseP fun h => h.name == toPull
-    (q → Entails hyps' goal) → Entails hyps goal := by
-  intro hh
-  apply Entails_revert (toRevert := toPull)
-  rw [hfound] ; dsimp only [Option.elim]
+  (toPull : String) {q : Prop} :
+  letI idx := hyps.findIdx fun h => h.name == toPull
+  letI hyps' := hyps.eraseIdx idx
+  hyps[idx]?.map NamedPred.pred = some [tlafml| ⌞ q ⌟] →
+  (q → Entails hyps' goal) → Entails hyps goal := by
+  intro heq hh
+  apply Entails_revert_by_name (toRevert := toPull)
+  simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
+  rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
   rw [← Entails_pure_fact_intro]
   exact hh
 
-private def pullPureTacDSimps := #[``List.find?, ``List.eraseP, ``String.reduceBEq,
+private def pullPureTacDSimps := #[``List.findIdx, ``List.findIdx.go, ``List.eraseIdx, ``String.reduceBEq,
   ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
 
 /--

@@ -67,7 +67,7 @@ elab_rules : tactic
     let thm := if old matches .byName .. then ``Entails_rename_by_name else ``Entails_rename_by_idx
     let newStr := toString new.getId
     evalTactic <| ← `(tactic|
-      refine ($(mkIdent thm) ($(quoteTemporalHypLoc old)) ($(quote newStr))).$(mkIdent `mp) ?_)
+      refine ($(mkIdent thm) ($(quoteTemporalHypLocToTerm old)) ($(quote newStr))).$(mkIdent `mp) ?_)
     postDSimpAfterApplyingReflectionTheorem renameTacDSimps
 
 end TLA.ProofMode

@@ -1,6 +1,3 @@
-import Lentil.Rules.Basic
-import Lentil.ProofMode.Basic
-import Lentil.ProofMode.Tactics.Apply
 import Lentil.ProofMode.Tactics.Intro
 
 namespace TLA.ProofMode
@@ -29,23 +26,35 @@ theorem Entails_revert_forall {σ : Type u} {hyps : List (NamedPred σ)}
   {α : Type v} {p : α → pred σ} (n : String) :
   Entails hyps (TLA.tla_forall (binderNameHintAsString n p)) → (∀ x, Entails hyps (p x)) := forall_elim.mpr
 
-theorem Entails_revert {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
-  (toRevert : String) :
-  -- NOTE: Still, linear complexity, but should be fine?
-  letI rev := hyps.find? fun h => h.name == toRevert
-  letI hyps' := hyps.eraseP fun h => h.name == toRevert
+section
+
+variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+
+theorem Entails_revert_by_idx (idx : Nat) :
+  -- NOTE: `get?Internal` should be only for internal use, but it's easier
+  -- to reduce, so use it instead of `getElem?`
+  letI rev := hyps.get?Internal idx
+  letI hyps' := hyps.eraseIdx idx
   letI goal' := rev.elim goal fun r => [tlafml| (r.pred) → goal]
   Entails hyps' goal' → Entails hyps goal := by
-  rcases h : (List.find? (fun h ↦ h.name == toRevert) hyps) with _ | r <;> rw [h] <;> dsimp
-  · rw [List.eraseP_of_forall_not]
-    · exact id
-    · simp at h ⊢ ; exact h
-  · replace h := List.mem_of_find?_eq_some h
+  rw [List.get?Internal_eq_getElem?]
+  rcases h : hyps[idx]? with _ | r <;> dsimp
+  · simp at h ; simp [List.eraseIdx_of_length_le h]
+  · replace h := List.mem_of_getElem? h
     rw [← Entails_intro_temporal r.name]
     refine pred_implies_trans ?_
-    apply repeatedAnd_subset_implies ; grind
+    apply repeatedAnd_subset_implies
+    grind [List.mem_of_mem_eraseIdx]
 
-private def revertTacDSimps := #[``List.find?, ``List.eraseP, ``String.reduceBEq,
+theorem Entails_revert_by_name (toRevert : String) :
+  -- NOTE: Still, linear complexity, but should be fine?
+  letI idx := hyps.findIdx fun h => h.name == toRevert
+  (type_of% (@Entails_revert_by_idx _ hyps goal idx)) := Entails_revert_by_idx _
+
+end
+
+private def revertTacDSimps := #[``List.findIdx, ``List.findIdx.go,
+  ``List.get?Internal, ``List.eraseIdx, ``String.reduceBEq,
   ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
 
 private def restoreBinderNameInForallCase : TacticM Unit := do
@@ -73,6 +82,8 @@ quantifier in the goal.
 -/
 syntax (name := tlaRevertTac) "tla_revert" (ppSpace colGt ident)+ : tactic
 
+-- FIXME: Better error message? Since the current semantics is if the target is missing,
+-- then do nothing
 elab_rules : tactic
   | `(tactic| tla_revert $[$names:ident]*) => do
     -- Revert in reverse order so that the resulting nested implication mirrors
@@ -93,7 +104,7 @@ elab_rules : tactic
         | none =>
           let nameStr := toString name.getId
           evalTactic <| ← `(tactic|
-            refine $(mkIdent ``Entails_revert) ($(quote nameStr)) ?_)
+            refine $(mkIdent ``Entails_revert_by_name) ($(quote nameStr)) ?_)
           postDSimpAfterApplyingReflectionTheorem revertTacDSimps
 
 end TLA.ProofMode

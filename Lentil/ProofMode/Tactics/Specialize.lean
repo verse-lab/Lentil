@@ -176,16 +176,16 @@ def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Uni
   -- FIXME: Repetitively running `recognizeEntailsHypsFromGoal` and `find?` on it
   -- might be slow in some extreme cases?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_specialize: failed to read the hypotheses from the goal"
-  let some (_, pred) := findByTemporalHypLoc hyps pos | throwError (specializeTargetMissingMsg pos)
+  let (_, pred) ← findByTemporalHypLoc hyps pos "tla_specialize" "the goal's Entails list"
   match_expr pred with
   | TLA.tla_forall _ _ _ =>
     let thm := if pos matches .byName .. then ``Entails_specialize_forall_by_name else ``Entails_specialize_forall_by_idx
-    evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
+    evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
   | TLA.tla_implies _ lhs _ =>
     if lhs.isAppOfArity' ``TLA.pure_pred 2 then
       -- Treat `arg` as a Lean term
       let thm := if pos matches .byName .. then ``Entails_specialize_pure_by_name else ``Entails_specialize_pure_by_idx
-      evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
     else
       let premises ← match arg with
         | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
@@ -198,13 +198,10 @@ def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Uni
         unless hyps.any (fun ⟨name, _⟩ => name == premise) do
           throwError "tla_specialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
       let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
-      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLoc pos)) (by rfl) ?_)
+      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
   | _ => throwError (specializeTargetBadShapeMsg pred pos)
   postDSimpAfterApplyingReflectionTheorem specializeTacDSimps
 where
-  specializeTargetMissingMsg : TemporalHypLoc → MessageData
-    | .byName name => m!"tla_specialize: hypothesis '{name}' not found in the goal's Entails list"
-    | .byIdx idx => m!"tla_specialize: hypothesis index {idx} not found in the goal's Entails list"
   specializeTargetBadShapeMsg (pred : Expr) : TemporalHypLoc → MessageData
     | .byName name => m!"tla_specialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
     | .byIdx idx => m!"tla_specialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"

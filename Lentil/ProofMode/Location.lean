@@ -19,13 +19,25 @@ def parseTemporalHypLoc (pos : Syntax) (errorMsg : MessageData) : TacticM Tempor
   | `(term| $num:num) | `(temporalHypLoc| $num:num) => pure <| .byIdx <| num.getNat
   | _ => throwError errorMsg
 
-def quoteTemporalHypLoc : TemporalHypLoc → TSyntax `term
+def quoteTemporalHypLoc : TemporalHypLoc → TacticM (TSyntax ``temporalHypLoc)
+  | .byName name => `(temporalHypLoc| $(mkIdent (.mkSimple name)):ident)
+  | .byIdx idx => `(temporalHypLoc| $(Syntax.mkNatLit idx):num)
+
+def quoteTemporalHypLocToTerm : TemporalHypLoc → TSyntax `term
   | .byName name => quote name
   | .byIdx idx => quote idx
 
-def findByTemporalHypLoc (xs : List (String × α)) : TemporalHypLoc → Option (String × α)
+def findByTemporalHypLoc? (xs : List (String × α)) : TemporalHypLoc → Option (String × α)
   | .byName name => xs.find? fun x => x.1 == name
   | .byIdx idx => xs[idx]?
+
+def findByTemporalHypLoc [Monad m] [MonadError m] (xs : List (String × α)) (loc : TemporalHypLoc)  (errorMsgPrefix errorMsgSuffix : String) : m (String × α) := do
+  match findByTemporalHypLoc? xs loc with
+  | some res => pure res
+  | none =>
+    match loc with
+    | .byName name => throwError m!"{errorMsgPrefix}: hypothesis '{name}' not found in {errorMsgSuffix}"
+    | .byIdx idx => throwError m!"{errorMsgPrefix}: hypothesis index {idx} not found in {errorMsgSuffix}"
 
 /-- Locations for `rewrite`/`simp`-like tactics. -/
 structure RewriteLocation where
