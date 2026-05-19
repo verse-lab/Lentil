@@ -22,6 +22,7 @@ theorem Entails_intro_temporal {σ : Type u} {hyps : List (NamedPred σ)}
 private def introTacDSimps := #[``List.cons_append, ``List.nil_append]
 
 def tlaIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
+  (ident? : TSyntax k → TacticM (Option Ident))
   (errorMsgPrefix : String) (tacIntroNonTemporalHyp : TSyntax k → TacticM (TSyntax `tactic))
   -- (tacIntroTemporalHyp : TSyntax k → TacticM Unit)
   : TacticM Bool := withMainContext do
@@ -42,9 +43,9 @@ def tlaIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
         refine $(mkIdent ``Entails_pure_fact_intro).$(mkIdent `mp) ?_ ; $tac)
       return false
     else
-      let nameStr :=
-        let nm := name.raw.getId
-        if nm == Name.anonymous then "h" else toString nm
+      let nameStr := match ← ident? name with
+        | some nm => toString nm.getId
+        | none => "h"
       evalTactic <| ← `(tactic|
         refine ($(mkIdent ``Entails_intro_temporal) ($(quote nameStr))).$(mkIdent `mp) ?_)
       postDSimpAfterApplyingReflectionTheorem introTacDSimps
@@ -78,6 +79,6 @@ elab_rules : tactic
     for name in names, i in 0...* do
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, name] else name
       withTacticInfoContext ctxRef <| withRef name <|
-        discard <| tlaIntroCoreStep `ident name "tla_intro" tacNonTemporal
+        discard <| tlaIntroCoreStep `ident name (fun x => pure (some x)) "tla_intro" tacNonTemporal
 
 end TLA.ProofMode

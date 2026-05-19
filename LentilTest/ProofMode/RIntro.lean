@@ -46,10 +46,10 @@ example (P : Nat → pred σ) :
 
 -- Mixed introductions proceed from left to right.
 example (P : Nat → pred σ) :
-    (⊤) |-tla- (∀ n : Nat, (((P n) ∧ q) → (P n))) := by
+    (⊤) |-tla- (∀ n : Nat, (((P n) ∧ q) → r → (P n))) := by
   tla_start
-  tla_rintro n ⟨hp, hq⟩
-  show Entails [⟨"hp", P n⟩, ⟨"hq", q⟩] (P n)
+  tla_rintro n ⟨hp, hq⟩ hr
+  show Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
   intro _ ⟨hp, _⟩ ; exact hp
 
 -- Numeric `tla_rcases` targets the chosen proof-mode hypothesis, even when

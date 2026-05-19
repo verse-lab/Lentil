@@ -211,10 +211,14 @@ syntax (name := tlaRintroTac) "tla_rintro" (ppSpace colGt rintroPat)+ : tactic
 elab_rules : tactic
   | `(tactic| tla_rintro%$tk $[$pats:rintroPat]*) => do
     let tacNonTemporal (pat : TSyntax `rintroPat) : TacticM (TSyntax `tactic) := `(tactic| rintro $pat:rintroPat)
+    let rintroPatIdent? (pat : TSyntax `rintroPat) : TacticM (Option Ident) := do
+      match pat with
+      | `(rintroPat| $name:ident) => return some name
+      | _ => return none
     for pat in pats, i in 0...* do
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, pat] else pat
       withTacticInfoContext ctxRef <| withRef pat do
-        let isTemporal? ← tlaIntroCoreStep `rintroPat pat "tla_rintro" tacNonTemporal
+        let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "tla_rintro" tacNonTemporal
         if isTemporal? then
           -- FIXME: This "getting the last index" also appears frequently ...
           let some hypCount ← goalHypsLength
