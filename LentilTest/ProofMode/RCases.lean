@@ -17,7 +17,7 @@ namespace TLA.ProofMode.Test.RCases
 
 open TLA TLA.ProofMode
 
-variable {σ : Type u} (a b c : pred σ)
+variable {σ : Type u} (a b c d e : pred σ)
 
 /-! ## And destructure -/
 
@@ -127,6 +127,90 @@ example : (a) |-tla- (a) := by
   show Entails [⟨"h'", a⟩] a
   exact pred_implies_refl _
 
+/-! ## Or destructure -/
+
+-- Single level: `tla_rcases hab with (ha | hb)` on `hab : a ∨ b` splits into
+-- two subgoals.
+example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (a ∨ b) := by
+  tla_start ha0
+  tla_have hab := lem ha0
+  tla_clear ha0
+  tla_rcases hab with (ha | hb)
+  · tla_check_goal_form
+    show Entails [⟨"ha", a⟩] (TLA.tla_or a b)
+    intro _ ha ; exact Or.inl ha
+  · tla_check_goal_form
+    show Entails [⟨"hb", b⟩] (TLA.tla_or a b)
+    intro _ hb ; exact Or.inr hb
+
+-- N-ary alternation on a right-associated chain: `(ha | hb | hc)` on
+-- `h : a ∨ b ∨ c` produces three subgoals.
+example (lem : (a) |-tla- (a ∨ b ∨ c)) : (a) |-tla- (a ∨ b ∨ c) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with (ha | hb | hc)
+  · intro _ ha ; exact Or.inl ha
+  · intro _ hb ; exact Or.inr (Or.inl hb)
+  · intro _ hc ; exact Or.inr (Or.inr hc)
+
+-- Alternation nested inside a tuple: `⟨ha, hb | hc⟩` on `h : a ∧ (b ∨ c)`.
+-- The conjunct `ha` is retained in both branches.
+example (lem : (a) |-tla- (a ∧ (b ∨ c))) : (a) |-tla- (a) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with ⟨ha, hb | hc⟩
+  · intro _ ⟨ha, _⟩ ; exact ha
+  · intro _ ⟨ha, _⟩ ; exact ha
+
+-- Alternation crossing a sibling: `⟨ha | hb, hc⟩` on `h : (a ∨ b) ∧ c`. The
+-- split happens in the first slot, yet `hc` must reach both branches.
+example (lem : (a) |-tla- ((a ∨ b) ∧ c)) : (a) |-tla- (c) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with ⟨ha | hb, hc⟩
+  · intro _ ⟨hc, _⟩ ; exact hc
+  · intro _ ⟨hc, _⟩ ; exact hc
+
+-- Deep nest: both tuple slots case-split. The explicit bullets pin the goal
+-- count at exactly four.
+example (lem : (a) |-tla- ((a ∨ b) ∧ (c ∨ d))) : (a) |-tla- (⊤) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with ⟨ha | hb, hc | hd⟩
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+
+-- Deeper nest: an outer or-split whose first branch is the deep nest above and
+-- whose second branch is a plain hypothesis. Five bullets pin the goal count.
+example (lem : (a) |-tla- (((a ∨ b) ∧ (c ∨ d)) ∨ e)) : (a) |-tla- (⊤) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with (⟨ha | hb, hc | hd⟩ | he)
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+
+-- Mixed and/or/exists nest: an existential whose body is an `or` of an `and`.
+-- Two bullets: the `and` branch and the plain branch.
+example (A B C : Nat → pred σ)
+    (lem : (a) |-tla- (∃ n : Nat, (((A n) ∧ (B n)) ∨ (C n)))) :
+    (a) |-tla- (⊤) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with ⟨n, (⟨ha, hb⟩ | hc)⟩
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+
 /-! ## Errors -/
 
 -- Pred head is neither `tla_and` nor `tla_exists`.
@@ -138,16 +222,14 @@ example : (a) |-tla- (a) := by
   tla_start h
   tla_rcases h with ⟨ha, hb⟩
 
--- Alternation `|` is rejected.
+-- Alternation on a pred that is not a `tla_or`.
 /--
-error: tla_rcases: alternation '|' is not supported
+error: tla_rcases: cannot case-split pred a with alternation (ha | hb)
 -/
 #guard_msgs in
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
-  tla_start ha0
-  tla_have hab := lem ha0
-  tla_clear ha0
-  tla_rcases hab with ⟨p | q, hb⟩
+example : (a) |-tla- (a) := by
+  tla_start h
+  tla_rcases h with (ha | hb)
 
 -- Reference to a hypothesis not in the Entails list.
 /--

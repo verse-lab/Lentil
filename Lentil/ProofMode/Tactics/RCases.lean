@@ -35,6 +35,29 @@ theorem Entails_rcases_and_by_name (chosen : String) :
   (type_of% (@Entails_rcases_and_by_idx _ hyps goal name1 name2 a b idx)) :=
   Entails_rcases_and_by_idx _ _ _
 
+-- NOTE: This proof is slightly repetitive with `Entails_rcases_and_by_idx`, but
+-- here the hypothesis is `tla_or`, so the destructure splits into two subgoals.
+theorem Entails_rcases_or_by_idx (idx : Nat)
+  (heq : hyps[idx]?.map NamedPred.pred = some (tla_or a b)) :
+  letI hyps' := hyps.eraseIdx idx
+  Entails (hyps' ++ [⟨name1, a⟩]) goal → Entails (hyps' ++ [⟨name2, b⟩]) goal →
+  Entails hyps goal := by
+  unfold Entails
+  simp only [List.map_append, repeatedAnd_append, ← impl_intro_add_r]
+  intro h1 h2
+  conv at h1 => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
+  conv at h2 => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
+  apply Entails_revert_by_idx idx
+  simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
+  rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
+  -- Oh
+  intro e hΓ hab ; exact TLA.or_elim e hab (h1 e hΓ) (h2 e hΓ)
+
+theorem Entails_rcases_or_by_name (chosen : String) :
+  letI idx := hyps.findIdx fun h => h.name == chosen
+  (type_of% (@Entails_rcases_or_by_idx _ hyps goal name1 name2 a b idx)) :=
+  Entails_rcases_or_by_idx _ _ _
+
 end
 
 section
@@ -82,8 +105,9 @@ private def nameStrForPat (pat : TSyntax `rcasesPat) : TacticM String := do
     -- Use something that cannot be a valid identifier to avoid accidental collision
     return "-" ++ toString freshName
 
-/-- Unwrap a `rcasesPatLo` to its underlying single `rcasesPat`, rejecting `|`
-    alternations and `: ty` ascriptions. -/
+/-- Unwrap a `rcasesPatLo` to a single `rcasesPat`, rejecting `: ty` ascriptions.
+    A genuine `|` alternation is re-wrapped as a parenthesized `rcasesPat`, so it
+    can be carried uniformly and later recognized by `asAlternation?`. -/
 private def unwrapPatLo (p : TSyntax ``Lean.Parser.Tactic.rcasesPatLo) : TacticM (TSyntax `rcasesPat) := do
   match p with
   | `(rcasesPatLo| $_:rcasesPatMed : $_:term) =>
@@ -92,16 +116,26 @@ private def unwrapPatLo (p : TSyntax ``Lean.Parser.Tactic.rcasesPatLo) : TacticM
     match med with
     | `(rcasesPatMed| $ps:rcasesPat|*) =>
       let elems := ps.getElems
-      if elems.size == 1 then return elems[0]!
-      else throwError "tla_rcases: alternation '|' is not supported"
+      if elems.size == 0 then throwError "tla_rcases: empty pattern"
+      else if elems.size == 1 then return elems[0]!
+      else `(rcasesPat| ( $med:rcasesPatMed ))
     | _ => throwError "tla_rcases: unexpected rcasesPatMed shape"
   | _ => throwError "tla_rcases: unexpected rcasesPatLo shape"
 
-/-- Are we facing a tuple pattern that needs another recursion? -/
-private def isTuple (pat : TSyntax `rcasesPat) : Bool :=
+/-- If `pat` is a parenthesized alternation `(p₁ | p₂ | …)` with at least two
+    branches, return its branches; otherwise `none`. -/
+private def asAlternation? (pat : TSyntax `rcasesPat) : Option (Array (TSyntax `rcasesPat)) :=
   match pat with
-  | `(rcasesPat| ⟨ $_,* ⟩) => true
-  | _ => false
+  | `(rcasesPat| ( $lo:rcasesPatLo )) =>
+    match lo with
+    | `(rcasesPatLo| $med:rcasesPatMed) =>
+      match med with
+      | `(rcasesPatMed| $ps:rcasesPat|*) =>
+        let elems := ps.getElems
+        if elems.size ≥ 2 then some elems else none
+      | _ => none
+    | _ => none
+  | _ => none
 
 -- FIXME: There is some back and forth conversion of `List` and `Array`, and ideally
 -- the list of patterns should only be processed once. They should be refactored
@@ -119,7 +153,27 @@ private def splitBinaryRightAssoc (pats : Array (TSyntax ``Lean.Parser.Tactic.rc
     let tup ← `(rcasesPat| ⟨ $[$restArr],* ⟩)
     return (← unwrapPatLo p1, tup)
 
-partial def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+/-- Split alternation branches into (head, tail) with right-associative wrapping
+    for n > 2: `[b₁, b₂, …, bₙ]` becomes `(b₁, (b₂ | … | bₙ))`. -/
+private def splitAltRightAssoc (branches : Array (TSyntax `rcasesPat))
+    : TacticM (TSyntax `rcasesPat × TSyntax `rcasesPat) := do
+  match branches.toList with
+  | [] | [_] => throwError "tla_rcases: alternation needs at least two branches"
+  | [b1, b2] => return (b1, b2)
+  | b1 :: rest =>
+    let restArr := rest.toArray
+    let tail ← `(rcasesPat| ( $[$restArr]|* ))
+    return (b1, tail)
+
+mutual
+
+/-- Destructure the proof-mode hypothesis at `currentHyp` against `pat`.
+    Precondition: the goal list is exactly one goal — every caller runs it
+    through `Tactic.run`, which guarantees this.
+
+    A tuple `⟨..⟩` destructures `tla_and` / `tla_exists`; a parenthesized
+    alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
+partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
   -- FIXME: This handling also appears in the implementation of `tla_specialize`,
   -- so maybe reuse it?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_rcases: failed to read the hypotheses from the goal"
@@ -148,19 +202,63 @@ partial def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPa
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote n1Str)) ($(quote n2Str))
           ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
-      if isTuple pat1 then tlaRcasesCore (.byName n1Str) pat1
-      if isTuple pat2 then tlaRcasesCore (.byName n2Str) pat2
+      -- The `refine` left a single goal; `pat1` may case-split it, so `pat2`
+      -- must then be applied to every goal `pat1` produced.
+      tlaRcasesCoreFocused (.byName n1Str) pat1
+      tlaRcasesCoreAllGoals (.byName n2Str) pat2
     | TLA.tla_exists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
       let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote nInnerStr))
           ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_ ; rintro $pat1)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
-      if isTuple pat2 then tlaRcasesCore (.byName nInnerStr) pat2
+      tlaRcasesCoreAllGoals (.byName nInnerStr) pat2
     | _ =>
       throwError "tla_rcases: cannot destructure pred {pred} with pattern {pat}"
   | _ =>
-    throwError "tla_rcases: unsupported pattern (use ident, '_', or ⟨..⟩ tuples)"
+    match asAlternation? pat with
+    | some branches =>
+      let (pat1, pat2) ← splitAltRightAssoc branches
+      match_expr pred with
+      | TLA.tla_or _ _ _ =>
+        let n1Str ← nameStrForPat pat1
+        let n2Str ← nameStrForPat pat2
+        let thm := if currentHyp matches .byName .. then ``Entails_rcases_or_by_name else ``Entails_rcases_or_by_idx
+        evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote n1Str)) ($(quote n2Str))
+            ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_ ?_)
+        postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
+        -- We started focused on one goal, so `refine ?_ ?_` left exactly two:
+        -- the `a`-branch and the `b`-branch. Recurse into each.
+        match ← getGoals with
+        | [g1, g2] =>
+          let g1s ← Tactic.run g1 (tlaRcasesCoreFocused (.byName n1Str) pat1)
+          let g2s ← Tactic.run g2 (tlaRcasesCoreFocused (.byName n2Str) pat2)
+          setGoals (g1s ++ g2s)
+        | _ => throwError "tla_rcases: expected exactly two subgoals after the or-split"
+      | _ =>
+        throwError "tla_rcases: cannot case-split pred {pred} with alternation {pat}"
+    | none =>
+      throwError "tla_rcases: unsupported pattern (use ident, '_', ⟨..⟩ tuples, or | alternations)"
+
+/-- Run `tlaRcasesCoreFocused` on every current goal, collecting all resulting
+    goals. Needed because an or-split multiplies goals, and sibling or
+    subsequent patterns must then be applied to each of them. -/
+partial def tlaRcasesCoreAllGoals (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+  let perGoal ← (← getGoals).mapM fun g => Tactic.run g (tlaRcasesCoreFocused currentHyp pat)
+  setGoals perGoal.flatten
+
+end
+
+/-- Destructure the proof-mode hypothesis at `currentHyp` against `pat`, acting
+    on the main goal and leaving any other goals untouched. This is the entry
+    point; the recursive work happens in `tlaRcasesCoreFocused`. -/
+def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+  -- CHECK Does this focusing pattern appear in the Lean code base?
+  let g ← getMainGoal
+  let others := (← getGoals).eraseP (· == g)
+  -- `Tactic.run` executes `tlaRcasesCoreFocused` with `g` as the sole goal, so
+  -- its internal `getGoals` only ever sees goals derived from `g`.
+  setGoals ((← Tactic.run g (tlaRcasesCoreFocused currentHyp pat)) ++ others)
 
 /--
 `tla_rcases h with pat` destructures a temporal hypothesis in the proof-mode
@@ -174,8 +272,13 @@ removes `h` and adds `hp : p` and `hq : q`. If `h : ∃ x, P x`, then
 ```lean
 tla_rcases h with ⟨x, hx⟩
 ```
-introduces a Lean witness `x` and a temporal hypothesis `hx : P x`.
-A numeric index can be used instead of a name:
+introduces a Lean witness `x` and a temporal hypothesis `hx : P x`. If
+`h : p ∨ q`, then
+```lean
+tla_rcases h with (hp | hq)
+```
+case-splits into two subgoals, with `hp : p` in the first and `hq : q` in the
+second. A numeric index can be used instead of a name:
 ```lean
 tla_rcases 0 with ⟨hp, hq⟩
 ```
@@ -185,6 +288,7 @@ syntax (name := tlaRcasesTac) "tla_rcases" temporalHypLoc " with " rcasesPat : t
 elab_rules : tactic
   | `(tactic| tla_rcases $hyp:temporalHypLoc with $pat) => withMainContext do
     let hyp ← parseTemporalHypLoc hyp "tla_rcases: invalid syntax for hypothesis position"
+    -- `tlaRcasesCore` already acts only on the main goal.
     tlaRcasesCore hyp pat
 
 /--
@@ -204,7 +308,12 @@ adds `hp : p` and `hq : q` to the proof-mode context and changes the goal to
 ```lean
 tla_rintro x
 ```
-introduces `x` as a Lean local and changes the goal to `P x`.
+introduces `x` as a Lean local and changes the goal to `P x`. A temporal
+antecedent `p ∨ q` can be case-split with a parenthesized alternation:
+```lean
+tla_rintro (hp | hq)
+```
+introduces the antecedent and splits into two subgoals.
 -/
 syntax (name := tlaRintroTac) "tla_rintro" (ppSpace colGt rintroPat)+ : tactic
 
@@ -215,16 +324,27 @@ elab_rules : tactic
       match pat with
       | `(rintroPat| $name:ident) => return some name
       | _ => return none
+    -- Introduce/destructure a single pattern on the current (single) main goal.
+    let stepOne (pat : TSyntax `rintroPat) : TacticM Unit := do
+      let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "tla_rintro" tacNonTemporal
+      if isTemporal? then
+        -- FIXME: This "getting the last index" also appears frequently ...
+        let some hypCount ← goalHypsLength
+          | throwError "tla_rintro: failed to read the hypotheses after temporal introduction"
+        match pat with
+        | `(rintroPat| $rpat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) rpat
+        | _ => throwError "tla_rintro: unsupported pattern (only rcasesPat is supported for `tla_rintro` temporal hypotheses)"
+    -- Focus the main goal; a case-splitting pattern multiplies goals.
+    let mainGoal ← getMainGoal
+    let rest := (← getGoals).eraseP (· == mainGoal)
+    setGoals [mainGoal]
     for pat in pats, i in 0...* do
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, pat] else pat
       withTacticInfoContext ctxRef <| withRef pat do
-        let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "tla_rintro" tacNonTemporal
-        if isTemporal? then
-          -- FIXME: This "getting the last index" also appears frequently ...
-          let some hypCount ← goalHypsLength
-            | throwError "tla_rintro: failed to read the hypotheses after temporal introduction"
-          match pat with
-          | `(rintroPat| $pat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) pat
-          | _ => throwError "tla_rintro: unsupported pattern (only rcasesPat is supported for `tla_rintro` temporal hypotheses)"
+        -- A previous pattern may have case-split the goal; apply this one to
+        -- each of the resulting goals.
+        let perGoal ← (← getGoals).mapM fun g => Tactic.run g (stepOne pat)
+        setGoals perGoal.flatten
+    setGoals ((← getGoals) ++ rest)
 
 end TLA.ProofMode

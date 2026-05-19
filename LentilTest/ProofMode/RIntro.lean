@@ -6,7 +6,7 @@ namespace TLA.ProofMode.Test.RIntro
 
 open TLA TLA.ProofMode
 
-variable {σ : Type u} (p q r : pred σ)
+variable {σ : Type u} (p q r s : pred σ)
 
 -- For universal quantifiers, `tla_rintro` behaves like Lean's `rintro`.
 example (P : Nat → pred σ) :
@@ -62,5 +62,30 @@ example (lem1 : (p) |-tla- (p ∧ q)) (lem2 : (p) |-tla- (q ∧ r)) :
   tla_rcases 2 with ⟨hq, hr⟩
   show Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   intro _ ⟨_, _, hq, _⟩ ; exact hq
+
+-- A temporal antecedent `q ∨ r` is case-split with a parenthesized
+-- alternation; the later pattern `hs` is introduced into both subgoals.
+example : (p) |-tla- ((q ∨ r) → s → (q ∨ r)) := by
+  tla_start hp
+  tla_rintro (hq | hr) hs
+  · intro _ ⟨_, hq, _⟩ ; exact Or.inl hq
+  · intro _ ⟨_, hr, _⟩ ; exact Or.inr hr
+
+-- A later tuple pattern is destructured in both case-split subgoals.
+example : (p) |-tla- ((q ∨ r) → (q ∧ r) → q) := by
+  tla_start hp
+  tla_rintro (hq | hr) ⟨hc, hd⟩
+  · intro _ ⟨_, _, hc, _⟩ ; exact hc
+  · intro _ ⟨_, _, hc, _⟩ ; exact hc
+
+-- Two successive case-splitting patterns: the second must fan out over both
+-- subgoals produced by the first. Four bullets pin the goal count.
+example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
+  tla_start hp
+  tla_rintro (hq1 | hr1) (hq2 | hr2)
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
+  · intro _ _ ; exact True.intro
 
 end TLA.ProofMode.Test.RIntro
