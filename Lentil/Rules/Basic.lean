@@ -23,6 +23,7 @@ open Classical LentilLib
   or_or_distrib_right or_rotate or_comm or_assoc
 #tla_lift Or.inl => TLA.or_inl
 #tla_lift Or.inr => TLA.or_inr
+#tla_lift Or.elim => TLA.or_elim
 
 -- distributive laws
 #tla_lift and_or_left or_and_right or_and_left and_or_right
@@ -41,10 +42,16 @@ open Classical LentilLib
   Decidable.not_imp_self Decidable.or_iff_not_imp_left
   Decidable.imp_iff_or_not Decidable.not_and_not_right
   Decidable.or_iff_not_not_and_not Decidable.and_iff_not_not_or_not
+#tla_lift Decidable.em => TLA.excluded_middle
 #tla_lift Decidable.not_and_iff_not_or_not => TLA.not_and
 #tla_lift Decidable.imp_iff_not_or => TLA.implies_to_or
 #tla_lift Decidable.not_imp_iff_and_not => TLA.not_implies_to_and
 #tla_lift Decidable.not_imp_not => TLA.contraposition_for_tla_implies
+
+#tla_lift LentilLib.Nat.find_min => TLA.find_min by {
+  intro σ p n e
+  apply LentilLib.Nat.find_min (p := fun n => p n e)
+}
 
 namespace TLA
 

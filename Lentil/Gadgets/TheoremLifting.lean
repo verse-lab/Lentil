@@ -162,7 +162,8 @@ partial def convertTheoremStatement (thmStmt : Expr) (uName : Name) : MetaM (Lif
           let thmStmt' ← mkAppM ``TLA.valid #[body'] >>= mkForallFVars (Array.append #[σ] ys)
           pure (LiftingCase.Other, thmStmt')
 
-partial def liftTheorem (thmName : Name) (liftedThmName : Option Name) : MetaM Unit := do
+partial def liftTheorem (thmName : Name) (liftedThmName : Option Name)
+  (tactic? : Option (TSyntax `term)) : MetaM Unit := do
   let info ← getConstInfo thmName
   let ty := info.type
   let lvlParams := info.levelParams
@@ -184,32 +185,37 @@ partial def liftTheorem (thmName : Name) (liftedThmName : Option Name) : MetaM U
     | apply $(mkIdent thmName) ))   -- if not using `_root_.` then this may apply the theorem being proved!
   match lcase with
   | LiftingCase.Iff =>
+    let defaultTac ← `(term| by intros ; funext $e ; apply $(mkIdent ``propext) ; $finalTac )
     simpleProveTheorem newThmName (uName :: lvlParams) ty'
-      (← `(term| by intros ; funext $e ; apply $(mkIdent ``propext) ; $finalTac )) noncomputable?
+      (tactic?.getD defaultTac) noncomputable?
   | LiftingCase.Other =>
+    let defaultTac ← `(term| by intros ; (try intro $e:ident) ; $finalTac )
     simpleProveTheorem newThmName (uName :: lvlParams) ty'
-      (← `(term| by intros ; (try intro $e:ident) ; $finalTac )) noncomputable?
+      (tactic?.getD defaultTac) noncomputable?
 
 end TLA.Lifting
 
-open Lean Elab Term in
 /-- `#tla_lift thm₁ ... thmₙ` lifts (typically purely first-order) theorems
     `thm₁`, ... ,`thmₙ` to the temporal logic level. Each new theorem will
     have the prefix `TLA.` and the same suffix as before.
 
     For example, after executing ```#tla_lift Decidable.not_not```,
     there will be a new theorem named `TLA.not_not` in the environment. -/
-elab "#tla_lift" idts:ident+ : command => Command.liftTermElabM do
-  for idt in idts do
-    -- FIXME: this approach prevents using shorter names after `open`, since it does not use `elabTerm`?
-    let nm := idt.getId
-    addTermInfo' idt (← Lean.mkConstWithLevelParams nm)
-    TLA.Lifting.liftTheorem nm none
-
-open Lean Elab Term in
+syntax (name := tlaLiftTac) "#tla_lift" ident+ : command
 /-- `#tla_lift thm => newthm` behaves like `#tla_lift`, but only lifts
     one theorem, while naming the new theorem as `newthm`. -/
-elab "#tla_lift" idt:ident "=>" nm:ident : command => Command.liftTermElabM do
-  addTermInfo' idt (← Lean.mkConstWithLevelParams idt.getId)
-  TLA.Lifting.liftTheorem idt.getId <| some nm.getId
-  addTermInfo' nm (← Lean.mkConstWithLevelParams nm.getId)
+syntax (name := tlaLiftSingleTac) "#tla_lift" ident ("=>" ident)? ("by" tactic)? : command
+
+open Lean Elab Term in
+elab_rules : command
+  | `(command| #tla_lift $idts:ident* ) => Command.liftTermElabM do
+    for idt in idts do
+      -- FIXME: this approach prevents using shorter names after `open`, since it does not use `elabTerm`?
+      let nm := idt.getId
+      addTermInfo' idt (← Lean.mkConstWithLevelParams nm)
+      TLA.Lifting.liftTheorem nm none none
+  | `(command| #tla_lift $idt:ident $[=> $nm:ident]? $[by $tac:tactic]?) => Command.liftTermElabM do
+    addTermInfo' idt (← Lean.mkConstWithLevelParams idt.getId)
+    TLA.Lifting.liftTheorem idt.getId (nm.map (·.getId)) (← tac.mapM fun tac => `(term| by $tac:tactic ))
+    if let some nm := nm then
+      addTermInfo' nm (← Lean.mkConstWithLevelParams nm.getId)
