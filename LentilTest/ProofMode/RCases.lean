@@ -27,6 +27,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tla_have hab := lem ha0
   tla_clear ha0
   tla_rcases hab with ⟨ha, hb⟩
+  tla_check_goal_form
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
@@ -36,6 +37,7 @@ example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
   tla_have h := lem ha0
   tla_clear ha0
   tla_rcases h with ⟨ha, hb, hc⟩
+  tla_check_goal_form
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
 
@@ -46,6 +48,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
   tla_have hab := lem ha0
   tla_clear ha0
   tla_rcases hab with ⟨_, hb⟩
+  tla_check_goal_form
   intro _ ⟨_, hb⟩ ; exact hb
 
 /-! ## Exists destructure -/
@@ -55,6 +58,7 @@ example (P : Nat → pred σ) :
     (∃ n : Nat, (P n)) |-tla- (∃ n : Nat, (P n)) := by
   tla_start hex
   tla_rcases hex with ⟨n, hp⟩
+  tla_check_goal_form
   show Entails [⟨"hp", P n⟩] (TLA.tla_exists P)
   intro e hp
   exact ⟨n, hp⟩
@@ -64,6 +68,7 @@ example (P : Nat → Nat → pred σ) :
     (∃ x : Nat, (∃ y : Nat, (P x y))) |-tla- (∃ x : Nat, (∃ y : Nat, (P x y))) := by
   tla_start h
   tla_rcases h with ⟨x, y, hp⟩
+  tla_check_goal_form
   show Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
   intro e hp
   exact ⟨x, y, hp⟩
@@ -75,6 +80,7 @@ example (PA PB : Nat → pred σ) :
     (∃ n : Nat, ((PA n) ∧ (PB n))) |-tla- (∃ n : Nat, (PA n)) := by
   tla_start h
   tla_rcases h with ⟨n, ⟨ha, hb⟩⟩
+  tla_check_goal_form
   show Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
   intro e ⟨ha, _⟩
   exact ⟨n, ha⟩

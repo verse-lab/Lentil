@@ -19,6 +19,7 @@ example (Q : Prop) (lem : Q → (a) |-tla- (a)) :
     (a ∧ ⌞ Q ⌟) |-tla- (a) := by
   tla_start ha hQ
   tla_pull_pure hQ
+  tla_check_goal_form
   -- `hQ : Q` is now in the Lean ctx; the temporal list dropped its `⟨"hQ", ⌞Q⌟⟩`.
   show Entails [⟨"ha", a⟩] a
   exact lem hQ
@@ -28,6 +29,7 @@ example (Q : Prop) :
     (a ∧ ⌞ Q ⌟ ∧ b) |-tla- (a) := by
   tla_start ha hQ hb
   tla_pull_pure hQ
+  tla_check_goal_form
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
@@ -36,6 +38,7 @@ example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
     (a ∧ ⌞ Q ⌟) |-tla- (b) := by
   tla_start ha hQ
   tla_pull_pure hQ
+  tla_check_goal_form
   tla_apply (lem hQ)
   show Entails [⟨"ha", a⟩] a
   exact pred_implies_refl _
@@ -45,7 +48,9 @@ example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
     (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tla- (a) := by
   tla_start ha hQ hR
   tla_pull_pure hQ
+  tla_check_goal_form
   tla_pull_pure hR
+  tla_check_goal_form
   show Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
@@ -54,6 +59,7 @@ example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
     (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tla- (a) := by
   tla_start ha hQ hR
   tla_pull_pure hQ hR
+  tla_check_goal_form
   show Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 

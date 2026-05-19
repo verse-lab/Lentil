@@ -27,6 +27,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tla_start hp hq
   tla_revert hp
+  tla_check_goal_form
   show Entails [⟨"hq", q⟩] [tlafml| p → q]
   intro e hq _ ; exact hq
 
@@ -35,6 +36,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tla_start hp hq
   tla_revert hp
+  tla_check_goal_form
   tla_intro hp
   show Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
   intro e ⟨hq, _⟩ ; exact hq
@@ -45,6 +47,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tla_start hp hq
   tla_revert hp hq
+  tla_check_goal_form
   show Entails [] [tlafml| p → q → q]
   intro e _ _ hq ; exact hq
 
@@ -54,6 +57,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
   tla_start hp hq hr
   tla_revert hq
+  tla_check_goal_form
   show Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
   intro e ⟨_, hr⟩ _ ; exact hr
 
