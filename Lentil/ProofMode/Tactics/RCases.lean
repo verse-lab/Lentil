@@ -168,8 +168,8 @@ private def splitAltRightAssoc (branches : Array (TSyntax `rcasesPat))
 mutual
 
 /-- Destructure the proof-mode hypothesis at `currentHyp` against `pat`.
-    Precondition: the goal list is exactly one goal — every caller runs it
-    through `Tactic.run`, which guarantees this.
+    Precondition: the goal list contains exactly one goal — every caller
+    enforces this by running through `focus` or `Tactic.run`.
 
     A tuple `⟨..⟩` destructures `tla_and` / `tla_exists`; a parenthesized
     alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
@@ -252,13 +252,8 @@ end
 /-- Destructure the proof-mode hypothesis at `currentHyp` against `pat`, acting
     on the main goal and leaving any other goals untouched. This is the entry
     point; the recursive work happens in `tlaRcasesCoreFocused`. -/
-def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
-  -- CHECK Does this focusing pattern appear in the Lean code base?
-  let g ← getMainGoal
-  let others := (← getGoals).eraseP (· == g)
-  -- `Tactic.run` executes `tlaRcasesCoreFocused` with `g` as the sole goal, so
-  -- its internal `getGoals` only ever sees goals derived from `g`.
-  setGoals ((← Tactic.run g (tlaRcasesCoreFocused currentHyp pat)) ++ others)
+def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit :=
+  focus (tlaRcasesCoreFocused currentHyp pat)
 
 /--
 `tla_rcases h with pat` destructures a temporal hypothesis in the proof-mode
@@ -334,17 +329,15 @@ elab_rules : tactic
         match pat with
         | `(rintroPat| $rpat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) rpat
         | _ => throwError "tla_rintro: unsupported pattern (only rcasesPat is supported for `tla_rintro` temporal hypotheses)"
-    -- Focus the main goal; a case-splitting pattern multiplies goals.
-    let mainGoal ← getMainGoal
-    let rest := (← getGoals).eraseP (· == mainGoal)
-    setGoals [mainGoal]
-    for pat in pats, i in 0...* do
-      let ctxRef := if i == 0 then Lean.mkNullNode #[tk, pat] else pat
-      withTacticInfoContext ctxRef <| withRef pat do
-        -- A previous pattern may have case-split the goal; apply this one to
-        -- each of the resulting goals.
-        let perGoal ← (← getGoals).mapM fun g => Tactic.run g (stepOne pat)
-        setGoals perGoal.flatten
-    setGoals ((← getGoals) ++ rest)
+    -- Focus the main goal; a case-splitting pattern multiplies goals, and
+    -- `focus` merges any resulting subgoals back ahead of the others.
+    focus do
+      for pat in pats, i in 0...* do
+        let ctxRef := if i == 0 then Lean.mkNullNode #[tk, pat] else pat
+        withTacticInfoContext ctxRef <| withRef pat do
+          -- A previous pattern may have case-split the goal; apply this one to
+          -- each of the resulting goals.
+          let perGoal ← (← getGoals).mapM fun g => Tactic.run g (stepOne pat)
+          setGoals perGoal.flatten
 
 end TLA.ProofMode
