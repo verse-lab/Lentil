@@ -24,14 +24,14 @@ set_option linter.unusedVariables false in
 example : (p) |-tla- (∀ n : Nat, (p)) := by
   tla_start hp
   tla_intro n
-  show Entails [⟨"hp", p⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- Intro a pure-predicate antecedent (`⌞q⌟ → …`).
 example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
   tla_start hp
   tla_intro hQ
-  show Entails [⟨"hp", p⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- The introduced pure fact lands as a Lean hypothesis usable in subsequent
@@ -39,7 +39,7 @@ example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
 example (Q : Prop) (h : Q → (p) |-tla- (q)) : (p) |-tla- (⌞ Q ⌟ → (q)) := by
   tla_start hp
   tla_intro hQ
-  show Entails [⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩] q
   exact h hQ
 
 -- Mixed sequence: ∀, then ⌞..⌟→, then ∀ again. Starting from `⊤` on the
@@ -52,7 +52,7 @@ example (P : Nat → Nat → pred σ) :
   intro h
   tla_start
   tla_intro x hxx y
-  show Entails [] (P x y)
+  tla_check_goal Entails [] (P x y)
   intro e _
   exact h e True.intro x hxx y
 
@@ -63,7 +63,7 @@ example (P : Nat → Nat → pred σ) :
   intro h
   tla_start
   tla_intro x y
-  show Entails [] (P x y)
+  tla_check_goal Entails [] (P x y)
   intro e _
   exact h e True.intro x y
 
@@ -89,7 +89,7 @@ example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
   intro h
   tla_start hp
   tla_intro hp'
-  show Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
   intro e ⟨_, hp'⟩
   exact h e hp' hp'
 
@@ -98,7 +98,7 @@ example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
 example : (⊤) |-tla- (p → q → p) := by
   tla_start
   tla_intro hp hq
-  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
   intro _ ⟨hp, _⟩ ; exact hp
 
 -- Mixed: temporal intro followed by ∀-intro and pure-intro.
@@ -108,7 +108,7 @@ example (P : Nat → pred σ) :
   intro h
   tla_start
   tla_intro hp n heq
-  show Entails [⟨"hp", p⟩] (P n)
+  tla_check_goal Entails [⟨"hp", p⟩] (P n)
   intro e hp
   exact h e True.intro hp n heq
 

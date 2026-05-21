@@ -21,7 +21,7 @@ example (Q : Prop) (lem : Q → (a) |-tla- (a)) :
   tla_pull_pure hQ
   tla_check_goal_form
   -- `hQ : Q` is now in the Lean ctx; the temporal list dropped its `⟨"hQ", ⌞Q⌟⟩`.
-  show Entails [⟨"ha", a⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩] a
   exact lem hQ
 
 -- Pull from the middle of the list — the rest of the order is preserved.
@@ -30,7 +30,7 @@ example (Q : Prop) :
   tla_start ha hQ hb
   tla_pull_pure hQ
   tla_check_goal_form
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- Pull and then use the pulled fact in subsequent reasoning.
@@ -40,7 +40,7 @@ example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
   tla_pull_pure hQ
   tla_check_goal_form
   tla_apply (lem hQ)
-  show Entails [⟨"ha", a⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩] a
   exact pred_implies_refl _
 
 -- Multiple pure facts can be pulled in sequence.
@@ -51,7 +51,7 @@ example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
   tla_check_goal_form
   tla_pull_pure hR
   tla_check_goal_form
-  show Entails [⟨"ha", a⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
 -- Multiple pure facts in one invocation (space-separated, like `tla_clear`).
@@ -60,7 +60,7 @@ example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
   tla_start ha hQ hR
   tla_pull_pure hQ hR
   tla_check_goal_form
-  show Entails [⟨"ha", a⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
 end TLA.ProofMode.Test.PurePred

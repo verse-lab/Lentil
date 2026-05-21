@@ -93,7 +93,7 @@ example : (p) |-tla- (q) → (p) |-tla- (q) := by
 example : |-tla- (p → q ∧ r → p) := by
   tla_normalize
   tla_start hp hq hr
-  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] p
   intro _ ⟨hp, _, _⟩ ; exact hp
 
 end TLA.ProofMode.Test.Normalize

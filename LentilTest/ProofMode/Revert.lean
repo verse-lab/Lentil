@@ -28,7 +28,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   tla_start hp hq
   tla_revert hp
   tla_check_goal_form
-  show Entails [⟨"hq", q⟩] [tlafml| p → q]
+  tla_check_goal Entails [⟨"hq", q⟩] [tlafml| p → q]
   intro e hq _ ; exact hq
 
 -- Reverting then re-introducing should round-trip back to the same shape.
@@ -38,7 +38,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   tla_revert hp
   tla_check_goal_form
   tla_intro hp
-  show Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
   intro e ⟨hq, _⟩ ; exact hq
 
 -- Revert multiple temporal hypotheses; the leftmost name ends up as the
@@ -48,7 +48,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   tla_start hp hq
   tla_revert hp hq
   tla_check_goal_form
-  show Entails [] [tlafml| p → q → q]
+  tla_check_goal Entails [] [tlafml| p → q → q]
   intro e _ _ hq ; exact hq
 
 -- Reverting a temporal hyp from the *middle* of the list filters it cleanly
@@ -58,7 +58,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   tla_start hp hq hr
   tla_revert hq
   tla_check_goal_form
-  show Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
   intro e ⟨_, hr⟩ _ ; exact hr
 
 /-! ## ∀-revert (Lean-local non-Prop var) -/
@@ -70,7 +70,7 @@ example (P : Nat → pred σ) :
   tla_start
   tla_intro n
   tla_revert n
-  show Entails [] (TLA.tla_forall P)
+  tla_check_goal Entails [] (TLA.tla_forall P)
   exact h
 
 -- Round-trip: intro then revert should be a no-op (up to displayed shape).
@@ -91,7 +91,7 @@ example (Q : Prop) :
   tla_start
   tla_intro hQ
   tla_revert hQ
-  show Entails [] [tlafml| ⌞ Q ⌟ → p]
+  tla_check_goal Entails [] [tlafml| ⌞ Q ⌟ → p]
   exact h
 
 /-! ## Mixed sequence -/

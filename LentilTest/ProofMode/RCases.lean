@@ -28,7 +28,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tla_clear ha0
   tla_rcases hab with ⟨ha, hb⟩
   tla_check_goal_form
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- N-ary tuple on a right-associated chain: `⟨ha, hb, hc⟩` on `h : a ∧ b ∧ c`.
@@ -38,7 +38,7 @@ example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
   tla_clear ha0
   tla_rcases h with ⟨ha, hb, hc⟩
   tla_check_goal_form
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
 
 -- Wildcard sub-pattern: `⟨_, hb⟩` names only the right half (the left half
@@ -59,7 +59,7 @@ example (P : Nat → pred σ) :
   tla_start hex
   tla_rcases hex with ⟨n, hp⟩
   tla_check_goal_form
-  show Entails [⟨"hp", P n⟩] (TLA.tla_exists P)
+  tla_check_goal Entails [⟨"hp", P n⟩] (TLA.tla_exists P)
   intro e hp
   exact ⟨n, hp⟩
 
@@ -69,7 +69,7 @@ example (P : Nat → Nat → pred σ) :
   tla_start h
   tla_rcases h with ⟨x, y, hp⟩
   tla_check_goal_form
-  show Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
+  tla_check_goal Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
   intro e hp
   exact ⟨x, y, hp⟩
 
@@ -81,7 +81,7 @@ example (PA PB : Nat → pred σ) :
   tla_start h
   tla_rcases h with ⟨n, ⟨ha, hb⟩⟩
   tla_check_goal_form
-  show Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
+  tla_check_goal Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
   intro e ⟨ha, _⟩
   exact ⟨n, ha⟩
 
@@ -94,7 +94,7 @@ example (P : Fin 3 → pred σ) :
   tla_rcases h with ⟨⟨v, hlt⟩, hp⟩
   -- After the destructure: `v : Nat`, `hlt : v < 3` in the Lean ctx,
   -- and the temporal hyp is `hp : P ⟨v, hlt⟩`.
-  show Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlafml| ∃ i : Fin 3, (P i)]
+  tla_check_goal Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlafml| ∃ i : Fin 3, (P i)]
   intro e hp
   exact ⟨⟨v, hlt⟩, hp⟩
 
@@ -104,7 +104,7 @@ example (P : {n : Nat // n > 0} → pred σ) :
   tla_start h
   tla_rcases h with ⟨⟨n, hpos⟩, hp⟩
   -- `n : Nat`, `hpos : n > 0`, hyp `hp : P ⟨n, hpos⟩`.
-  show Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlafml| ∃ x : {n : Nat // n > 0}, (P x)]
+  tla_check_goal Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlafml| ∃ x : {n : Nat // n > 0}, (P x)]
   intro e hp
   exact ⟨⟨n, hpos⟩, hp⟩
 
@@ -124,7 +124,7 @@ example (P : Nat → pred σ) :
 example : (a) |-tla- (a) := by
   tla_start h
   tla_rcases h with h'
-  show Entails [⟨"h'", a⟩] a
+  tla_check_goal Entails [⟨"h'", a⟩] a
   exact pred_implies_refl _
 
 /-! ## Or destructure -/
@@ -137,10 +137,10 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (a ∨ b) := by
   tla_clear ha0
   tla_rcases hab with (ha | hb)
   · tla_check_goal_form
-    show Entails [⟨"ha", a⟩] (TLA.tla_or a b)
+    tla_check_goal Entails [⟨"ha", a⟩] (TLA.tla_or a b)
     intro _ ha ; exact Or.inl ha
   · tla_check_goal_form
-    show Entails [⟨"hb", b⟩] (TLA.tla_or a b)
+    tla_check_goal Entails [⟨"hb", b⟩] (TLA.tla_or a b)
     intro _ hb ; exact Or.inr hb
 
 -- N-ary alternation on a right-associated chain: `(ha | hb | hc)` on

@@ -12,14 +12,14 @@ variable {σ : Type u} (p q r : pred σ)
 example (lem : (q) |-tla- (r)) (h : (p) |-tla- (q)) : (p) |-tla- (r) := by
   tla_start hp
   tla_apply lem
-  show Entails [⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩] q
   exact h
 
 -- Direct application also accepts a valid implication theorem.
 example (lem : |-tla- (p → q)) : (p) |-tla- (q) := by
   tla_start hp
   tla_apply lem
-  show Entails [⟨"hp", p⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- Mixed application: a proof-mode hypothesis can be supplied as an argument.
@@ -34,7 +34,7 @@ example (lem : (p) |-tla- (q)) : (p) |-tla- (q) := by
 example (lem : ∀ _ : Nat, (p) |-tla- (q)) : (p) |-tla- (q) := by
   tla_start hp
   tla_apply lem 0
-  show Entails [⟨"hp", p⟩] p
+  tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- Once a Lean argument has exposed the theorem, temporal arguments are handled
@@ -52,7 +52,7 @@ example (lem : |-tla- (p → q → r)) : (p ∧ q) |-tla- (r) := by
 example (lem : |-tla- (p → q → s → r)) : (p ∧ q ∧ s) |-tla- (r) := by
   tla_start hp hq hs
   tla_apply lem hp
-  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hs", s⟩] [tlafml| q ∧ s]
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hs", s⟩] [tlafml| q ∧ s]
   intro _ ⟨_, hq⟩ ; exact hq
 
 -- Tuple arguments are flattened into the selected temporal premises.

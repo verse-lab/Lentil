@@ -15,7 +15,7 @@ example (P : Nat → pred σ) :
   intro h
   tla_start
   tla_rintro n
-  show Entails [] (P n)
+  tla_check_goal Entails [] (P n)
   intro e _
   exact h e True.intro n
 
@@ -24,7 +24,7 @@ example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
     (p) |-tla- (⌞ Q ∧ R ⌟ → q) := by
   tla_start hp
   tla_rintro ⟨hQ, hR⟩
-  show Entails [⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩] q
   exact h hQ hR
 
 -- Temporal antecedents are introduced as proof-mode hypotheses and then
@@ -32,7 +32,7 @@ example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
 example : (p) |-tla- ((q ∧ r) → q) := by
   tla_start hp
   tla_rintro ⟨hq, hr⟩
-  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   intro _ ⟨_, hq, _⟩ ; exact hq
 
 -- Existential temporal antecedents introduce a Lean witness and a temporal hyp.
@@ -40,7 +40,7 @@ example (P : Nat → pred σ) :
     (⊤) |-tla- ((∃ n : Nat, (P n)) → (∃ n : Nat, (P n))) := by
   tla_start
   tla_rintro ⟨n, hp⟩
-  show Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
+  tla_check_goal Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
   intro _ hp
   exact ⟨n, hp⟩
 
@@ -49,7 +49,7 @@ example (P : Nat → pred σ) :
     (⊤) |-tla- (∀ n : Nat, (((P n) ∧ q) → r → (P n))) := by
   tla_start
   tla_rintro n ⟨hp, hq⟩ hr
-  show Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
+  tla_check_goal Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
   intro _ ⟨hp, _⟩ ; exact hp
 
 -- Numeric `tla_rcases` targets the chosen proof-mode hypothesis, even when
@@ -60,7 +60,7 @@ example (lem1 : (p) |-tla- (p ∧ q)) (lem2 : (p) |-tla- (q ∧ r)) :
   tla_have h := lem1 hp
   tla_have h := lem2 hp
   tla_rcases 2 with ⟨hq, hr⟩
-  show Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   intro _ ⟨_, _, hq, _⟩ ; exact hq
 
 -- A temporal antecedent `q ∨ r` is case-split with a parenthesized

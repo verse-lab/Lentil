@@ -20,14 +20,14 @@ variable {σ : Type u} (p q r : pred σ)
 example : (⊤) |-tla- (p) → (⊤) |-tla- (p) := by
   intro h
   tla_start
-  show Entails [] p
+  tla_check_goal Entails [] p
   exact h
 
 -- One premise, single label.
 example : (p) |-tla- (q) → (p) |-tla- (q) := by
   intro h
   tla_start hp
-  show Entails [⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩] q
   exact h
 
 -- Two premises (right-associated by parser): `(p ∧ q) |-tla- r`
@@ -36,7 +36,7 @@ example : (p) |-tla- (q) → (p) |-tla- (q) := by
 example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
   intro h
   tla_start hp hq
-  show Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
 -- Three premises (right-associated): `p ∧ q ∧ r` parses as `p ∧ (q ∧ r)`,
@@ -44,14 +44,14 @@ example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
 example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
   tla_start a b c
-  show Entails [⟨"a", p⟩, ⟨"b", q⟩, ⟨"c", r⟩] r
+  tla_check_goal Entails [⟨"a", p⟩, ⟨"b", q⟩, ⟨"c", r⟩] r
   exact h
 
 -- The labels are recorded as strings of the identifier; unicode names are
 -- preserved.
 example : (p) |-tla- (p) := by
   tla_start ψ
-  show Entails [⟨"ψ", p⟩] p
+  tla_check_goal Entails [⟨"ψ", p⟩] p
   exact pred_implies_refl _
 
 -- Wrong number of labels (too few).

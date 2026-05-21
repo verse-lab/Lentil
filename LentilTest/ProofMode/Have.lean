@@ -26,9 +26,9 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have hb : b by
     tla_apply lem
-    show Entails [⟨"ha", a⟩] a
+    tla_check_goal Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- Multi-step `by`-block: nested `tla_*` tactics work as expected.
@@ -38,9 +38,9 @@ example (lem1 : (a) |-tla- (b)) (lem2 : (b) |-tla- (c)) :
   tla_have hc : c by
     tla_apply lem2
     tla_apply lem1
-    show Entails [⟨"ha", a⟩] a
+    tla_check_goal Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
-  show Entails [⟨"ha", a⟩, ⟨"hc", c⟩] c
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, hc⟩ ; exact hc
 
 -- "Duplicate" an existing hyp under a different name (the by-block just
@@ -48,86 +48,86 @@ example (lem1 : (a) |-tla- (b)) (lem2 : (b) |-tla- (c)) :
 example : (a) |-tla- (a) := by
   tla_start ha
   tla_have ha' : a by
-    show Entails [⟨"ha", a⟩] a
+    tla_check_goal Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
-  show Entails [⟨"ha", a⟩, ⟨"ha'", a⟩] a
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"ha'", a⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- Add a valid TLA fact as a temporal hypothesis.
 example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have hb := lem
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- Add a residual implication from a `pred_implies` theorem.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have h := lem
-  show Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
   tla_apply h ha
 
 -- Supply an existing temporal hypothesis directly to the theorem.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have hb := lem ha
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- Replace a named proof-mode hypothesis with a theorem derived from it.
 example (lem : (a) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   tla_start ha hc
   tla_replace ha := lem ha
-  show Entails [⟨"hc", c⟩, ⟨"ha", b⟩] b
+  tla_check_goal Entails [⟨"hc", c⟩, ⟨"ha", b⟩] b
   tla_assumption
 
 -- Lean arguments can be supplied before temporal proof-mode arguments.
 example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have hb := lem (0 + 1) ha
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- The direct theorem prefix can also be kept as a residual implication.
 example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have h := lem 0
-  show Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| a → b]⟩] b
   tla_apply h ha
 
 -- Anonymous `tla_have := ...` appends an internal temporal hypothesis.
 example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
   tla_have := lem
-  show Entails [⟨"ha", a⟩, ⟨"this", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"this", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- Valid implication chains share the same mixed-argument path as `tla_apply`.
 example (lem : |-tla- (a → b → c)) : (a ∧ b) |-tla- (c) := by
   tla_start ha hb
   tla_have hc := lem ha hb
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
 
 -- Tuple temporal arguments conjunct multiple proof-mode hypotheses.
 example (lem : (a ∧ b) |-tla- (c)) : (a ∧ b) |-tla- (c) := by
   tla_start ha hb
   tla_have hc := lem ⟨ha, hb⟩
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
 
 -- The head can be a temporal hypothesis already in the proof-mode context.
 example : ([tlafml| (a → b) ∧ a]) |-tla- (b) := by
   tla_start h ha
   tla_have hb := h ha
-  show Entails [⟨"h", [tlafml| a → b]⟩, ⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"h", [tlafml| a → b]⟩, ⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, _, hb⟩ ; exact hb
 
 -- The term can be an expression, and the new hypothesis is appended.
 example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   tla_start ha hc
   tla_have hb := (show |-tla- (b) from lem)
-  show Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, _, hb⟩ ; exact hb
 
 /-! ## `tla_suffices` -/
@@ -137,10 +137,10 @@ example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
 example (lem : (b) |-tla- (a)) : (b) |-tla- (a) := by
   tla_start hb
   tla_suffices hsuff : a ∧ a by
-    show Entails [⟨"hb", b⟩, ⟨"hsuff", [tlafml| a ∧ a]⟩] a
+    tla_check_goal Entails [⟨"hb", b⟩, ⟨"hsuff", [tlafml| a ∧ a]⟩] a
     tla_rcases hsuff with ⟨h, h'⟩
     tla_apply h
-  show Entails [⟨"hb", b⟩] [tlafml| a ∧ a]
+  tla_check_goal Entails [⟨"hb", b⟩] [tlafml| a ∧ a]
   tla_split_ands <;> tla_apply lem hb
 
 -- Use `tla_rcases` inside `tla_suffices`' `by`-block to destructure the new
@@ -150,9 +150,9 @@ example (lem : (a) |-tla- (b ∧ c)) : (a) |-tla- (c) := by
   tla_start ha
   tla_suffices hbc : b ∧ c by
     tla_rcases hbc with ⟨hb, hc⟩
-    show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+    tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
     intro _ ⟨_, _, hc⟩ ; exact hc
-  show Entails [⟨"ha", a⟩] [tlafml| b ∧ c]
+  tla_check_goal Entails [⟨"ha", a⟩] [tlafml| b ∧ c]
   exact lem
 
 /-! ## Interplay between the two -/
@@ -164,14 +164,14 @@ example (lemAB : (a) |-tla- (b)) (lemBC : (b) |-tla- (c)) :
   tla_start ha
   tla_have hb : b by
     tla_apply lemAB
-    show Entails [⟨"ha", a⟩] a
+    tla_check_goal Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
   tla_suffices hc : c by
-    show Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+    tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
     intro _ ⟨_, _, hc⟩ ; exact hc
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] c
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] c
   tla_apply lemBC
-  show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :

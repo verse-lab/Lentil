@@ -12,21 +12,21 @@ variable {σ : Type u} (p q r : pred σ)
 example (heq : q = r) (h : (p) |-tla- (q)) : (p) |-tla- (r) := by
   tla_start hp
   tla_rewrite [← heq]
-  show Entails [⟨"hp", p⟩] q
+  tla_check_goal Entails [⟨"hp", p⟩] q
   exact h
 
 -- A named proof-mode hypothesis can be rewritten without touching the goal.
 example (heq : p = q) : (p) |-tla- (q) := by
   tla_start hp
   tla_rewrite [heq] at hp
-  show Entails [⟨"hp", q⟩] q
+  tla_check_goal Entails [⟨"hp", q⟩] q
   exact pred_implies_refl _
 
 -- Numeric locations refer to proof-mode hypothesis indices.
 example (heq : p = q) : (p ∧ r) |-tla- (q) := by
   tla_start hp hr
   tla_rewrite [heq] at 0
-  show Entails [⟨"hp", q⟩, ⟨"hr", r⟩] q
+  tla_check_goal Entails [⟨"hp", q⟩, ⟨"hr", r⟩] q
   intro _ h ; exact h.1
 
 -- Regression: unselected hypotheses must be hidden in the value body of the
@@ -34,7 +34,7 @@ example (heq : p = q) : (p ∧ r) |-tla- (q) := by
 example (heq : q = p) : (p ∧ p ∧ p) |-tla- (q) := by
   tla_start hp1 hp2 hp3
   tla_rewrite [← heq] at hp1 hp3
-  show Entails [⟨"hp1", q⟩, ⟨"hp2", p⟩, ⟨"hp3", q⟩] q
+  tla_check_goal Entails [⟨"hp1", q⟩, ⟨"hp2", p⟩, ⟨"hp3", q⟩] q
   intro _ h ; exact h.1
 
 -- Rewriting can create ordinary Lean side goals, so `tla_rewrite` is not
@@ -42,7 +42,7 @@ example (heq : q = p) : (p ∧ p ∧ p) |-tla- (q) := by
 example {P : Prop} (heq : P → p = q) (hP : P) : (p) |-tla- (q) := by
   tla_start hp
   tla_rewrite [heq] at hp
-  · show Entails [⟨"hp", q⟩] q
+  · tla_check_goal Entails [⟨"hp", q⟩] q
     exact pred_implies_refl _
   · exact hP
 
@@ -50,7 +50,7 @@ example {P : Prop} (heq : P → p = q) (hP : P) : (p) |-tla- (q) := by
 example (heq : p = q) : (p) |-tla- (q) := by
   tla_start hp
   tla_rewrite [heq] at *
-  show Entails [⟨"hp", q⟩] q
+  tla_check_goal Entails [⟨"hp", q⟩] q
   exact pred_implies_refl _
 
 -- `tla_rewrite` follows Lean's location semantics: selected hypotheses are
@@ -58,20 +58,20 @@ example (heq : p = q) : (p) |-tla- (q) := by
 example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
   tla_start hp hq hr
   tla_rewrite [always_idem] at *
-  show Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
+  tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
   intro _ h ; exact h.2.1
 
 example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
   tla_start hp hq hr
   tla_rewrite [always_idem] at hp hr
-  show Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
+  tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
   intro _ h ; exact h.2.1
 
 -- Lean-style locations can include both selected hypotheses and the target.
 example (heq : p = q) : (p) |-tla- (p) := by
   tla_start hp
   tla_rewrite [heq] at hp ⊢
-  show Entails [⟨"hp", q⟩] q
+  tla_check_goal Entails [⟨"hp", q⟩] q
   exact pred_implies_refl _
 
 end TLA.ProofMode.Test.Rewrite
