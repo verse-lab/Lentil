@@ -1,3 +1,4 @@
+import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Specialize
 import Lentil.Expr
 
@@ -182,6 +183,19 @@ adds a new hypothesis named `this` containing the result of `lemma hp`.
 -/
 syntax (name := tlaHaveAnonTac) "tla_have" " := " term : tactic
 /--
+`tla_replace h := t` replaces the named proof-mode hypothesis `h` by the
+temporal fact obtained from `t`.
+
+For example, if `hp : p` and `lem : (p) |-tla- (q)`, then
+```lean
+tla_replace hp := lem hp
+```
+removes `hp : p` and adds `hp : q`. The replacement is appended at the end of
+the proof-mode context, as if `tla_have`, `tla_clear`, and `tla_rename` had
+been used in sequence.
+-/
+syntax (name := tlaReplaceTac) "tla_replace" (ppSpace colGt ident) " := " term : tactic
+/--
 `tla_suffices h : p by tac` changes the main goal to proving `p`. The block
 `tac` must show that the original goal follows after adding `h : p` to the
 proof-mode context.
@@ -225,5 +239,14 @@ elab_rules : tactic
     discard <| tlaHaveTerm nameStr t
   | `(tactic| tla_have := $t:term) => do
     discard <| tlaHaveTerm "this" t
+  | `(tactic| tla_replace $h:ident := $t:term) => withMainContext do
+    let nameStr := toString h.getId
+    let some (_, hyps) ← recognizeEntailsHypsFromGoal
+      | throwError "tla_replace: failed to read the hypotheses from the goal"
+    unless hyps.any (fun ⟨name, _⟩ => name == nameStr) do
+      throwError "tla_replace: hypothesis '{nameStr}' not found in the goal's Entails list"
+    let idx ← tlaHaveTerm "" t
+    evalTactic <| ← `(tactic| tla_clear $h:ident)
+    tlaRename (.byIdx <| idx - 1) nameStr
 
 end TLA.ProofMode

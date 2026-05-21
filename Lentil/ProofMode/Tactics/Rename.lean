@@ -45,6 +45,12 @@ private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
     ``List.modifyTailIdx.go, ``List.modifyHead]
 
+def tlaRename (old : TemporalHypLoc) (newStr : String) : TacticM Unit := do
+  let thm := if old matches .byName .. then ``Entails_rename_by_name else ``Entails_rename_by_idx
+  evalTactic <| ← `(tactic|
+    refine ($(mkIdent thm) ($(quote newStr)) ($(quoteTemporalHypLocToTerm old))).$(mkIdent `mp) ?_)
+  postDSimpAfterApplyingReflectionTheorem renameTacDSimps
+
 /--
 `tla_rename h => h'` renames a proof-mode temporal hypothesis. The predicate
 and the hypothesis position are unchanged.
@@ -64,10 +70,7 @@ syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt temporalHypLoc) " => "
 elab_rules : tactic
   | `(tactic| tla_rename $old:temporalHypLoc => $new:ident) => do
     let old ← parseTemporalHypLoc old "tla_rename: invalid syntax for renaming position"
-    let thm := if old matches .byName .. then ``Entails_rename_by_name else ``Entails_rename_by_idx
     let newStr := toString new.getId
-    evalTactic <| ← `(tactic|
-      refine ($(mkIdent thm) ($(quoteTemporalHypLocToTerm old)) ($(quote newStr))).$(mkIdent `mp) ?_)
-    postDSimpAfterApplyingReflectionTheorem renameTacDSimps
+    tlaRename old newStr
 
 end TLA.ProofMode

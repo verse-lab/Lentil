@@ -74,6 +74,13 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
+-- Replace a named proof-mode hypothesis with a theorem derived from it.
+example (lem : (a) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
+  tla_start ha hc
+  tla_replace ha := lem ha
+  show Entails [⟨"hc", c⟩, ⟨"ha", b⟩] b
+  tla_assumption
+
 -- Lean arguments can be supplied before temporal proof-mode arguments.
 example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
