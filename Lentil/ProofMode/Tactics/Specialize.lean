@@ -78,6 +78,13 @@ private theorem Entails_specialize_pure_aux {rhs : pred σ} {q : Prop} (hq : q)
   · grind
   · simp [repeatedAnd_singleton] ; tla_unfold_simp ; grind
 
+private theorem Entails_specialize_valid_aux {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
+  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| lhs → rhs]) :
+  Entails hyps' goal → Entails hyps goal := by
+  apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [[tlafml| lhs → rhs]])
+  · grind
+  · subst newHyp ; simp [repeatedAnd_singleton] ; revert hlhs ; tla_unfold_simp ; grind
+
 private theorem Entails_specialize_temporal_aux {rhs : pred σ} (lhss : List (pred σ))
   (hin : lhss ⊆ hyps.map NamedPred.pred)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| (repeatedAnd lhss) → rhs]) :
@@ -138,6 +145,27 @@ end
 
 section
 
+variable {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
+include hlhs
+
+theorem Entails_specialize_valid_by_name (chosen : String)
+  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlafml| lhs → rhs]⟩) :
+  Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
+  obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
+  unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
+  apply Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
+
+theorem Entails_specialize_valid_by_idx (idx : Nat)
+  (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| lhs → rhs]) :
+  Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
+  simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
+  rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
+  apply Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
+
+end
+
+section
+
 variable {rhs : pred σ} {lhss : List (pred σ)} (premises : List String)
   -- (hprem : hyps.find? (fun h => h.name == premise) = some ⟨premise, lhs⟩)
   (hprem : premises.filterMap (fun premise => hyps.find? (fun h => h.name == premise) |>.map NamedPred.pred) = lhss)
@@ -187,18 +215,23 @@ def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Uni
       let thm := if pos matches .byName .. then ``Entails_specialize_pure_by_name else ``Entails_specialize_pure_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
     else
-      let premises ← match arg with
-        | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
-        | _ => pure [arg]
-      let premises ← premises.mapM fun arg => do
-        match (← termIdent? arg) with
-        | some id => pure <| toString id.getId
-        | _ => throwError "tla_specialize: implication arguments must be a tuple or a single identifier; got {arg}"
-      for premise in premises do
-        unless hyps.any (fun ⟨name, _⟩ => name == premise) do
-          throwError "tla_specialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
-      let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
-      evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
+      (do
+        let thm := if pos matches .byName .. then ``Entails_specialize_valid_by_name else ``Entails_specialize_valid_by_idx
+        evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_))
+      <|>
+      (do
+        let premises ← match arg with
+          | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
+          | _ => pure [arg]
+        let premises ← premises.mapM fun arg => do
+          match (← termIdent? arg) with
+          | some id => pure <| toString id.getId
+          | _ => throwError "tla_specialize: implication arguments must be a tuple or a single identifier; got {arg}"
+        for premise in premises do
+          unless hyps.any (fun ⟨name, _⟩ => name == premise) do
+            throwError "tla_specialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
+        let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
+        evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_))
   | _ => throwError (specializeTargetBadShapeMsg pred pos)
   postDSimpAfterApplyingReflectionTheorem specializeTacDSimps
 where
