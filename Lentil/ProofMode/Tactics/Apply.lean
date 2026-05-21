@@ -40,14 +40,18 @@ theorem Entails_apply_hyp_closing_goal (h : hyps.getLast?.map NamedPred.pred = s
 
 end
 
-private def applyTacDSimps := #[``repeatedAnd, ``LentilLib.List.foldrD, ``List.dropLast]
+private def applyTacDSimps := #[``repeatedAnd, ``LentilLib.List.foldrD, ``List.dropLast,
+  ``List.foldr]
 
-private def getHypByIdx (idx : Nat) : TacticM Expr := do
-  let some (_, hyps) ← recognizeEntailsHypsFromGoal
-    | throwError "tla_apply: failed to read the hypotheses from the goal"
-  let some (_, pred) := hyps[idx]?
-    | throwError "tla_apply: failed to find the introduced theorem hypothesis"
-  return pred
+private def goalDirectedPremisesCut (remainingPremises : List Expr) (goal conclusion : Expr) : MetaM (List Expr) := do
+  if ← isDefEq goal conclusion then
+    return remainingPremises
+  else
+    match remainingPremises with
+    | [] => throwError "tla_apply: failed to find a way to unify the goal and the hypothesis conclusion"
+    | prem :: rest =>
+      let newConclusion ← mkAppM ``tla_implies #[prem, conclusion]
+      goalDirectedPremisesCut rest goal newConclusion
 
 /--
 `tla_apply t` proves the current proof-mode goal using a TLA theorem or a
@@ -75,14 +79,23 @@ elab_rules : tactic
     (do
       let idx ← tlaHaveTerm default /- the name does not matter here -/ tm
       withMainContext do
-      let pred ← getHypByIdx idx
+      let g ← getMainTarget
+      let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
+      let_expr TLA.ProofMode.Entails _ hyps goal := g
+        | throwError "tla_apply: goal is not an Entails sequent, but {g}"
+      let some (_, hyps) ← recognizeHypsList hyps
+        | throwError "tla_apply: failed to read the hypotheses from the goal"
+      let some (_, pred) := hyps[idx]?
+        | throwError "tla_apply: failed to find the introduced theorem hypothesis"
       -- NOTE: For convenience, do not cut inner `∧`s
-      let (premises, _) ← TLA.Expr.splitImplicationsIntoParts pred (cutAnd? := false)
-      if premises.isEmpty then
+      let (premises, conclusion) ← TLA.Expr.splitImplicationsIntoParts pred (cutAnd? := false)
+      -- The goal might be an implication, so need to find where to cut `premises`
+      let premisesToProve ← goalDirectedPremisesCut premises goal conclusion
+      if premisesToProve.isEmpty then
         evalTactic <| ← `(tactic| apply $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
       else
         let holesListStx ← do
-          let holes := Array.replicate premises.length (← `(_))
+          let holes := Array.replicate premisesToProve.length (← `(_))
           `([$holes,*])
         evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_apply_hyp) $holesListStx (by rfl) ?_)
         postDSimpAfterApplyingReflectionTheorem applyTacDSimps)

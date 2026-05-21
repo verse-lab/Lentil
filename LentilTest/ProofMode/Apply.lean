@@ -70,4 +70,13 @@ example {P : Prop} (hpure : P) (lem : |-tla- (⌞ P ⌟ → q)) : (p) |-tla- (q)
   tla_start hp
   tla_apply lem hpure
 
+example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
+  (b → c) |-tla- (c) := by
+  tla_start hbc
+  tla_apply TLA.or_elim
+  tla_split_ands
+  · tla_apply lem1
+  · tla_apply lem2
+  · tla_assumption
+
 end TLA.ProofMode.Test.Apply
