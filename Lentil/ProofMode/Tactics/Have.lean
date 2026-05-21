@@ -1,4 +1,5 @@
 import Lentil.ProofMode.Tactics.Specialize
+import Lentil.Expr
 
 namespace TLA.ProofMode
 
@@ -74,7 +75,7 @@ theorem.
 private def haveTacDSimps : Array Name := #[``List.cons_append, ``List.nil_append]
 
 private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := do
-  let e ← Term.elabTermAndSynthesize tm none
+  let e ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize tm none
   Term.synthesizeSyntheticMVarsNoPostponing
   let ty ← inferType e >>= instantiateMVars
   -- To be safe, instantiate the theorem better
@@ -87,11 +88,21 @@ private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := 
   -- NOTE: The following restricts that `e` must be directly a TLA theorem,
   -- not a theorem whose conclusion is a TLA theorem. This is just for convenience.
   let thm ←
-    if ty.isAppOfArity' ``TLA.pred_implies 3 then
-      mkAppOptM ``Entails_have_pred_implies #[some σ, some hypsExpr, some goal, some newHypNameExpr, none, none, some e]
-    else if ty.isAppOfArity' ``TLA.valid 2 then
-      mkAppOptM ``Entails_have_valid #[some σ, some hypsExpr, some goal, some newHypNameExpr, none, some e]
-    else throwError "tla_have: term is not a TLA theorem, got type {ty}"
+    -- Manual unification, as `e` might have uninstantiated metavariables that
+    -- might make `mkAppOptM` fail. It seems that at minimum we need to unify
+    -- the state type `σ` here
+    match_expr ty with
+    | TLA.pred_implies σ' lhs rhs =>
+      unless ← isDefEq σ' σ do
+        throwError "tla_have: theorem state type{indentExpr σ'}\ndoes not match proof-mode state type{indentExpr σ}"
+      mkAppOptM ``Entails_have_pred_implies
+        #[some σ, some hypsExpr, some goal, some newHypNameExpr, some lhs, some rhs, some e]
+    | TLA.valid σ' p =>
+      unless ← isDefEq σ' σ do
+        throwError "tla_have: theorem state type{indentExpr σ'}\ndoes not match proof-mode state type{indentExpr σ}"
+      mkAppOptM ``Entails_have_valid
+        #[some σ, some hypsExpr, some goal, some newHypNameExpr, some p, some e]
+    | _ => throwError "tla_have: term is not a TLA theorem, got type {ty}"
   let goals ← g.apply thm
   replaceMainGoal goals
   postDSimpAfterApplyingReflectionTheorem haveTacDSimps

@@ -167,4 +167,12 @@ example (lemAB : (a) |-tla- (b)) (lemBC : (b) |-tla- (c)) :
   show Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
+example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
+  (b → c) |-tla- (c) := by
+  tla_start hbc
+  -- Allowing uninstantiated metavariables that will be resolved later
+  tla_have h := TLA.or_elim
+  tla_specialize h lem1
+  tla_apply h lem2 hbc
+
 end TLA.ProofMode.Test.Have
