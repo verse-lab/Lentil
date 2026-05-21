@@ -27,6 +27,17 @@ example : (p) |-tla- (∀ n : Nat, (p)) := by
   tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
+-- Universal binders may range over proof values.
+example (Q : Prop) (P : Q → pred σ) :
+    (⊤) |-tla- (∀ hQ : Q, (P hQ)) →
+    (⊤) |-tla- (∀ hQ : Q, (P hQ)) := by
+  intro h
+  tla_start
+  tla_intro hQ
+  tla_check_goal Entails [] (P hQ)
+  intro e _
+  exact h e True.intro hQ
+
 -- Intro a pure-predicate antecedent (`⌞q⌟ → …`).
 example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
   tla_start hp

@@ -53,6 +53,14 @@ example (P : Nat → pred σ) (k : Nat) (lem : (a) |-tla- ((P k))) :
   tla_check_goal Entails [⟨"ha", a⟩] (P k)
   exact lem
 
+-- Existential witnesses may be proof values.
+example (Q : Prop) (hQ : Q) (P : Q → pred σ) (lem : (a) |-tla- ((P hQ))) :
+    (a) |-tla- (∃ h : Q, (P h)) := by
+  tla_start ha
+  tla_exists hQ
+  tla_check_goal Entails [⟨"ha", a⟩] (P hQ)
+  exact lem
+
 -- After `tla_exists`, the remaining proof works in the proof-mode view.
 example (lem : (a) |-tla- ((P 0))) : (a) |-tla- (∃ n : Nat, (P n)) := by
   tla_start ha

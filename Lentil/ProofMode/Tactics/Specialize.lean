@@ -64,7 +64,7 @@ private theorem Entails_specializeHyp_aux
 variable (hidx : idx < hyps.length) (hhyps' : hyps' = hyps.modify idx replaceFun)
 include hidx hhyps'
 
-private theorem Entails_specialize_forall_aux {α : Type v} {p : α → pred σ} (witness : α)
+private theorem Entails_specialize_forall_aux {α : Sort v} {p : α → pred σ} (witness : α)
   (heq : newHyp = p witness) (hpred : (hyps[idx]'hidx).pred = tla_forall p) :
   Entails hyps' goal → Entails hyps goal := by
   apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [TLA.tla_forall p])
@@ -104,7 +104,7 @@ variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
 
 section
 
-variable {α : Type v} {p : α → pred σ} (witness : α)
+variable {α : Sort v} {p : α → pred σ} (witness : α)
 
 theorem Entails_specialize_forall_by_name (chosen : String)
   (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, TLA.tla_forall p⟩) :

@@ -8,7 +8,7 @@ open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
 
 -- Not sure if this is generally useful, so just make it as a `private theorem` for now
-private theorem exists_put_witness_back {α : Type v} {p : α → pred σ} {Γ g : pred σ} :
+private theorem exists_put_witness_back {α : Sort v} {p : α → pred σ} {Γ g : pred σ} :
   (∀ x, ((Γ) |-tla- ((p x) → g))) = ((Γ) |-tla- ((∃ x, (p x)) → g)) := by tla_unfold_simp ; grind
 
 section
@@ -63,7 +63,7 @@ end
 
 section
 
-variable (newName : String) {α : Type v} {p : α → pred σ}
+variable (newName : String) {α : Sort v} {p : α → pred σ}
 
 -- NOTE: This proof is slightly repetitive with the one above
 theorem Entails_rcases_exists_by_idx (idx : Nat)

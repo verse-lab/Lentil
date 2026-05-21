@@ -21,6 +21,14 @@ example (P : Nat → pred σ) : TLA.pred_implies (TLA.tla_forall P) (P 0) := by
   tla_check_goal Entails [⟨"h", P 0⟩] (P 0)
   intro _ hp ; exact hp
 
+-- Universal specialization also accepts proof-valued witnesses.
+example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
+    TLA.pred_implies (TLA.tla_forall P) (P hQ) := by
+  tla_start h
+  tla_specialize h hQ
+  tla_check_goal Entails [⟨"h", P hQ⟩] (P hQ)
+  intro _ hp ; exact hp
+
 -- Multiple arguments specialize nested `∀` binders left-to-right.
 example (P : Nat → Nat → pred σ) :
     TLA.pred_implies (TLA.tla_forall fun x : Nat => TLA.tla_forall fun y : Nat => P x y)

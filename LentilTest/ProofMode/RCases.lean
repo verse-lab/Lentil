@@ -63,6 +63,15 @@ example (P : Nat → pred σ) :
   intro e hp
   exact ⟨n, hp⟩
 
+-- Existential destructuring also introduces proof-valued witnesses.
+example (Q : Prop) (P : Q → pred σ) :
+    (∃ hQ : Q, (P hQ)) |-tla- (⊤) := by
+  tla_start h
+  tla_rcases h with ⟨hQ, hp⟩
+  tla_check_goal Entails [⟨"hp", P hQ⟩] [tlafml| ⊤]
+  intro _ _
+  trivial
+
 -- Chained exists with n-ary tuple: `⟨x, y, hp⟩` on `h : ∃ a, ∃ b, P a b`.
 example (P : Nat → Nat → pred σ) :
     (∃ x : Nat, (∃ y : Nat, (P x y))) |-tla- (∃ x : Nat, (∃ y : Nat, (P x y))) := by
@@ -224,6 +233,14 @@ example (P : Nat → pred σ) (lem : |-tla- (∃ n : Nat, (P n))) :
   tla_obtain ⟨n, hp⟩ := lem
   intro e hp
   exact ⟨n, hp⟩
+
+example (Q : Prop) (P : Q → pred σ) (lem : |-tla- (∃ hQ : Q, (P hQ))) :
+    (a) |-tla- (⊤) := by
+  tla_start ha
+  tla_obtain ⟨hQ, hp⟩ := lem
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hp", P hQ⟩] [tlafml| ⊤]
+  intro _ _
+  trivial
 
 example : (⊤) |-tla- (a ∨ ¬ a) := by
   tla_start

@@ -6,7 +6,7 @@ namespace TLA.ProofMode
 open Lean Meta Elab Tactic
 
 theorem Entails_intro_forall {σ : Type u} {hyps : List (NamedPred σ)}
-  {α : Type v} {p : α → pred σ} :
+  {α : Sort v} {p : α → pred σ} :
   (∀ x, Entails hyps (p x)) → Entails hyps (TLA.tla_forall p) := forall_elim.mp
 
 theorem Entails_pure_fact_intro {σ : Type u} {hyps : List (NamedPred σ)}

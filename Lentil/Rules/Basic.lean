@@ -321,10 +321,10 @@ end playground
 -- FIXME: Better name
 section more
 
-theorem forall_elim {α : Type u} {β : Type v} {p : β → pred α} {Γ : pred α} :
+theorem forall_elim {α : Type u} {β : Sort v} {p : β → pred α} {Γ : pred α} :
   (∀ x, (Γ) |-tla- ((p x))) = ((Γ) |-tla- (∀ x, (p x))) := by tla_unfold_simp ; grind
 
-theorem exists_elim {α : Type u} {β : Type v} {p : β → pred α} {Γ : pred α} (x : β) :
+theorem exists_elim {α : Type u} {β : Sort v} {p : β → pred α} {Γ : pred α} (x : β) :
   ((Γ) |-tla- ((p x))) → ((Γ) |-tla- (∃ x, (p x))) := by tla_unfold_simp ; grind
 
 end more

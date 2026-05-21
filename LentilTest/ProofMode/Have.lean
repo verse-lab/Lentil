@@ -182,4 +182,15 @@ example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
   tla_specialize h lem1
   tla_apply h lem2 hbc
 
+example (q : (i : Nat) → i < n → pred σ) :
+    (∃ j : Nat, ∃ hltj, (q j hltj)) |-tla- (⊤) := by
+  -- intro p
+  tla_start h
+  tla_rcases h with ⟨j, h⟩
+  -- NOTE: If we do not specify `p` here, unification will unfold related definitions
+  tla_have := (TLA.find_min (p := fun j_ => [tlafml| ∃ hltj, (q j_ hltj)]) j) h
+  tla_obtain ⟨j, hle, ⟨hltj, htmp⟩, hmin⟩ := this
+  intro _ _
+  trivial
+
 end TLA.ProofMode.Test.Have
