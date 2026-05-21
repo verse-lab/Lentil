@@ -1,3 +1,4 @@
+import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Rename
 import Lentil.ProofMode.Tactics.Revert
 
@@ -285,6 +286,42 @@ elab_rules : tactic
     let hyp ← parseTemporalHypLoc hyp "tla_rcases: invalid syntax for hypothesis position"
     -- `tlaRcasesCore` already acts only on the main goal.
     tlaRcasesCore hyp pat
+
+/--
+`tla_obtain pat := t` adds the temporal fact proved by `t` and immediately
+destructures it with `pat`.
+
+For example, if `h : |-tla- (p ∧ q)`, then
+```lean
+tla_obtain ⟨hp, hq⟩ := h
+```
+adds `hp : p` and `hq : q` to the proof-mode context. If `t` proves an
+existential predicate, the pattern may introduce a Lean witness together with
+the temporal hypothesis for its body.
+-/
+syntax (name := tlaObtainTac) "tla_obtain" rcasesPat " := " term : tactic
+
+elab_rules : tactic
+  | `(tactic| tla_obtain $pat:rcasesPat := $tm:term) => withMainContext do
+    let idx ← tlaHaveTerm default tm
+    tlaRcasesCore (.byIdx idx) pat
+
+/--
+`tla_by_cases h : p` splits a proof-mode goal into the cases `h : p` and
+`h : ¬ p`.
+
+For example,
+```lean
+tla_by_cases hp : p
+```
+creates two goals. The first has the temporal hypothesis `hp : p`; the second
+has `hp : ¬ p`.
+-/
+syntax (name := tlaByCasesTac) "tla_by_cases " ident " : " tlafml : tactic
+
+macro_rules
+  | `(tactic| tla_by_cases $h:ident : $p:tlafml) =>
+    `(tactic| tla_obtain ($h | $h) := TLA.excluded_middle [tlafml| $p])
 
 /--
 `tla_rintro pat₁ pat₂ ...` introduces proof-mode goal binders like

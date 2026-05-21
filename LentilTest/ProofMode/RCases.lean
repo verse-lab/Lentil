@@ -211,6 +211,26 @@ example (A B C : Nat → pred σ)
   · intro _ _ ; exact True.intro
   · intro _ _ ; exact True.intro
 
+/-! ## Obtain and by-cases -/
+
+example (lem : |-tla- (a ∧ b)) : (⊤) |-tla- (a) := by
+  tla_start
+  tla_obtain ⟨ha, hb⟩ := lem
+  tla_assumption
+
+example (P : Nat → pred σ) (lem : |-tla- (∃ n : Nat, (P n))) :
+    (⊤) |-tla- (∃ n : Nat, (P n)) := by
+  tla_start
+  tla_obtain ⟨n, hp⟩ := lem
+  intro e hp
+  exact ⟨n, hp⟩
+
+example : (⊤) |-tla- (a ∨ ¬ a) := by
+  tla_start
+  tla_by_cases ha : a
+  · intro _ ha ; exact Or.inl ha
+  · intro _ ha ; exact Or.inr ha
+
 /-! ## Errors -/
 
 -- Pred head is neither `tla_and` nor `tla_exists`.
