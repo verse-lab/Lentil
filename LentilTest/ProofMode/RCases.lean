@@ -224,7 +224,9 @@ example (A B C : Nat → pred σ)
 
 example (lem : |-tla- (a ∧ b)) : (⊤) |-tla- (a) := by
   tla_start
-  tla_obtain ⟨ha, hb⟩ := lem
+  tla_have h := lem
+  tla_obtain ⟨ha, hb⟩ := h
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   tla_assumption
 
 example (P : Nat → pred σ) (lem : |-tla- (∃ n : Nat, (P n))) :

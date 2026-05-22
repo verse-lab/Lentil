@@ -297,14 +297,20 @@ tla_obtain ⟨hp, hq⟩ := h
 ```
 adds `hp : p` and `hq : q` to the proof-mode context. If `t` proves an
 existential predicate, the pattern may introduce a Lean witness together with
-the temporal hypothesis for its body.
+the temporal hypothesis for its body. A bare proof-mode hypothesis is
+destructured in place; other terms are first added as a new temporal hypothesis.
 -/
 syntax (name := tlaObtainTac) "tla_obtain" rcasesPat " := " term : tactic
 
 elab_rules : tactic
   | `(tactic| tla_obtain $pat:rcasesPat := $tm:term) => withMainContext do
-    let idx ← tlaHaveTerm default tm
-    tlaRcasesCore (.byIdx idx) pat
+    let some (_, hyps) ← recognizeEntailsHypsFromGoal
+      | throwError "tla_obtain: failed to read the hypotheses from the goal"
+    match ← temporalHypLocOfBareTerm? hyps tm with
+    | some loc => tlaRcasesCore loc pat
+    | none =>
+      let idx ← tlaHaveTerm default tm
+      tlaRcasesCore (.byIdx idx) pat
 
 /--
 `tla_by_cases h : p` splits a proof-mode goal into the cases `h : p` and

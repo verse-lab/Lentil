@@ -131,7 +131,7 @@ def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat := withMainConte
     let (head, args) ← match tm with
       | `(term| $f:term $args:term* ) => pure (f, args)
       | _ => pure (tm, #[])
-    if let some oldHypName ← temporalHypName? hyps head then
+    if let some oldHypName ← temporalHypNameOfBareTerm? hyps head then
       evalTactic <| ← `(tactic|
         refine $(mkIdent ``Entails_duplicate_one_hyp_by_name) ($(quote newHypName)) ($(quote oldHypName)) (by rfl) ?_)
       postDSimpAfterApplyingReflectionTheorem haveTacDSimps
@@ -142,10 +142,6 @@ def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat := withMainConte
       specializeByIdx idx rest.toArray
       return idx)
 where
-  temporalHypName? (hyps : List (String × Expr)) (tm : Term) : TacticM (Option String) := withMainContext do
-    let some id ← termIdent? tm | return none
-    let name := toString id.getId
-    return if hyps.any (fun ⟨n, _⟩ => n == name) then some name else none
   specializeByIdx (idx : Nat) (args : Array (Term)) : TacticM Unit := do
     for arg in args do
       tlaSpecializeStep (.byIdx idx) arg

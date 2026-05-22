@@ -39,6 +39,20 @@ def findByTemporalHypLoc [Monad m] [MonadError m] (xs : List (String × α)) (lo
     | .byName name => throwError m!"{errorMsgPrefix}: hypothesis '{name}' not found in {errorMsgSuffix}"
     | .byIdx idx => throwError m!"{errorMsgPrefix}: hypothesis index {idx} not found in {errorMsgSuffix}"
 
+/-- If `tm` is a bare identifier that names a proof-mode hypothesis in `hyps`,
+return that name. Lean locals shadow proof-mode hypotheses. -/
+def temporalHypNameOfBareTerm? (hyps : List (String × α)) (tm : Term) :
+    TacticM (Option String) := withMainContext do
+  let some id ← LentilLib.termIdent? tm | return none
+  if (← getLCtx).findFromUserName? id.getId |>.isSome then
+    return none
+  let name := toString id.getId
+  return if hyps.any (fun ⟨hypName, _⟩ => hypName == name) then some name else none
+
+def temporalHypLocOfBareTerm? (hyps : List (String × α)) (tm : Term) :
+    TacticM (Option TemporalHypLoc) := do
+  return (← temporalHypNameOfBareTerm? hyps tm).map .byName
+
 /-- Locations for `rewrite`/`simp`-like tactics. -/
 structure RewriteLocation where
   idxs : Array Nat
