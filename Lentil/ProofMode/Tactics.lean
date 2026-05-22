@@ -5,6 +5,7 @@ import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Exists
 import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Intro
+import Lentil.ProofMode.Tactics.ModalityMisc
 import Lentil.ProofMode.Tactics.Monotone
 import Lentil.ProofMode.Tactics.Normalize
 import Lentil.ProofMode.Tactics.PurePred
@@ -33,6 +34,8 @@ NOTE: On the soundness theorems corresponding to these tactics:
 - `apply`: reducing to `have` then `specialize`
 - `monotone`: distributing a supported modality over the proof-mode context,
   then using the corresponding `_monotone` rule
+- `toggle_goal_under_always`: toggling the goal with `always_pred_implies`
+  after recognizing an all-`always` proof-mode context
 - `rewrite`: hide unselected proof-mode locations behind a local continuation,
   run Lean's `rewrite`, then reconstruct the `Entails` sequent
 - `simp`/`dsimp`: run Lean's simplifiers as direct `conv` visits to selected

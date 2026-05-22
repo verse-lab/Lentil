@@ -102,6 +102,10 @@ theorem and_true (p : pred σ) : (p ∧ ⊤) =tla= (p) := by funext e ; tla_unfo
 
 theorem true_and (p : pred σ) : (⊤ ∧ p) =tla= (p) := by funext e ; tla_unfold_simp'
 
+theorem always_true :
+  letI lhs : pred σ := [tlafml| □ ⊤]
+  ((lhs)) =tla= (⊤) := by funext e ; tla_unfold_simp'
+
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
   tla_unfold_simp ; constructor
   · aesop
@@ -203,6 +207,11 @@ theorem modus_ponens_with_premise : (p ∧ (p → q)) |-tla- (p ∧ q) := by
   tla_unfold_simp ; aesop
 
 -- the following: about modal operators
+
+theorem always_pred_implies : ((□ p) |-tla- (q)) = ((□ p) |-tla- (□ q)) := by
+  tla_unfold_simp ; constructor
+  · intro h e hp k ; apply h ; tla_unfold_simp ; grind
+  · intro h e hp ; exact h _ hp 0
 
 theorem always_and_eventually : (◇ p ∧ □ q) |-tla- (◇ (p ∧ q)) := by
   tla_unfold_simp ; aesop
