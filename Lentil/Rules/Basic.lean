@@ -30,6 +30,7 @@ open Classical LentilLib
 
 -- `Not`
 #tla_lift not_and' not_or imp_false not_true
+#tla_lift not_and => TLA.not_and_to_imp
 #tla_lift not_false_iff => TLA.not_false
 
 -- `∀`, `∃`
@@ -346,6 +347,10 @@ theorem pred_implies_pure {p : Prop} : p → @pred_implies α q (pure_pred p) :=
 
 theorem pure_fact_intro {α : Type u} {Γ p : pred α} {q : Prop} :
   (q → ((Γ) |-tla- (p))) = ((Γ) |-tla- (⌞ q ⌟ → p)) := by tla_unfold_simp ; grind
+
+theorem pure_implies_to_forall {p : Prop} : (⌞ p ⌟ → q) =tla= (∀ _x : p, q) := by funext e ; tla_unfold_simp
+
+theorem pure_and_to_exists {p : Prop} : (⌞ p ⌟ ∧ q) =tla= (∃ _x : p, q) := by funext e ; tla_unfold_simp
 
 end pure
 
