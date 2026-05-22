@@ -328,6 +328,16 @@ def finiteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat
     FiniteWindow (tla_exists p) n :=
   finiteWindowBinder (fun r => ∃ x, r x) exists_congr p n hp
 
+instance hasFiniteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
+    [hp : ∀ x, HasFiniteWindow (p x) n] :
+    HasFiniteWindow (tla_forall p) n where
+  finite := finiteWindowForall p n fun _ => finiteWindowOfHasFiniteWindow
+
+instance hasFiniteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
+    [hp : ∀ x, HasFiniteWindow (p x) n] :
+    HasFiniteWindow (tla_exists p) n where
+  finite := finiteWindowExists p n fun _ => finiteWindowOfHasFiniteWindow
+
 attribute [tla_finite_window_def]
   Nat.max_def Nat.reduceAdd Nat.reduceLeDiff
   IteratedForall
@@ -336,6 +346,7 @@ attribute [tla_finite_window_def]
   hasFiniteWindowState hasFiniteWindowAction hasFiniteWindowEnabled
   hasFiniteWindowAnd hasFiniteWindowOr hasFiniteWindowNot
   hasFiniteWindowImplies hasFiniteWindowLater
+  hasFiniteWindowForall hasFiniteWindowExists
   finiteWindowPure finiteWindowTrue finiteWindowFalse
   finiteWindowState finiteWindowAction finiteWindowEnabled
   finiteWindowBinary finiteWindowAnd finiteWindowOr finiteWindowNot
