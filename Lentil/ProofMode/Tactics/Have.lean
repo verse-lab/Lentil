@@ -17,10 +17,16 @@ theorem Entails_have_or_suffices :
   Entails hyps goal := Entails_add_new _ (List.Subset.refl _) newHypName newHyp
 
 omit newHyp in
+theorem Entails_have_true_pred_implies {newHyp : pred σ} :
+  ((⊤) |-tla- (newHyp)) →
+  Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
+  Entails hyps goal := Entails_add_new [] (List.nil_subset _) newHypName newHyp
+
+omit newHyp in
 theorem Entails_have_valid {newHyp : pred σ} :
   (|-tla- (newHyp)) →
   Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
-  Entails hyps goal := by rw [valid_eq_true_implies] ; exact Entails_add_new [] (List.nil_subset _) newHypName newHyp
+  Entails hyps goal := by rw [valid_eq_true_implies] ; apply Entails_have_true_pred_implies
 
 -- NOTE: In theory we don't need this, but applying `Entails_have_valid` on a `pred_implies`
 -- can break its form, so still have this more specific version to preserve the `pred_implies` shape
@@ -93,11 +99,25 @@ private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := 
     -- might make `mkAppOptM` fail. It seems that at minimum we need to unify
     -- the state type `σ` here
     match_expr ty with
+    -- FIXME: Slightly repetitive
     | TLA.pred_implies σ' lhs rhs =>
       unless ← isDefEq σ' σ do
         throwError "tla_have: theorem state type{indentExpr σ'}\ndoes not match proof-mode state type{indentExpr σ}"
       mkAppOptM ``Entails_have_pred_implies
         #[some σ, some hypsExpr, some goal, some newHypNameExpr, some lhs, some rhs, some e]
+    | TLA.ProofMode.Entails σ' hyps rhs =>
+      unless ← isDefEq σ' σ do
+        throwError "tla_have: theorem state type{indentExpr σ'}\ndoes not match proof-mode state type{indentExpr σ}"
+      let some (_, hypsExprList) ← recognizeHypsList hyps
+        | throwError "tla_have: failed to read the hypotheses from the theorem type"
+      if hypsExprList.isEmpty then
+        mkAppOptM ``Entails_have_true_pred_implies
+          #[some σ, some hypsExpr, some goal, some newHypNameExpr, some rhs, some e]
+      else
+        let op ← mkAppOptM ``tla_and #[σ]
+        let lhs := List.foldrD (mkApp2 op) default <| hypsExprList.map Prod.snd
+        mkAppOptM ``Entails_have_pred_implies
+          #[some σ, some hypsExpr, some goal, some newHypNameExpr, some lhs, some rhs, some e]
     | TLA.valid σ' p =>
       unless ← isDefEq σ' σ do
         throwError "tla_have: theorem state type{indentExpr σ'}\ndoes not match proof-mode state type{indentExpr σ}"
