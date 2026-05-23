@@ -37,6 +37,7 @@ open Classical LentilLib
 #tla_lift not_exists forall_and exists_or exists_and_left exists_and_right
   forall_comm exists_comm
 #tla_lift Bool.forall_bool Bool.exists_bool'
+#tla_lift LentilLib.forall_unit LentilLib.exists_unit
 
 -- `Decidable`, but we are in the classical setting
 #tla_lift Decidable.not_not Decidable.by_contra Decidable.not_imp_comm
@@ -99,12 +100,27 @@ section one
 
 variable (p : pred σ)
 
+-- FIXME: These should be automatically generated
 theorem and_true (p : pred σ) : (p ∧ ⊤) =tla= (p) := by funext e ; tla_unfold_simp'
 
 theorem true_and (p : pred σ) : (⊤ ∧ p) =tla= (p) := by funext e ; tla_unfold_simp'
 
+theorem or_false (p : pred σ) : (p ∨ ⊥) =tla= (p) := by funext e ; tla_unfold_simp'
+
+theorem false_or (p : pred σ) : (⊥ ∨ p) =tla= (p) := by funext e ; tla_unfold_simp'
+
+theorem imp_true (p : pred σ) : (p → ⊤) =tla= (⊤) := by funext e ; tla_unfold_simp'
+
 theorem always_true :
   letI lhs : pred σ := [tlafml| □ ⊤]
+  ((lhs)) =tla= (⊤) := by funext e ; tla_unfold_simp'
+
+theorem eventually_true :
+  letI lhs : pred σ := [tlafml| ◇ ⊤]
+  ((lhs)) =tla= (⊤) := by funext e ; tla_unfold_simp'
+
+theorem later_true :
+  letI lhs : pred σ := [tlafml| ◯ ⊤]
   ((lhs)) =tla= (⊤) := by funext e ; tla_unfold_simp'
 
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by

@@ -4,7 +4,9 @@ namespace TLA.ProofMode
 
 open Lean Meta Elab Tactic
 
-attribute [tlanormsimp ↓] impl_intro valid_eq_true_implies impl_intro_add_r and_assoc and_true true_and
+attribute [tlanormsimp ↓] TLA.impl_intro TLA.valid_eq_true_implies TLA.impl_intro_add_r TLA.and_assoc
+  TLA.and_true TLA.true_and TLA.imp_true TLA.always_true TLA.eventually_true TLA.later_true
+  TLA.or_false TLA.false_or TLA.forall_unit TLA.exists_unit
 
 /--
 `tla_normalize` rewrites a raw TLA goal into a shape that proof-mode tactics can

@@ -2,6 +2,10 @@ import Lean
 
 namespace LentilLib
 
+theorem forall_unit {p : PUnit → Prop} : (∀ x, p x) ↔ p PUnit.unit := by grind
+
+theorem exists_unit {p : PUnit → Prop} : (∃ x, p x) ↔ p PUnit.unit := by grind
+
 namespace List
 
 theorem mem_forall_iff_fin_index {α : Type u} (l : List α) (p : α → Prop) :
