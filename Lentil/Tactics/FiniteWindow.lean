@@ -436,7 +436,7 @@ elab "tla_finite_window" : tactic => withMainContext do
   introFiniteStates n
   -- The core still contains the instance constructors and computed `max` widths;
   -- reducing them produces the expected first-order state predicate goal.
-  withMainContext do evalTactic <| ← `(tactic| dsimp only [$(mkIdent `tla_finite_window_def):ident])
+  withMainContext do evalTactic <| ← `(tactic| dsimp +$(mkIdent `instances) -$(mkIdent `failIfUnchanged) only [$(mkIdent `tla_finite_window_def):ident])
   unless proofModeHypNames.isEmpty do
     let g ← getMainGoal
     let (_, g') ← liftMetaM <| g.introN proofModeHypNames.length proofModeHypNames
