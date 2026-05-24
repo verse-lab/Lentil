@@ -5,6 +5,7 @@ import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Exists
 import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Intro
+import Lentil.ProofMode.Tactics.LeftRight
 import Lentil.ProofMode.Tactics.ModalityMisc
 import Lentil.ProofMode.Tactics.Monotone
 import Lentil.ProofMode.Tactics.Normalize
