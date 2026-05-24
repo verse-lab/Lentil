@@ -3,6 +3,7 @@ import Lentil.ProofMode.Tactics.Assumption
 import Lentil.ProofMode.Tactics.CheckGoalForm
 import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Exists
+import Lentil.ProofMode.Tactics.Exit
 import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Intro
 import Lentil.ProofMode.Tactics.LeftRight
