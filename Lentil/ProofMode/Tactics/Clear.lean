@@ -47,6 +47,10 @@ syntax (name := tlaClearTac) "tla_clear" (ppSpace colGt ident)+ : tactic
 private def clearTacDSimps := #[``List.filter, ``List.contains, ``List.elem, ``or, ``and, ``not,
   ``String.reduceBEq, ``String.reduceBNe, ``Bool.false_or, ``Bool.or_false]
 
+def tlaClearByName (name : List String) : TacticM Unit := do
+  evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear) ($(quote name)) ?_)
+  postDSimpAfterApplyingReflectionTheorem clearTacDSimps
+
 elab_rules : tactic
   | `(tactic| tla_clear * - $[$names:ident]*) => withMainContext do
     let toKeep := names.toList.map fun name => toString name.getId
@@ -54,7 +58,6 @@ elab_rules : tactic
     postDSimpAfterApplyingReflectionTheorem clearTacDSimps
   | `(tactic| tla_clear $[$names:ident]*) => withMainContext do
     let toClear := names.toList.map fun name => toString name.getId
-    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear) ($(quote toClear)) ?_)
-    postDSimpAfterApplyingReflectionTheorem clearTacDSimps
+    tlaClearByName toClear
 
 end TLA.ProofMode

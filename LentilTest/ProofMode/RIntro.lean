@@ -88,4 +88,11 @@ example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
   · intro _ _ ; exact True.intro
   · intro _ _ ; exact True.intro
 
+-- `tla_rintro -` introduces a temporal antecedent and immediately clears it.
+example : (p) |-tla- (q → p) := by
+  tla_start hp
+  tla_rintro -
+  tla_check_goal Entails [⟨"hp", p⟩] p
+  intro _ hp ; exact hp
+
 end TLA.ProofMode.Test.RIntro

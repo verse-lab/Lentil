@@ -250,6 +250,52 @@ example : (⊤) |-tla- (a ∨ ¬ a) := by
   · intro _ ha ; exact Or.inl ha
   · intro _ ha ; exact Or.inr ha
 
+/-! ## Clear (`-`) -/
+
+-- Top-level `-` clears the targeted hypothesis.
+example : (a) |-tla- (⊤) := by
+  tla_start h
+  tla_rcases h with -
+  tla_check_goal Entails [] (tla_true : pred σ)
+  intro _ _ ; exact True.intro
+
+-- `-` in a tuple slot discards that conjunct after destructuring.
+example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
+  tla_start ha0
+  tla_have hab := lem ha0
+  tla_clear ha0
+  tla_rcases hab with ⟨ha, -⟩
+  tla_check_goal Entails [⟨"ha", a⟩] a
+  intro _ ha ; exact ha
+
+-- Symmetric: discard the left conjunct, keep the right.
+example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
+  tla_start ha0
+  tla_have hab := lem ha0
+  tla_clear ha0
+  tla_rcases hab with ⟨-, hb⟩
+  tla_check_goal Entails [⟨"hb", b⟩] b
+  intro _ hb ; exact hb
+
+-- `tla_obtain - := h` routes through `tlaRcasesCore` and clears `h`.
+example : (a) |-tla- (tla_true) := by
+  tla_start h
+  tla_obtain - := h
+  tla_check_goal Entails [] (tla_true : pred σ)
+  intro _ _ ; exact True.intro
+
+-- `-` inside an alternation discards the introduced hypothesis on that branch.
+example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (⊤) := by
+  tla_start ha0
+  tla_have h := lem ha0
+  tla_clear ha0
+  tla_rcases h with (ha | -)
+  · tla_check_goal Entails [⟨"ha", a⟩] (tla_true : pred σ)
+    intro _ _ ; exact True.intro
+  · -- the `b`-branch hypothesis was cleared
+    tla_check_goal Entails [] (tla_true : pred σ)
+    intro _ _ ; exact True.intro
+
 /-! ## Errors -/
 
 -- Pred head is neither `tla_and` nor `tla_exists`.

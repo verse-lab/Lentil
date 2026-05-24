@@ -1,4 +1,5 @@
 import Lentil.ProofMode.Tactics.Have
+import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Rename
 import Lentil.ProofMode.Tactics.Revert
 
@@ -190,6 +191,10 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
     -- FIXME: This is not very good, since the generated names are not readable.
     -- A better design should be to only support `-` at the tail positions.
     pure ()
+  | `(rcasesPat| -) =>
+    -- Clear the targeted hypothesis. Works at any nesting depth because the
+    -- name was already resolved to `currentHypStr` above.
+    tlaClearByName [currentHypStr]
   | `(rcasesPat| ⟨ $pats,* ⟩) =>
     let (pat1, pat2) ← splitBinaryRightAssoc pats.getElems
     match_expr pred with
@@ -274,7 +279,12 @@ introduces a Lean witness `x` and a temporal hypothesis `hx : P x`. If
 tla_rcases h with (hp | hq)
 ```
 case-splits into two subgoals, with `hp : p` in the first and `hq : q` in the
-second. A numeric index can be used instead of a name:
+second. A `-` pattern clears the targeted hypothesis:
+```lean
+tla_rcases h with -
+tla_rcases h with ⟨ha, -⟩  -- destructure and discard the second conjunct
+```
+A numeric index can be used instead of a name:
 ```lean
 tla_rcases 0 with ⟨hp, hq⟩
 ```
