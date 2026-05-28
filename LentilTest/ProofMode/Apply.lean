@@ -79,4 +79,11 @@ example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
   · tla_apply lem2
   · tla_assumption
 
+example : (⊥) |-tla- (a ↝ b) := by
+  tla_start h
+  tla_apply (wf1 _ _ _ _)
+  on_goal 2=> exact fun _ _ => False
+  on_goal 2=> exact fun _ _ => False
+  tla_contradiction
+
 end TLA.ProofMode.Test.Apply

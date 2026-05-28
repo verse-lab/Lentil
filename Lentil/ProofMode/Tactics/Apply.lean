@@ -74,7 +74,15 @@ syntax (name := tlaApplyBackwardTac) "tla_apply " term : tactic
 
 elab_rules : tactic
   | `(tactic| tla_apply $tm:term) => withMainContext do
-    (do evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_trans) (by apply $tm) ?_))
+    (do
+      let g ← getMainGoal
+      let gs ← evalTacticAt (← `(tactic| refine @$(mkIdent ``Entails_trans) _ _ ?_ _ ?_ ?_)) g
+      -- NOTE: This is kind of ad-hoc, relying on the exact shape of `Entails_trans`
+      let [midGoal, theoremGoal, entailsGoal] := gs
+        | throwError "tla_apply: failed to generate the expected number of subgoals"
+      replaceMainGoal [theoremGoal, entailsGoal, midGoal]
+      Tactic.focusAndDone <| evalTactic <| ← `(tactic| apply $tm)
+      pruneSolvedGoals)
     <|>
     (do
       let idx ← tlaHaveTerm default /- the name does not matter here -/ tm

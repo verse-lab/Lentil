@@ -71,7 +71,7 @@ theorem wf1_original (p q : pred σ) (next a : action σ) :
    ((p ⇒ Enabled a))) |-tla- (□ ⟨next⟩ ∧ 𝒲ℱ a → p ↝ q) := by
   tla_start hpuntilq haq henable
   tla_rintro ⟨hnext, hfair⟩
-  tla_apply wf1 (next := next) (a := a)
+  tla_apply wf1 _ _ (next := next) (a := a)
   tla_split_ands
   · rw [later_or] ; tla_apply hpuntilq
   · tla_apply haq

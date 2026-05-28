@@ -32,7 +32,7 @@ canonical `|-tla- r` (i.e. `valid r`), rather than the equivalent
 syntax (name := tlaExitTac) "tla_exit" : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_exit) => do
+  | `(tactic| tla_exit) => withMainContext do
     let mainGoal ← getMainGoal
     let ty ← mainGoal.getType
     let ty ← cleanupAnnotAndMore ty

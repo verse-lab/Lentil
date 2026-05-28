@@ -17,6 +17,7 @@ open Classical LentilLib
 #tla_lift And.imp => TLA.and_imp_both
 #tla_lift not_and_of_not_left not_and_of_not_right and_left_comm and_right_comm
   and_rotate and_and_and_comm and_and_left and_and_right
+  and_imp
 
 -- `Or`
 #tla_lift or_self_iff or_left_comm or_right_comm or_or_or_comm or_or_distrib_left

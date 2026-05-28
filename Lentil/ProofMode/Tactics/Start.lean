@@ -32,7 +32,7 @@ goal `r`.
 syntax (name := tlaStartTac) "tla_start" (ppSpace colGt term:max)* : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_start $[$names:ident]*) => do
+  | `(tactic| tla_start $[$names:ident]*) => withMainContext do
     -- Get input labels
     let lbls := names.toList.map fun name => toString name.getId
     if LentilLib.List.containsDuplicateElemHashable lbls then

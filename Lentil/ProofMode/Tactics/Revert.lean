@@ -51,11 +51,19 @@ theorem Entails_revert_by_name (toRevert : String) :
   letI idx := hyps.findIdx fun h => h.name == toRevert
   (type_of% (@Entails_revert_by_idx _ hyps goal idx)) := Entails_revert_by_idx _
 
+theorem Entails_revert_all :
+  Entails [] (repeatedImplies (hyps.map NamedPred.pred) goal) →
+  Entails hyps goal := by
+  intro h ; replace h := (valid_eq_true_implies _).mpr h
+  intro e h1 ; apply repeatedImplies_apply ; apply And.intro ; apply h1 ; apply h
+
 end
 
 private def revertTacDSimps := #[``List.findIdx, ``List.findIdx.go,
   ``List.get?Internal, ``List.eraseIdx, ``String.reduceBEq,
   ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
+
+private def revertAllTacDSimps := #[``repeatedImplies, ``List.map, ``List.foldr]
 
 private def restoreBinderNameInForallCase : TacticM Unit := do
   let g ← getMainGoal
@@ -82,9 +90,26 @@ quantifier in the goal.
 -/
 syntax (name := tlaRevertTac) "tla_revert" (ppSpace colGt ident)+ : tactic
 
+/--
+`tla_revert_all` moves every temporal hypothesis back into the proof-mode goal.
+
+For example, if the proof-mode context contains `hp : p`, `hq : q`, and the
+goal is `r`, then
+```lean
+tla_revert_all
+```
+leaves an empty temporal context and changes the goal to `p → q → r`.
+Lean-local variables and pure assumptions are not reverted; use `tla_revert`
+with explicit names for those.
+-/
+syntax (name := tlaRevertAllTac) "tla_revert_all" : tactic
+
 -- FIXME: Better error message? Since the current semantics is if the target is missing,
 -- then do nothing
 elab_rules : tactic
+  | `(tactic| tla_revert_all) => do
+    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_revert_all) ?_)
+    postDSimpAfterApplyingReflectionTheorem revertAllTacDSimps
   | `(tactic| tla_revert $[$names:ident]*) => do
     -- Revert in reverse order so that the resulting nested implication mirrors
     -- the order of the names in the user's invocation (left-to-right becomes

@@ -61,6 +61,26 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   tla_check_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
   intro e ⟨_, hr⟩ _ ; exact hr
 
+/-! ## Revert all temporal hypotheses -/
+
+-- Revert every temporal hypothesis at once. The temporal context becomes empty
+-- and the hypotheses are rebuilt as a left-to-right implication chain.
+example : (p ∧ q) |-tla- (p) := by
+  tla_start hp hq
+  tla_revert_all
+  tla_check_goal_form
+  tla_check_goal Entails [] [tlafml| p → q → p]
+  intro _ _ hp _ ; exact hp
+
+-- On an empty temporal context, `tla_revert_all` is a no-op on the goal shape.
+example : (q) |-tla- (⊤) := by
+  tla_start hq
+  tla_clear hq
+  tla_revert_all
+  tla_check_goal_form
+  tla_check_goal Entails [] [tlafml| ⊤]
+  intro _ _ ; exact True.intro
+
 /-! ## ∀-revert (Lean-local non-Prop var) -/
 
 -- Revert a `∀`-introduced binder.
