@@ -81,6 +81,9 @@ elab_rules : tactic
       let [midGoal, theoremGoal, entailsGoal] := gs
         | throwError "tla_apply: failed to generate the expected number of subgoals"
       replaceMainGoal [theoremGoal, entailsGoal, midGoal]
+      -- NOTE: `mid` is an auxiliary predicate to be inferred by applying the theorem;
+      -- make it assignable by unification instead of leaving it synthetic opaque.
+      midGoal.setKind .natural
       Tactic.focusAndDone <| evalTactic <| ← `(tactic| apply $tm)
       pruneSolvedGoals)
     <|>

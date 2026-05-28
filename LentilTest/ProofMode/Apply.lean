@@ -79,6 +79,13 @@ example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
   · tla_apply lem2
   · tla_assumption
 
+-- Applying `wf1` with its action arguments supplied should still infer the
+-- state predicates from the current goal.
+example (next act : action σ) : (⊥) |-tla- (p ↝ q) := by
+  tla_start h
+  tla_apply wf1 (next := next) (a := act)
+  tla_contradiction
+
 example : (⊥) |-tla- (a ↝ b) := by
   tla_start h
   tla_apply (wf1 _ _ _ _)
