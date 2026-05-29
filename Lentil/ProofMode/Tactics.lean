@@ -3,6 +3,7 @@ import Lentil.ProofMode.Tactics.Assumption
 import Lentil.ProofMode.Tactics.CheckGoalForm
 import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Contradiction
+import Lentil.ProofMode.Tactics.CoalesceToPTL
 import Lentil.ProofMode.Tactics.Exists
 import Lentil.ProofMode.Tactics.Exit
 import Lentil.ProofMode.Tactics.Have
@@ -26,6 +27,8 @@ NOTE: On the soundness theorems corresponding to these tactics:
 (not including `normalize` and `start`)
 - `clear`: simple inclusion reasoning
 - `assumption`: inclusion reasoning for a singleton sub-context
+- `coalesce_to_ptl`: generalize first-order predicate blocks while preserving
+  their propositional temporal skeleton
 - `exists`, `intro`: basically reducing to existing rules
 - `revert`: basically the inversion of `intro`
 - `pull_pure`: `revert` + `intro`
