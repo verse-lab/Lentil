@@ -54,12 +54,10 @@ example (Q : Prop) (h : Q → (p) |-tla- (q)) : (p) |-tla- (⌞ Q ⌟ → (q)) :
   exact h hQ
 
 -- Mixed sequence: ∀, then ⌞..⌟→, then ∀ again. Starting from `⊤` on the
--- premise side gives an empty hypothesis list after `tla_start`. The body
--- of each `∀` parses at high tlafml precedence, so the `→` and inner `∀`
--- need to be parenthesized to live inside the binder scope.
+-- premise side gives an empty hypothesis list after `tla_start`.
 example (P : Nat → Nat → pred σ) :
-    (⊤) |-tla- (∀ x : Nat, (⌞ x = x ⌟ → (∀ y : Nat, (P x y)))) →
-    (⊤) |-tla- (∀ x : Nat, (⌞ x = x ⌟ → (∀ y : Nat, (P x y)))) := by
+    (⊤) |-tla- (∀ x : Nat, ⌞ x = x ⌟ → ∀ y : Nat, P x y) →
+    (⊤) |-tla- (∀ x : Nat, ⌞ x = x ⌟ → ∀ y : Nat, P x y) := by
   intro h
   tla_start
   tla_intro x hxx y

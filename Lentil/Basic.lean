@@ -115,7 +115,7 @@ end TLA
 -/
 
 declare_syntax_cat tlafml
-syntax (priority := low) term:max : tlafml
+syntax (priority := low) term:lead : tlafml
 syntax "(" tlafml ")" : tlafml
 syntax "⌜ " term " ⌝" : tlafml
 syntax "⌞ " term " ⌟" : tlafml
@@ -124,21 +124,21 @@ syntax "⊤" : tlafml
 syntax "⊥" : tlafml
 syntax tlafml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
 syntax:max tlafml_heading_op tlafml:40 : tlafml
-syntax:max "Enabled" term:40 : tlafml
+syntax:max "Enabled" term:lead : tlafml
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
-syntax:15 tlafml:16 " → " tlafml:15 : tlafml
+syntax:25 tlafml:26 " → " tlafml:25 : tlafml
 syntax:35 tlafml:36 " ∧ " tlafml:35 : tlafml
 syntax:30 tlafml:31 " ∨ " tlafml:30 : tlafml
-syntax:20 tlafml:21 " ↝ " tlafml:20 : tlafml
-syntax:25 tlafml:26 " 𝑈 " tlafml:25 : tlafml
-syntax:17 tlafml:18 " ⇒ " tlafml:17 : tlafml
-syntax:arg "𝒲ℱ" term:max : tlafml
+syntax:29 tlafml:30 " ↝ " tlafml:29 : tlafml
+syntax:37 tlafml:38 " 𝑈 " tlafml:37 : tlafml
+syntax:27 tlafml:28 " ⇒ " tlafml:27 : tlafml
+syntax:arg "𝒲ℱ" term:lead : tlafml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
 open Batteries.ExtendedBinder in
-syntax "∀ " extBinder ", " tlafml:51 : tlafml
+syntax "∀ " extBinder ", " tlafml : tlafml
 open Batteries.ExtendedBinder in
-syntax "∃ " extBinder ", " tlafml:51 : tlafml
+syntax "∃ " extBinder ", " tlafml : tlafml
 
 syntax tlafml_bigop := "⋀ " <|> "⋁ "
 syntax tlafml_bigop binderIdent " ∈ " term ", " tlafml : tlafml
@@ -190,7 +190,7 @@ macro_rules
 /- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
    easily typed in Lean VSCode extension, so anyway -/
 syntax:max tlafml:max " |-tla- " tlafml:max : term
-syntax:max "|-tla- " tlafml:max : term
+syntax:55 "|-tla- " tlafml:55 : term
 syntax:max tlafml:max " =tla= " tlafml:max : term
 syntax term " |=tla= " tlafml : term
 
