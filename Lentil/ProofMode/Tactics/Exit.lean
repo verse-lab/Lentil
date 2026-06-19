@@ -34,12 +34,9 @@ syntax (name := tlaExitTac) "tla_exit" : tactic
 elab_rules : tactic
   | `(tactic| tla_exit) => withMainContext do
     let mainGoal ← getMainGoal
-    let ty ← mainGoal.getType
-    let ty ← cleanupAnnotAndMore ty
-    let_expr TLA.ProofMode.Entails σ hypsExpr rhs := ty
-      | throwError "tla_exit: goal is not an Entails sequent, but {ty}"
-    let some (_, hyps) ← recognizeHypsList hypsExpr
-      | throwError "tla_exit: failed to read the hyp list from {hypsExpr}"
+    let ty ← cleanupAnnotAndMore (← mainGoal.getType)
+    let (σ, _, _, hyps, rhs) ←
+      parseCanonicalEntails ty m!"tla_exit: goal is not an Entails sequent, but {ty}"
     let preds := hyps.map (·.2)
     if preds.isEmpty then
       let thm ← mkAppM ``valid_eq_true_implies #[rhs]

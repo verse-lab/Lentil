@@ -4,16 +4,6 @@ namespace TLA.ProofMode
 
 open Lean Meta Elab Tactic
 
--- CHECK Does this also appear somewhere else?
-private def parseCanonicalEntails (tm : Expr) (errorMsg : MessageData) :
-    TacticM (Expr × List (String × Expr) × Expr) := do
-  let tm ← cleanupAnnotAndMore tm
-  let_expr Entails σ hyps goal := tm
-    | throwError errorMsg
-  let some (_, hyps) ← recognizeHypsList hyps
-    | throwError errorMsg
-  return (σ, hyps, goal)
-
 private def checkNamedHyps (actualHyps expectedHyps : List (String × Expr)) : MetaM Unit :=
   go 0 actualHyps expectedHyps
 where go : Nat → List (String × Expr) → List (String × Expr) → MetaM Unit
@@ -52,11 +42,11 @@ checks that the context contains exactly `hp : p` followed by `hq : q`, and
 that the goal is `r`. Predicates are compared by definitional equality.
 -/
 elab "tla_check_goal " expected:term : tactic => withMainContext do
-  let (actualσ, actualHyps, actualGoal) ←
+  let (actualσ, _, _, actualHyps, actualGoal) ←
     parseCanonicalEntails (← getMainTarget)
       m!"tla_check_goal: goal is not in canonical Entails form"
   let expected ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize expected none
-  let (expectedσ, expectedHyps, expectedGoal) ←
+  let (expectedσ, _, _, expectedHyps, expectedGoal) ←
     parseCanonicalEntails expected
       m!"tla_check_goal: expected an Entails expression with a literal hypothesis list"
   unless ← isDefEq actualσ expectedσ do

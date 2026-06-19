@@ -1,4 +1,5 @@
 import Lean
+import Lentil.ProofMode.Basic
 import Lentil.Tactics.Basic
 
 open Lean
@@ -375,17 +376,31 @@ private def finiteWindowOf (p : Expr) : MetaM (Expr × Nat) := do
   return (inst, n)
 
 private def introFiniteStates (n : Nat) : TacticM Unit := do
-  for idx in 0...n do
-    discard <| introFresh (stateName idx)
+  let g ← getMainGoal
+  let names := (List.range n).map stateName
+  let (_, g') ← liftMetaM <| g.introN n names
+  replaceMainGoal [g']
 where
-  /-- Introduce one fresh state variable for each argument of the finite core. -/
-  introFresh (namePrefix : Name) : TacticM FVarId := do
-    let name ← mkFreshUserName namePrefix
-    liftMetaTacticAux fun g => do
-      let (fvar, g') ← g.intro name
-      return (fvar, [g'])
   stateName (idx : Nat) : Name :=
     Name.mkSimple <| "s" ++ String.ofList (List.replicate idx '\'')
+
+private def changeProofModeEntailsToValidRepeatedImplies : TacticM (List Name) := withMainContext do
+  let g ← getMainGoal
+  let target ← ProofMode.cleanupAnnotAndMore (← g.getType)
+  let some (_, hypsExpr, _, hyps, goal) ← ProofMode.recognizeCanonicalEntails target
+    | return []
+  let thm ← mkAppOptM ``TLA.ProofMode.Entails_of_valid_repeatedImplies
+    #[none, some hypsExpr, some goal]
+  let gs ← g.apply thm
+  let [g] := gs
+    | throwError "tla_finite_window: unexpected number of goals after converting proof-mode Entails goal (got {gs.length}, expected 1)"
+  replaceMainGoal [g]
+  let implicationChain ← hyps.foldrM (init := goal) fun (_, hyp) acc =>
+    mkAppM ``TLA.tla_implies #[hyp, acc]
+  let newTarget ← mkAppM ``TLA.valid #[implicationChain]
+  let g ← getMainGoal
+  replaceMainGoal [← g.change newTarget]
+  return hyps.map fun (name, _) => Name.mkSimple name
 
 /--
 `tla_finite_window` reduces a finite-window TLA sequent to an ordinary Lean
@@ -398,6 +413,7 @@ does not peel genuinely temporal structure such as `□`; use sequent/modal rule
 first to expose a finite local obligation.
 -/
 elab "tla_finite_window" : tactic => withMainContext do
+  let proofModeHypNames ← changeProofModeEntailsToValidRepeatedImplies
   -- Work only with validity goals. Sequents are definitional aliases for
   -- validity of temporal implication.
   changePredImpliesToValid
@@ -421,5 +437,9 @@ elab "tla_finite_window" : tactic => withMainContext do
   -- The core still contains the instance constructors and computed `max` widths;
   -- reducing them produces the expected first-order state predicate goal.
   withMainContext do evalTactic <| ← `(tactic| dsimp only [$(mkIdent `tla_finite_window_def):ident])
+  unless proofModeHypNames.isEmpty do
+    let g ← getMainGoal
+    let (_, g') ← liftMetaM <| g.introN proofModeHypNames.length proofModeHypNames
+    replaceMainGoal [g']
 
 end TLA

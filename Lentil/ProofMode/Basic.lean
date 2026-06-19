@@ -61,6 +61,18 @@ theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred �
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
   TLA.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal
 
+-- FIXME: Move this somewhere else; this is very similar to `revert_all`
+/-- If a proof-mode context is reified as a chain of temporal implications,
+validity of that implication chain proves the original `Entails` sequent. -/
+theorem Entails_of_valid_repeatedImplies {σ : Type u} {hyps : List (NamedPred σ)}
+    {goal : pred σ} :
+    valid (repeatedImplies (hyps.map NamedPred.pred) goal) →
+      Entails hyps goal := by
+  intro h
+  unfold Entails
+  intro e hhyps
+  exact repeatedImplies_apply e ⟨hhyps, h e⟩
+
 theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   (idx : Nat) (h : idx < hyps.length) (f : NamedPred σ → NamedPred σ) :
   ((repeatedAnd <| hyps.map NamedPred.pred) ∧ (f (hyps[idx]'h) |>.pred)) =tla=
@@ -153,9 +165,22 @@ def recognizeHypsList (hyps : Expr) : MetaM (Option (Expr × List (String × Exp
   let some hyps := hyps | return none
   return some (ty, hyps)
 
+def recognizeCanonicalEntails (e : Expr) :
+    MetaM (Option (Expr × Expr × Expr × List (String × Expr) × Expr)) := do
+  let e ← cleanupAnnotAndMore e
+  let_expr Entails σ hypsExpr goal := e | return none
+  let some (hypTy, hyps) ← recognizeHypsList hypsExpr | return none
+  return some (σ, hypsExpr, hypTy, hyps, goal)
+
+def parseCanonicalEntails (e : Expr) (errorMsg : MessageData) :
+    MetaM (Expr × Expr × Expr × List (String × Expr) × Expr) := do
+  let some parsed ← recognizeCanonicalEntails e
+    | throwError errorMsg
+  return parsed
+
 def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Expr))) := do
-  let_expr TLA.ProofMode.Entails _ hyps _ := e | return none
-  recognizeHypsList hyps
+  let some (_, _, hypTy, hyps, _) ← recognizeCanonicalEntails e | return none
+  return some (hypTy, hyps)
 
 def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr))) := do
   let g ← getMainTarget
