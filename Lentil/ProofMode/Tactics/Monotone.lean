@@ -83,15 +83,19 @@ where
     matchFirst nm1 e |>.bind (matchFirst nm2)
 
 private def findMonotonePeel? (hyps : List (String × Expr)) (goal : Expr) :
-    Option (Name × List (String × Expr) × Expr) := do
-  let recognize (e : Expr) : Option (Name × Expr) :=
+    MetaM (Option (Name × List (String × Expr) × Expr)) := do
+  let recognizeDirect (e : Expr) : Option (Name × Expr) :=
     monotoneKinds.findSome? fun (recognizer, nm) => recognizer e |>.map (fun p => (nm, p))
-  let (nm, peeledGoal) ← recognize goal
-  let peeledHyps ← hyps.mapM fun (name, pred) => do
-    let (nm', peeledPred) ← recognize pred
-    guard (nm' == nm)
-    return (name, peeledPred)
-  return (nm, peeledHyps, peeledGoal)
+  let recognize (e : Expr) := recognizeWithTlaModalityHeadUnfold? recognizeDirect e
+  let some (nm, peeledGoal) ← recognize goal
+    | return none
+  let mut peeledHyps := []
+  for (name, pred) in hyps do
+    let some (nm', peeledPred) ← recognize pred | return none
+    unless nm' == nm do
+      return none
+    peeledHyps := (name, peeledPred) :: peeledHyps
+  return some (nm, peeledHyps.reverse, peeledGoal)
 
 /-- A not quite useful fallback to non-proof-mode case. -/
 private def rawMonotone : TacticM Unit := do
@@ -111,7 +115,7 @@ private def proofModeMonotone : TacticM Unit := withMainContext do
   -- Can we wrap it?
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
     | throwError "tla_monotone: failed to read the hypotheses from the goal"
-  let some (nm, peeledHyps, peeledGoal) := findMonotonePeel? hyps goal
+  let some (nm, peeledHyps, peeledGoal) ← findMonotonePeel? hyps goal
     | throwError "tla_monotone: expected every proof-mode hypothesis and the goal to have a common monotone temporal prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHyps
   let thm ← do
@@ -136,8 +140,14 @@ turns a context such as `hp : □ p`, `hq : □ q` with goal `□ r` into
 `hp : p`, `hq : q` with goal `r`.
 
 It also supports `◯` and `◇□` over multiple hypotheses, and the single-hypothesis
-cases for `◇` and `□◇`. Outside proof mode it applies the corresponding raw
-monotonicity theorem:
+cases for `◇` and `□◇`.
+
+When the outer modality is hidden behind a definition tagged with
+`[tla_modality_unfold]`, this tactic unfolds only that expression head while
+recognizing the prefix. This includes the built-in wrappers `TLA.always_implies`
+(`⇒`), `TLA.leads_to` (`↝`), and `TLA.weak_fairness` (`𝒲ℱ`).
+
+Outside proof mode it applies the corresponding raw monotonicity theorem:
 ```lean
 tla_monotone
 ```

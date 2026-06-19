@@ -36,4 +36,9 @@ register_simp_attr tladual
 /-- Marking the theorems that are used for normalizing sequents. -/
 register_simp_attr tlanormsimp
 
+/-- Marking definitions whose head may hide a leading modality operator. -/
+initialize tlaModalityUnfoldAttr : TagAttribute ←
+  registerTagAttribute `tla_modality_unfold
+    "definitions whose head may be unfolded by proof-mode modality tactics"
+
 initialize registerTraceClass `lentil.debug
