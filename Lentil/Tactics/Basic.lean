@@ -18,9 +18,9 @@ attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implie
 
 attribute [execsimp] exec.drop Nat.add_zero Nat.zero_add
 
-macro "tla_unfold" : tactic => `(tactic| (try dsimp only [tlasimp_def] at *))
+macro "tla_unfold_defs" : tactic => `(tactic| (try dsimp only [tlasimp_def] at *))
 
-macro "tla_unfold'" : tactic => `(tactic| (tla_unfold ; (try dsimp only [execsimp] at *)))
+macro "tla_unfold_defs'" : tactic => `(tactic| (tla_unfold_defs ; (try dsimp only [execsimp] at *)))
 
 macro "tla_unfold_simp" : tactic => `(tactic| (simp [tlasimp_def] at *))
 

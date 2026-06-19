@@ -1,6 +1,6 @@
 import Lentil
 
-/- Tests for `tla_simp` and `tla_dsimp`. -/
+/- Tests for `tla_simp`, `tla_dsimp`, and `tla_unfold`. -/
 
 namespace TLA.ProofMode.Test.Simp
 
@@ -58,5 +58,40 @@ example : TLA.pred_implies (wrapPred p) p := by
   tla_dsimp [wrapPred] at hp
   tla_check_goal Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
+
+-- `tla_unfold` directly runs Lean's conv-level `unfold` on the goal by default.
+example : TLA.pred_implies p (wrapPred p) := by
+  tla_start hp
+  tla_unfold wrapPred
+  tla_check_goal Entails [⟨"hp", p⟩] p
+  exact pred_implies_refl _
+
+-- `tla_unfold` can unfold selected proof-mode hypotheses.
+example : TLA.pred_implies (wrapPred p) p := by
+  tla_start hp
+  tla_unfold wrapPred at hp
+  tla_check_goal Entails [⟨"hp", p⟩] p
+  exact pred_implies_refl _
+
+-- Lean-style locations can include both selected hypotheses and the target.
+example : TLA.pred_implies (wrapPred p) (wrapPred p) := by
+  tla_start hp
+  tla_unfold wrapPred at hp ⊢
+  tla_check_goal Entails [⟨"hp", p⟩] p
+  exact pred_implies_refl _
+
+-- `at *` unfolds all temporal hypotheses and the goal.
+example : (wrapPred p ∧ wrapPred q) |-tla- (wrapPred p) := by
+  tla_start hp hq
+  tla_unfold wrapPred at *
+  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
+  intro _ h
+  exact h.1
+
+-- The old all-definition unfolding tactic is still available under its new name.
+example : @TLA.valid σ TLA.tla_true := by
+  tla_unfold_defs
+  intro _
+  trivial
 
 end TLA.ProofMode.Test.Simp

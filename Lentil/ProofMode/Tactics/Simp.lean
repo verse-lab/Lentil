@@ -20,11 +20,12 @@ The goal predicate is just argument 2 of `Entails`.
 -/
 
 private def runConvAtProofModeLocations
+    (tacticName : String)
     (loc? : Option (TSyntax ``Lean.Parser.Tactic.location))
     (mkConv : TacticM (TSyntax `conv)) : TacticM Unit := do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal
-    | throwError "tla_simp: goal is not an Entails sequent"
-  let loc ← parseRewriteLocation hyps loc? "tla_simp"
+    | throwError "{tacticName}: goal is not an Entails sequent"
+  let loc ← parseRewriteLocation hyps loc? tacticName
   for idx in loc.idxs do
     runConvAtPath (hypPredConvPath idx) (← mkConv)
   if loc.includeGoal then
@@ -69,12 +70,17 @@ syntax (name := tlaDsimp) "tla_dsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
+syntax (name := tlaUnfold) "tla_unfold" (ppSpace colGt ident)+ (Lean.Parser.Tactic.location)? : tactic
+
 elab_rules : tactic
   | `(tactic| tla_simp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
-    runConvAtProofModeLocations loc do
+    runConvAtProofModeLocations "tla_simp" loc do
       `(conv| simp $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
   | `(tactic| tla_dsimp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
-    runConvAtProofModeLocations loc do
+    runConvAtProofModeLocations "tla_dsimp" loc do
       `(conv| dsimp $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
+  | `(tactic| tla_unfold $defs:ident* $[$loc]?) => do
+    runConvAtProofModeLocations "tla_unfold" loc do
+      `(conv| unfold $defs:ident*)
 
 end TLA.ProofMode
