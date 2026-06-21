@@ -138,26 +138,26 @@ private def addTheoremPrefix (newHypName : String) (head : Term) (usedArgs : Arr
     let arg :: args := restArgs | throwError "tla_have: failed to elaborate a TLA theorem head from {head}"
     addTheoremPrefix newHypName head (usedArgs.push arg) args)
 
-private def explicitTheoremArgCount (head : Ident) : TacticM Nat := do
+private def theoremArgCount (allBinders : Bool) (head : Ident) : TacticM Nat := do
   -- `head` is restricted to an identifier, so inspect its type directly.
   -- This avoids asking the term elaborator to instantiate implicit arguments
   -- just to count how many explicit theorem arguments the prime tactic needs.
   let ty ← theoremHeadType head
-  countExplicitBindersUntilTLATheorem ty
+  countBindersUntilTLATheorem ty
 where
   theoremHeadType (head : Ident) : TacticM Expr := do
     if let some ldecl := (← getLCtx).findFromUserName? head.getId then
       return ldecl.type
     let decl ← resolveGlobalConstNoOverload head
     return (← getConstInfo decl).type
-  countExplicitBindersUntilTLATheorem (ty : Expr) : MetaM Nat := do
+  countBindersUntilTLATheorem (ty : Expr) : MetaM Nat := do
     forallTelescope (← instantiateMVars ty) fun args body => do
       let nm := body.getAppFn'.constName
       unless [``TLA.pred_implies, ``TLA.ProofMode.Entails, ``TLA.valid].contains nm do
         throwError "tla_have': failed to find a TLA theorem shape after omitted arguments, got type {body}"
       let lctx ← getLCtx
       return args.countP fun arg =>
-        lctx.findFVar? arg |>.elim false fun decl => if decl.binderInfo.isExplicit then true else false
+        lctx.findFVar? arg |>.elim false fun decl => allBinders || decl.binderInfo.isExplicit
 
 def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat := withMainContext do
   (do
@@ -222,14 +222,15 @@ where
       return none
     arg.raw.getArgs.findSomeM? fun alt => parse? ⟨alt⟩
 
-def tlaHavePrimeTerm (newHypName : String) (head : Ident) (args : Array (TSyntax `tlaMixedArg)) :
-    TacticM Nat := withMainContext do
+def tlaHavePrimeTerm (newHypName : String) (head : Ident) (allBinders : Bool)
+    (args : Array (TSyntax `tlaMixedArg)) : TacticM Nat := withMainContext do
   let some hypsLen ← goalHypsLength | throwError "tla_have': goal is not an Entails sequent"
   let termArgs ← args.toList.mapM mixedArgToTerm
-  let theoremArgCount ← explicitTheoremArgCount head
-  let (theoremArgs, rest) := termArgs.splitAt theoremArgCount
-  let holes := List.replicate (theoremArgCount - theoremArgs.length) <| ← `(_)
-  addValidTermHyp newHypName (Syntax.mkApp head (theoremArgs ++ holes).toArray)
+  let argCount ← theoremArgCount allBinders head
+  let (theoremArgs, rest) := termArgs.splitAt argCount
+  let holes := List.replicate (argCount - theoremArgs.length) <| ← `(_)
+  let headTerm : Term ← if allBinders then `(term| @$head:ident) else pure head
+  addValidTermHyp newHypName (Syntax.mkApp headTerm (theoremArgs ++ holes).toArray)
   for arg in rest do
     tlaSpecializeStep (.byIdx hypsLen) arg
   return hypsLen
@@ -261,13 +262,16 @@ head must be an identifier, not an arbitrary Lean term. In exchange, its
 arguments may be written as TLA formulas, without explicit `[tlafml| ... ]`
 wrappers.
 
+Writing `@thm` instead of `thm` exposes implicit theorem arguments, just like
+Lean's ordinary `@` notation.
+
 For example, if `lem : ∀ p : pred σ, |-tla- (p → p)`, then
 ```lean
 tla_have' h := lem (a ∧ b)
 ```
 adds `h : (a ∧ b) → (a ∧ b)` to the proof-mode context.
 -/
-syntax (name := tlaHavePrimeTac) "tla_have' " (ppSpace colGt ident) " := " ident (ppSpace colGt tlaMixedArg)* : tactic
+syntax (name := tlaHavePrimeTac) "tla_have' " (ppSpace colGt ident) " := " ("@")? ident (ppSpace colGt tlaMixedArg)* : tactic
 /--
 `tla_have := t` adds the temporal fact obtained from `t` under the default
 proof-mode name `"this"`.
@@ -334,9 +338,9 @@ elab_rules : tactic
   | `(tactic| tla_have $h:ident := $t:term) => do
     let nameStr := toString h.getId
     discard <| tlaHaveTerm nameStr t
-  | `(tactic| tla_have' $h:ident := $head:ident $[$args:tlaMixedArg]*) => withMainContext do
+  | `(tactic| tla_have' $h:ident := $[@%$explicit?]? $head:ident $[$args:tlaMixedArg]*) => withMainContext do
     let nameStr := toString h.getId
-    discard <| tlaHavePrimeTerm nameStr head args
+    discard <| tlaHavePrimeTerm nameStr head explicit?.isSome args
   | `(tactic| tla_have := $t:term) => do
     discard <| tlaHaveTerm "this" t
   | `(tactic| tla_replace $h:ident := $t:term) => withMainContext do

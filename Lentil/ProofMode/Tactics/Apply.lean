@@ -102,13 +102,16 @@ head must be an identifier, not an arbitrary Lean term. In exchange, its
 arguments may be written as TLA formulas, without explicit `[tlafml| ... ]`
 wrappers.
 
+Writing `@thm` instead of `thm` exposes implicit theorem arguments, just like
+Lean's ordinary `@` notation.
+
 For example, if `lem : ∀ p : pred σ, (p) |-tla- r`, then
 ```lean
 tla_apply' lem (p ∧ q)
 ```
 reduces the current goal `r` to proving `p ∧ q`.
 -/
-syntax (name := tlaApplyPrimeBackwardTac) "tla_apply' " ident (ppSpace colGt tlaMixedArg)* : tactic
+syntax (name := tlaApplyPrimeBackwardTac) "tla_apply' " ("@")? ident (ppSpace colGt tlaMixedArg)* : tactic
 
 elab_rules : tactic
   | `(tactic| tla_apply $tm:term) => withMainContext do
@@ -128,8 +131,8 @@ elab_rules : tactic
     (do
       let idx ← tlaHaveTerm default /- the name does not matter here -/ tm
       applyIntroducedHypByIdx idx)
-  | `(tactic| tla_apply' $head:ident $[$args:tlaMixedArg]*) => withMainContext do
-    let idx ← tlaHavePrimeTerm default /- the name does not matter here -/ head args
+  | `(tactic| tla_apply' $[@%$explicit?]? $head:ident $[$args:tlaMixedArg]*) => withMainContext do
+    let idx ← tlaHavePrimeTerm default /- the name does not matter here -/ head explicit?.isSome args
     applyIntroducedHypByIdx idx
 
 end TLA.ProofMode

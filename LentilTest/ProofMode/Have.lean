@@ -103,6 +103,14 @@ example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
   tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| (b ∧ c) → a]⟩] [tlafml| (b ∧ c) → a]
   tla_apply h
 
+-- The `@` form exposes implicit theorem arguments to positional arguments.
+example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
+    (a) |-tla- ((b ∧ c) → a) := by
+  tla_start ha
+  tla_have' h := @lem a (b ∧ c) ha
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| (b ∧ c) → a]⟩] [tlafml| (b ∧ c) → a]
+  tla_apply h
+
 -- Missing trailing theorem arguments are inserted as ordinary Lean holes.
 example : (⊥) |-tla- (a ↝ b) := by
   tla_start h

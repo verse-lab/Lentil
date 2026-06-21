@@ -88,6 +88,12 @@ example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
   tla_start hp
   tla_apply' lem (q ∧ s) hp
 
+-- The `@` form exposes implicit theorem arguments to positional arguments.
+example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
+    (p) |-tla- ((q ∧ s) → p) := by
+  tla_start hp
+  tla_apply' @lem p (q ∧ s) hp
+
 -- The head being applied can itself be a proof-mode temporal hypothesis.
 example : ([tlafml| (p → q) ∧ p]) |-tla- (q) := by
   tla_start h hp
@@ -136,6 +142,14 @@ example : (⊥) |-tla- (a ↝ b) := by
 example : (⊥) |-tla- (a ↝ b) := by
   tla_start h
   tla_apply' wf1
+  on_goal 2=> exact fun _ _ => False
+  on_goal 2=> exact fun _ _ => False
+  tla_contradiction
+
+-- With `@`, implicit arguments such as the state type are supplied positionally.
+example : (⊥) |-tla- (a ↝ b) := by
+  tla_start h
+  tla_apply' @wf1 _ a b
   on_goal 2=> exact fun _ _ => False
   on_goal 2=> exact fun _ _ => False
   tla_contradiction
