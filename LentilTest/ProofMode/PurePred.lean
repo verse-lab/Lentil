@@ -39,7 +39,7 @@ example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
   tla_start ha hQ
   tla_pull_pure hQ
   tla_check_goal_form
-  tla_apply (lem hQ)
+  tla_apply' lem hQ
   tla_check_goal Entails [⟨"ha", a⟩] a
   exact pred_implies_refl _
 

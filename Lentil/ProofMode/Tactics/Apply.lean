@@ -53,6 +53,28 @@ private def goalDirectedPremisesCut (remainingPremises : List Expr) (goal conclu
       let newConclusion ← mkAppM ``tla_implies #[prem, conclusion]
       goalDirectedPremisesCut rest goal newConclusion
 
+private def applyIntroducedHypByIdx (idx : Nat) : TacticM Unit := withMainContext do
+  let g ← getMainTarget
+  let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
+  let_expr TLA.ProofMode.Entails _ hyps goal := g
+    | throwError "tla_apply: goal is not an Entails sequent, but {g}"
+  let some (_, hyps) ← recognizeHypsList hyps
+    | throwError "tla_apply: failed to read the hypotheses from the goal"
+  let some (_, pred) := hyps[idx]?
+    | throwError "tla_apply: failed to find the introduced theorem hypothesis"
+  -- NOTE: For convenience, do not cut inner `∧`s
+  let (premises, conclusion) ← TLA.Expr.splitImplicationsIntoParts pred (cutAnd? := false)
+  -- The goal might be an implication, so need to find where to cut `premises`
+  let premisesToProve ← goalDirectedPremisesCut premises goal conclusion
+  if premisesToProve.isEmpty then
+    evalTactic <| ← `(tactic| apply $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
+  else
+    let holesListStx ← do
+      let holes := Array.replicate premisesToProve.length (← `(_))
+      `([$holes,*])
+    evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_apply_hyp) $holesListStx (by rfl) ?_)
+    postDSimpAfterApplyingReflectionTheorem applyTacDSimps
+
 /--
 `tla_apply t` proves the current proof-mode goal using a TLA theorem or a
 temporal hypothesis. If the theorem concludes the current goal but still has
@@ -71,6 +93,22 @@ tla_apply lemma hp
 changes the goal to `q`.
 -/
 syntax (name := tlaApplyBackwardTac) "tla_apply " term : tactic
+/--
+`tla_apply' thm arg₁ ... argₙ` proves the current proof-mode goal by applying
+the theorem or local hypothesis `thm` to the given arguments.
+
+Compared with `tla_apply t`, the prime form is more restricted: the theorem
+head must be an identifier, not an arbitrary Lean term. In exchange, its
+arguments may be written as TLA formulas, without explicit `[tlafml| ... ]`
+wrappers.
+
+For example, if `lem : ∀ p : pred σ, (p) |-tla- r`, then
+```lean
+tla_apply' lem (p ∧ q)
+```
+reduces the current goal `r` to proving `p ∧ q`.
+-/
+syntax (name := tlaApplyPrimeBackwardTac) "tla_apply' " ident (ppSpace colGt tlaMixedArg)* : tactic
 
 elab_rules : tactic
   | `(tactic| tla_apply $tm:term) => withMainContext do
@@ -89,26 +127,9 @@ elab_rules : tactic
     <|>
     (do
       let idx ← tlaHaveTerm default /- the name does not matter here -/ tm
-      withMainContext do
-      let g ← getMainTarget
-      let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
-      let_expr TLA.ProofMode.Entails _ hyps goal := g
-        | throwError "tla_apply: goal is not an Entails sequent, but {g}"
-      let some (_, hyps) ← recognizeHypsList hyps
-        | throwError "tla_apply: failed to read the hypotheses from the goal"
-      let some (_, pred) := hyps[idx]?
-        | throwError "tla_apply: failed to find the introduced theorem hypothesis"
-      -- NOTE: For convenience, do not cut inner `∧`s
-      let (premises, conclusion) ← TLA.Expr.splitImplicationsIntoParts pred (cutAnd? := false)
-      -- The goal might be an implication, so need to find where to cut `premises`
-      let premisesToProve ← goalDirectedPremisesCut premises goal conclusion
-      if premisesToProve.isEmpty then
-        evalTactic <| ← `(tactic| apply $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
-      else
-        let holesListStx ← do
-          let holes := Array.replicate premisesToProve.length (← `(_))
-          `([$holes,*])
-        evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_apply_hyp) $holesListStx (by rfl) ?_)
-        postDSimpAfterApplyingReflectionTheorem applyTacDSimps)
+      applyIntroducedHypByIdx idx)
+  | `(tactic| tla_apply' $head:ident $[$args:tlaMixedArg]*) => withMainContext do
+    let idx ← tlaHavePrimeTerm default /- the name does not matter here -/ head args
+    applyIntroducedHypByIdx idx
 
 end TLA.ProofMode

@@ -60,6 +60,58 @@ example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
+-- The restricted prime form accepts formula syntax as theorem arguments.
+example (lem : ∀ p : pred σ, |-tla- (p → p)) : (a) |-tla- (a) := by
+  tla_start ha
+  tla_have' h := lem (a ∧ b)
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| (a ∧ b) → (a ∧ b)]⟩] a
+  tla_assumption
+
+-- The prime form can keep a formula-instantiated theorem as a residual implication.
+example (lem : ∀ p : pred σ, (p) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
+  tla_start ha hc
+  tla_have' h := lem (a ∧ c)
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"h", [tlafml| (a ∧ c) → b]⟩] b
+  tla_apply h ⟨ha, hc⟩
+
+-- Lean arguments before the theorem shape are consumed before temporal arguments.
+example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tla_start ha
+  tla_have' hb := lem (0 + 1) ha
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
+  intro _ ⟨_, hb⟩ ; exact hb
+
+-- Valid implication chains still specialize through proof-mode hypotheses.
+example (lem : |-tla- (a → b → c)) : (a ∧ b) |-tla- (c) := by
+  tla_start ha hb
+  tla_have' hc := lem ha hb
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  intro _ ⟨_, _, hc⟩ ; exact hc
+
+-- Formula arguments and tuple temporal arguments can appear in the same application.
+example (lem : ∀ p : pred σ, (p) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
+  tla_start ha hc
+  tla_have' hb := lem (a ∧ c) ⟨ha, hc⟩
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
+  intro _ ⟨_, _, hb⟩ ; exact hb
+
+-- Explicit and implicit predicate parameters can appear in the same theorem.
+example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
+    (a) |-tla- ((b ∧ c) → a) := by
+  tla_start ha
+  tla_have' h := lem (b ∧ c) ha
+  tla_check_goal Entails [⟨"ha", a⟩, ⟨"h", [tlafml| (b ∧ c) → a]⟩] [tlafml| (b ∧ c) → a]
+  tla_apply h
+
+-- Missing trailing theorem arguments are inserted as ordinary Lean holes.
+example : (⊥) |-tla- (a ↝ b) := by
+  tla_start h
+  tla_have' hw := wf1 a b
+  on_goal 2=> exact fun _ _ => False
+  on_goal 2=> exact fun _ _ => False
+  tla_apply hw
+  tla_contradiction
+
 -- Add a residual implication from a `pred_implies` theorem.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tla_start ha
