@@ -1,7 +1,7 @@
 import Lake
 open Lake DSL
 
-require aesop from git "https://github.com/leanprover-community/aesop" @ "v4.30.0"
+require aesop from git "https://github.com/leanprover-community/aesop" @ "v4.31.0"
 
 package «lentil» where
   -- Settings applied to both builds and interactive editing
