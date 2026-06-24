@@ -66,13 +66,13 @@ hr : r
 #guard_msgs in
 #check (Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| ◇ p] : Prop)
 
--- Sanity-check that the same shape is produced by `tla_start`: after the
+-- Sanity-check that the same shape is produced by `tstart`: after the
 -- tactic runs, the goal is a real `Entails …` and thus rendered via the
--- proof-mode delaborator. `tla_check_goal` confirms the named term shape.
+-- proof-mode delaborator. `tcheck_goal` confirms the named term shape.
 example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
   intro h
-  tla_start hp hq
-  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
+  tstart hp hq
+  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
 end TLA.ProofMode.Test.Display

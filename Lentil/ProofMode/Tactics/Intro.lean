@@ -54,9 +54,9 @@ def tlaIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
     throwError m!"{errorMsgPrefix}: goal predicate is not a ∀ or a ⌞..⌟ →; got {goalPred}"
 
 /--
-`tla_intro x₁ x₂ ...` introduces binders from the proof-mode goal.
+`tintro x₁ x₂ ...` introduces binders from the proof-mode goal.
 
-If the goal starts with a temporal implication `p → q`, then `tla_intro hp`
+If the goal starts with a temporal implication `p → q`, then `tintro hp`
 adds `hp : p` to the proof-mode context and changes the goal to `q`.
 If the goal starts with a universal quantifier, the introduced name becomes a
 Lean local. If the goal starts with a pure implication `⌞P⌟ → q`, the introduced
@@ -64,14 +64,14 @@ name is a Lean proof of `P`.
 
 Examples:
 ```lean
-tla_intro hp    -- p → q  becomes  hp : p ⊢ q
-tla_intro n hp -- ∀ n, p n → q n  introduces `n`, then `hp`
+tintro hp    -- p → q  becomes  hp : p ⊢ q
+tintro n hp -- ∀ n, p n → q n  introduces `n`, then `hp`
 ```
 -/
-syntax (name := tlaIntroTac) "tla_intro" (ppSpace colGt ident)+ : tactic
+syntax (name := tlaIntroTac) "tintro" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_intro%$tk $[$names:ident]*) => do
+  | `(tactic| tintro%$tk $[$names:ident]*) => do
     let tacNonTemporal (name : Ident) : TacticM (TSyntax `tactic) := `(tactic| intro $name:ident)
     -- Following the built-in `intro` tactic: wrap each iteration in its own
     -- `withTacticInfoContext` so the proof state in the infoview steps through
@@ -79,6 +79,6 @@ elab_rules : tactic
     for name in names, i in 0...* do
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, name] else name
       withTacticInfoContext ctxRef <| withRef name <|
-        discard <| tlaIntroCoreStep `ident name (fun x => pure (some x)) "tla_intro" tacNonTemporal
+        discard <| tlaIntroCoreStep `ident name (fun x => pure (some x)) "tintro" tacNonTemporal
 
 end TLA.ProofMode

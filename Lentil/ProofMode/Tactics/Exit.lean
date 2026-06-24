@@ -7,7 +7,7 @@ open Lean Meta Elab Tactic
 -- FIXME: Replace this with `foldrDM`
 /-- Build the right-associative `tla_and` chain `p₁ ∧ (p₂ ∧ (… ∧ pₙ))` that
     matches `repeatedAnd`'s reduced form. For `[p]` it is `p`. The empty case
-    is unreachable from `tla_exit` — that branch goes through
+    is unreachable from `texit` — that branch goes through
     `Entails_nil_eq_valid` so the raw goal becomes `valid rhs` instead of the
     equivalent `(⊤) |-tla- rhs`. -/
 private partial def buildAndChain (_σ : Expr) : List Expr → MetaM Expr
@@ -16,27 +16,27 @@ private partial def buildAndChain (_σ : Expr) : List Expr → MetaM Expr
   | p :: ps => do mkAppM ``TLA.tla_and #[p, ← buildAndChain _σ ps]
 
 /--
-`tla_exit` is the inverse of `tla_start`: it leaves the proof mode by
+`texit` is the inverse of `tstart`: it leaves the proof mode by
 converting an `Entails`-shaped goal back into a raw `|-tla-` sequent whose
 left-hand side is the conjunction of the proof-mode hypotheses.
 
 For example, in a proof-mode context with `hp : p`, `hq : q`, and goal `r`,
 ```lean
-tla_exit
+texit
 ```
 changes the proof state back to `(p ∧ q) |-tla- r`. A single hypothesis
 `hp : p` becomes `p |-tla- r`. An empty proof-mode context becomes the
 canonical `|-tla- r` (i.e. `valid r`), rather than the equivalent
 `(⊤) |-tla- r`.
 -/
-syntax (name := tlaExitTac) "tla_exit" : tactic
+syntax (name := tlaExitTac) "texit" : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_exit) => withMainContext do
+  | `(tactic| texit) => withMainContext do
     let mainGoal ← getMainGoal
     let ty ← cleanupAnnotAndMore (← mainGoal.getType)
     let (σ, _, _, hyps, rhs) ←
-      parseCanonicalEntails ty m!"tla_exit: goal is not an Entails sequent, but {ty}"
+      parseCanonicalEntails ty m!"texit: goal is not an Entails sequent, but {ty}"
     let preds := hyps.map (·.2)
     if preds.isEmpty then
       let thm ← mkAppM ``valid_eq_true_implies #[rhs]

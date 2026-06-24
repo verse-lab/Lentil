@@ -8,7 +8,7 @@ namespace TLA.ProofMode
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
 
-/-- How `tla_coalesce_to_ptl` treats binders while collecting PTL atoms. -/
+/-- How `tcoalesce_to_ptl` treats binders while collecting PTL atoms. -/
 inductive CoalesceBinderMode where
   /-- Abstract quantifiers and big operators as single coalescing atoms. -/
   | block
@@ -16,7 +16,7 @@ inductive CoalesceBinderMode where
   | ignore
 deriving BEq, Inhabited
 
-/-- How much temporal structure `tla_coalesce_to_ptl` preserves. -/
+/-- How much temporal structure `tcoalesce_to_ptl` preserves. -/
 inductive CoalesceAbstractLevel where
   /-- Abstract only first-order leaves such as state, action, pure, and enabled predicates. -/
   | leaves
@@ -49,7 +49,7 @@ private def coalesceLeafHeads : List Name := [
 
 private def coalesceBinderHeads : List Name := [
   ``TLA.tla_forall,
-  ``TLA.tla_exists,
+  ``TLA.texists,
   ``TLA.tla_bigwedge,
   ``TLA.tla_bigvee
 ]
@@ -102,7 +102,7 @@ private partial def collectPTLBlocks (cfg : CoalesceConfig) (bound : Array Expr)
   | TLA.tla_or _ p q => collectBinary ``TLA.tla_or p q
   | TLA.tla_implies _ p q => collectBinary ``TLA.tla_implies p q
   | TLA.tla_forall _ _ p => collectBinder ``TLA.tla_forall p
-  | TLA.tla_exists _ _ p => collectBinder ``TLA.tla_exists p
+  | TLA.texists _ _ p => collectBinder ``TLA.texists p
   -- NOTE: Design choice: big op should be first turned into `forall`/`exists`
   /-
   | TLA.tla_bigwedge _ _ _ _ p s => collectBigOp ``TLA.tla_bigwedge p s
@@ -165,10 +165,10 @@ private def collectGoalBlocks (cfg : CoalesceConfig) (target : Expr) : MetaM Col
     let rq ← collectPTLBlocks cfg #[] q
     return ⟨rp.blocks ++ rq.blocks, ← mkAppM ``TLA.pred_implies #[rp.expr, rq.expr]⟩
   | Entails _ hyps goal => collectEntailsBlocks cfg hyps goal
-  | _ => throwError "tla_coalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
+  | _ => throwError "tcoalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
 where collectEntailsBlocks (cfg : CoalesceConfig) (hypsExpr goal : Expr) : MetaM CollectResult := do
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
-    | throwError "tla_coalesce_to_ptl: proof-mode hypotheses are not in canonical literal-list form"
+    | throwError "tcoalesce_to_ptl: proof-mode hypotheses are not in canonical literal-list form"
   let (hypBlocks, hyps') ←
     hyps.foldlM (init := ((#[] : Array Expr), (#[] : Array (String × Expr))))
       fun (blocks, hyps') (name, pred) => do
@@ -183,7 +183,7 @@ private def ensureSupportedGoalShape (target : Expr) : MetaM Unit := do
   | TLA.valid _ _ => pure ()
   | TLA.pred_implies _ _ _ => pure ()
   | Entails _ _ _ => pure ()
-  | _ => throwError "tla_coalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
+  | _ => throwError "tcoalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
 
 private def dedupBlocks (blocks : Array Expr) : MetaM (Array Expr) :=
   blocks.foldlM (init := #[]) fun seen block => do
@@ -210,7 +210,7 @@ private def coalesceToPTL (cfg : CoalesceConfig) : TacticM Unit := withMainConte
   let collected ← collectGoalBlocks cfg target
   let blocks ← dedupBlocks collected.blocks
   if blocks.isEmpty then
-    throwError "tla_coalesce_to_ptl: found no non-PTL predicate blocks to abstract"
+    throwError "tcoalesce_to_ptl: found no non-PTL predicate blocks to abstract"
   let g ← g.change collected.expr
   let args := blocks.map fun block =>
     { expr := block, xName? := some `ptlAtom : GeneralizeArg }
@@ -220,7 +220,7 @@ private def coalesceToPTL (cfg : CoalesceConfig) : TacticM Unit := withMainConte
   replaceMainGoal [g']
 
 /--
-`tla_coalesce_to_ptl` abstracts formula blocks from a TLA goal and keeps the
+`tcoalesce_to_ptl` abstracts formula blocks from a TLA goal and keeps the
 requested amount of propositional temporal skeleton.
 
 It supports raw validity goals, raw TLA sequents, and proof-mode `Entails`
@@ -238,10 +238,10 @@ Granularity options:
 * `abstractOpaque := true` also abstracts opaque `pred σ` leaves.
 * `unfoldDerived := false` leaves derived temporal definitions opaque.
 -/
-syntax (name := tlaCoalesceToPTLTac) "tla_coalesce_to_ptl" optConfig : tactic
+syntax (name := tlaCoalesceToPTLTac) "tcoalesce_to_ptl" optConfig : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_coalesce_to_ptl $cfg:optConfig) => do
+  | `(tactic| tcoalesce_to_ptl $cfg:optConfig) => do
     coalesceToPTL (← elabCoalesceConfig cfg)
 
 end TLA.ProofMode

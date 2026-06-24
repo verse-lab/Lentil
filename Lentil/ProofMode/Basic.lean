@@ -44,19 +44,19 @@ theorem repeatedAnd_reorder (ps1 ps2 : List (pred σ)) (p : pred σ) :
 theorem repeatedAnd_add_duplicate {ps : List (pred σ)} {p : pred σ} (h : p ∈ ps) :
   ((repeatedAnd ps)) =tla= ((repeatedAnd ps) ∧ p) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
-  funext e ; tla_unfold_simp ; grind
+  funext e ; tunfold_simp ; grind
 
 theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
   ps1 ⊆ ps2 → ((repeatedAnd ps2)) |-tla- ((repeatedAnd ps1)) := by
   intro h ; rw [List.subset_def] at h
   simp only [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
-  tla_nontemporal_simp ; aesop
+  tnontemporal_simp ; aesop
 
 theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred σ} :
   ((repeatedAnd hs) ∧ (repeatedImplies hs goal)) |-tla- (goal) := by
   induction hs with
   | nil => intro e ⟨h1, h2⟩ ; exact h2
-  | cons p ps ih => rw [repeatedAnd_cons, repeatedImplies, List.foldr_cons] ; tla_unfold_simp ; aesop
+  | cons p ps ih => rw [repeatedAnd_cons, repeatedImplies, List.foldr_cons] ; tunfold_simp ; aesop
 
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
   TLA.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal

@@ -1,6 +1,6 @@
 import Lentil
 
-/- Tests for `tla_assumption`. -/
+/- Tests for `tassumption`. -/
 
 namespace TLA.ProofMode.Test.Assumption
 
@@ -9,27 +9,27 @@ open TLA TLA.ProofMode
 variable {σ : Type u} (p q r : pred σ)
 
 example : (p) |-tla- (p) := by
-  tla_start hp
-  tla_assumption
+  tstart hp
+  tassumption
 
 example : (p ∧ q ∧ r) |-tla- (q) := by
-  tla_start hp hq hr
-  tla_assumption
+  tstart hp hq hr
+  tassumption
 
 example : (p) |-tla- ((fun e => p e)) := by
-  tla_start hp
-  tla_assumption
+  tstart hp
+  tassumption
 
 example (h : (p) |-tla- (q)) : (p) |-tla- (q) := by
-  tla_assumption
+  tassumption
 
 /--
-error: tla_assumption: no matching temporal hypothesis for
+error: tassumption: no matching temporal hypothesis for
   q
 -/
 #guard_msgs in
 example : (p) |-tla- (q) := by
-  tla_start hp
-  tla_assumption
+  tstart hp
+  tassumption
 
 end TLA.ProofMode.Test.Assumption

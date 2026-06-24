@@ -40,11 +40,11 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
   let_expr Entails _ hypsExpr goal := target
-    | throwError "tla_toggle_goal_under_always: expected a proof-mode Entails goal"
+    | throwError "ttoggle_goal_under_always: expected a proof-mode Entails goal"
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
-    | throwError "tla_toggle_goal_under_always: failed to read the hypotheses from the goal"
+    | throwError "ttoggle_goal_under_always: failed to read the hypotheses from the goal"
   let some peeledHypsList ← peelAlwaysHyps? hyps
-    | throwError "tla_toggle_goal_under_always: expected every temporal hypothesis to have an always prefix"
+    | throwError "ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHypsList
   let peeledGoal? ← peelAlways? goal
   let (leftToRight?, toggledGoal) :=
@@ -57,7 +57,7 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   postDSimpAfterApplyingReflectionTheorem #[``mapHypPreds, ``List.map]
 
 /--
-`tla_toggle_goal_under_always` toggles one leading `□` on the current
+`ttoggle_goal_under_always` toggles one leading `□` on the current
 proof-mode goal when every temporal hypothesis has a leading `□`.
 
 When the leading `□` is hidden behind a definition tagged with
@@ -68,20 +68,20 @@ checking for the prefix. This includes the built-in wrappers
 
 For example, with `hp : □ p`, it changes a proof-mode goal `□ q` to `q`:
 ```lean
-tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
-tla_toggle_goal_under_always
-tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
+tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+ttoggle_goal_under_always
+tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
 ```
 If the current goal has no leading `□`, the same tactic changes `q` to `□ q`:
 ```lean
-tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
-tla_toggle_goal_under_always
-tla_check_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
+ttoggle_goal_under_always
+tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
 ```
 -/
-syntax (name := tlaToggleGoalUnderAlwaysTac) "tla_toggle_goal_under_always" : tactic
+syntax (name := tlaToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_toggle_goal_under_always) => proofModeToggleGoalUnderAlways
+  | `(tactic| ttoggle_goal_under_always) => proofModeToggleGoalUnderAlways
 
 end TLA.ProofMode

@@ -5,7 +5,7 @@ namespace TLA.ProofMode
 open Lean Meta Elab Tactic LentilLib
 
 /-
-Design note: `tla_specialize` should be the shared specialization engine for
+Design note: `tspecialize` should be the shared specialization engine for
 proof-mode automation.
 
 The tactic repeatedly looks at the current predicate of one temporal hypothesis
@@ -18,7 +18,7 @@ and consumes one user argument according to that predicate shape:
   hypotheses, written either as a single identifier or as a flat tuple.
 
 This file supports both name-based and index-based positions through
-`TemporalHypLoc`. The index form is important for callers such as `tla_have := ...`,
+`TemporalHypLoc`. The index form is important for callers such as `thave := ...`,
 which can append an anonymous/internal temporal hypothesis and immediately
 specialize exactly that newly-added hypothesis without relying on a user-visible
 name.
@@ -69,21 +69,21 @@ private theorem Entails_specialize_forall_aux {α : Sort v} {p : α → pred σ}
   Entails hyps' goal → Entails hyps goal := by
   apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [TLA.tla_forall p])
   · grind
-  · simp [repeatedAnd_singleton] ; tla_unfold_simp ; subst newHyp ; grind
+  · simp [repeatedAnd_singleton] ; tunfold_simp ; subst newHyp ; grind
 
 private theorem Entails_specialize_pure_aux {rhs : pred σ} {q : Prop} (hq : q)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| ⌞ q ⌟ → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
   apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [[tlafml| ⌞ q ⌟ → rhs]])
   · grind
-  · simp [repeatedAnd_singleton] ; tla_unfold_simp ; grind
+  · simp [repeatedAnd_singleton] ; tunfold_simp ; grind
 
 private theorem Entails_specialize_valid_aux {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| lhs → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
   apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [[tlafml| lhs → rhs]])
   · grind
-  · subst newHyp ; simp [repeatedAnd_singleton] ; revert hlhs ; tla_unfold_simp ; grind
+  · subst newHyp ; simp [repeatedAnd_singleton] ; revert hlhs ; tunfold_simp ; grind
 
 private theorem Entails_specialize_temporal_aux {rhs : pred σ} (lhss : List (pred σ))
   (hin : lhss ⊆ hyps.map NamedPred.pred)
@@ -91,7 +91,7 @@ private theorem Entails_specialize_temporal_aux {rhs : pred σ} (lhss : List (pr
   Entails hyps' goal → Entails hyps goal := by
   apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [tlafml| (repeatedAnd lhss) → rhs] :: lhss)
   · grind
-  · rw [repeatedAnd_cons] ; tla_unfold_simp ; grind
+  · rw [repeatedAnd_cons] ; tunfold_simp ; grind
 
 end
 
@@ -203,8 +203,8 @@ predicate produced by the previous step. -/
 def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Unit := withMainContext do
   -- FIXME: Repetitively running `recognizeEntailsHypsFromGoal` and `find?` on it
   -- might be slow in some extreme cases?
-  let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_specialize: failed to read the hypotheses from the goal"
-  let (_, pred) ← findByTemporalHypLoc hyps pos "tla_specialize" "the goal's Entails list"
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tspecialize: failed to read the hypotheses from the goal"
+  let (_, pred) ← findByTemporalHypLoc hyps pos "tspecialize" "the goal's Entails list"
   match_expr pred with
   | TLA.tla_forall _ _ _ =>
     let thm := if pos matches .byName .. then ``Entails_specialize_forall_by_name else ``Entails_specialize_forall_by_idx
@@ -226,40 +226,40 @@ def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Uni
         let premises ← premises.mapM fun arg => do
           match (← termIdent? arg) with
           | some id => pure <| toString id.getId
-          | _ => throwError "tla_specialize: implication arguments must be a tuple or a single identifier; got {arg}"
+          | _ => throwError "tspecialize: implication arguments must be a tuple or a single identifier; got {arg}"
         for premise in premises do
           unless hyps.any (fun ⟨name, _⟩ => name == premise) do
-            throwError "tla_specialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
+            throwError "tspecialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
         let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
         evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_))
   | _ => throwError (specializeTargetBadShapeMsg pred pos)
   postDSimpAfterApplyingReflectionTheorem specializeTacDSimps
 where
   specializeTargetBadShapeMsg (pred : Expr) : TemporalHypLoc → MessageData
-    | .byName name => m!"tla_specialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
-    | .byIdx idx => m!"tla_specialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"
+    | .byName name => m!"tspecialize: hypothesis '{name}' is not a ∀ or implication; got {pred}"
+    | .byIdx idx => m!"tspecialize: hypothesis index {idx} is not a ∀ or implication; got {pred}"
 
 /--
-`tla_specialize h arg₁ arg₂ ...` specializes a proof-mode temporal hypothesis
+`tspecialize h arg₁ arg₂ ...` specializes a proof-mode temporal hypothesis
 in place.
 
 If `h : ∀ n, P n`, then
 ```lean
-tla_specialize h 0
+tspecialize h 0
 ```
 changes `h` to `P 0`. If `h : p → q` and `hp : p` is a temporal hypothesis,
 then
 ```lean
-tla_specialize h hp
+tspecialize h hp
 ```
 changes `h` to `q` and keeps `hp` in the context. Numeric hypothesis indices
 may be used in place of names.
 -/
-syntax (name := tlaSpecializeTac) "tla_specialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
+syntax (name := tlaSpecializeTac) "tspecialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_specialize $h:temporalHypLoc $[$args:term]*) => do
-    let pos ← parseTemporalHypLoc h "tla_specialize: invalid syntax for specialization position"
+  | `(tactic| tspecialize $h:temporalHypLoc $[$args:term]*) => do
+    let pos ← parseTemporalHypLoc h "tspecialize: invalid syntax for specialization position"
     for arg in args do
       tlaSpecializeStep pos arg
 

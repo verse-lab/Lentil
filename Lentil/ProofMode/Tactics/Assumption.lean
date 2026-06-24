@@ -9,20 +9,20 @@ theorem Entails_assumption {σ : Type u} {hyps : List (NamedPred σ)} {goal : pr
   Entails hyps goal := by apply repeatedAnd_subset_implies [goal] ; grind
 
 /--
-`tla_assumption` closes a proof-mode goal when the target predicate already
+`tassumption` closes a proof-mode goal when the target predicate already
 appears among the temporal hypotheses.
 
 For example, from a context containing `hp : p`,
 ```lean
-tla_assumption
+tassumption
 ```
 closes the goal `p`. The match is by definitional equality, so unfolded
 abbreviations of the same predicate are accepted.
 
-Outside proof mode, `tla_assumption` falls back to Lean's ordinary
+Outside proof mode, `tassumption` falls back to Lean's ordinary
 `assumption`.
 -/
-syntax (name := tlaAssumptionTac) "tla_assumption" : tactic
+syntax (name := tlaAssumptionTac) "tassumption" : tactic
 
 -- CHECK If in the future Lean has built-in `findIdxM?`, use it instead
 private def findIdxM? (xs : List α) (p : α → TacticM Bool) : TacticM (Option Nat) :=
@@ -44,15 +44,15 @@ where
 --   evalTactic <| ← `(tactic| all_goals rfl)
 
 elab_rules : tactic
-  | `(tactic| tla_assumption) => withMainContext do
+  | `(tactic| tassumption) => withMainContext do
     (evalTactic <| ← `(tactic| assumption)) <|> do
       let target ← getMainTarget
       let_expr Entails _ hyps goal := target.headBeta.cleanupAnnotations
-        | throwError "tla_assumption: goal is not a proof-mode Entails goal"
+        | throwError "tassumption: goal is not a proof-mode Entails goal"
       let some (_, hyps) ← recognizeHypsList hyps
-        | throwError "tla_assumption: failed to read the proof-mode hypotheses"
+        | throwError "tassumption: failed to read the proof-mode hypotheses"
       let some idx ← findIdxM? hyps fun (_, hyp) => isDefEq hyp goal
-        | throwError "tla_assumption: no matching temporal hypothesis for{indentExpr goal}"
+        | throwError "tassumption: no matching temporal hypothesis for{indentExpr goal}"
       evalTactic <| ← `(tactic| exact $(mkIdent ``Entails_assumption) $(Syntax.mkNatLit idx) (by rfl))
 
 end TLA.ProofMode

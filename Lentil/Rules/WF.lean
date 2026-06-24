@@ -53,11 +53,11 @@ theorem wf1 (p q : pred σ) (next a : action σ) :
       rcases ih with ⟨k', hle, ih⟩ | ih
       · left ; exists k' ; constructor ; omega ; apply ih
       · specialize hpuntilq _ ⟨ih, (hnext _)⟩
-        rcases hpuntilq with hq | hq <;> tla_unfold_simp'
+        rcases hpuntilq with hq | hq <;> tunfold_simp'
         · right ; apply hq
         · left ; exists (n + 1) ; aesop
     }
-  rcases htmp with ⟨k', _, hq⟩ | hq <;> tla_unfold_simp'
+  rcases htmp with ⟨k', _, hq⟩ | hq <;> tunfold_simp'
   · aesop
   · rcases hwf_alt with hq2 | hq2
     · specialize henable _ hq ; aesop
@@ -69,16 +69,16 @@ theorem wf1_original (p q : pred σ) (next a : action σ) :
   ((p ∧ ⟨next⟩ ⇒ ◯ (p ∨ q)) ∧
    ((p ∧ ⟨next⟩ ∧ ⟨a⟩ ⇒ ◯ q)) ∧
    ((p ⇒ Enabled a))) |-tla- (□ ⟨next⟩ ∧ 𝒲ℱ a → p ↝ q) := by
-  tla_start hpuntilq haq henable
-  tla_rintro ⟨hnext, hfair⟩
-  tla_apply wf1 (next := next) (a := a)
-  tla_split_ands
-  · rw [later_or] ; tla_apply hpuntilq
-  · tla_apply haq
+  tstart hpuntilq haq henable
+  trintro ⟨hnext, hfair⟩
+  tapply wf1 (next := next) (a := a)
+  tsplit_ands
+  · rw [later_or] ; tapply hpuntilq
+  · tapply haq
   · intro e ⟨_, _, henable, _⟩ k hp
     exact Or.inl (henable k hp)
-  · tla_apply hnext
-  · tla_apply hfair
+  · tapply hnext
+  · tapply hfair
 
 end wf
 

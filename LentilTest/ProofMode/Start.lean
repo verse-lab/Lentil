@@ -1,8 +1,8 @@
 import Lentil
 
-/- Tests for the `tla_start` tactic.
+/- Tests for the `tstart` tactic.
 
-   `tla_start` reshapes a goal of the form `(prem₁ ∧ … ∧ premₙ) |-tla- goal`
+   `tstart` reshapes a goal of the form `(prem₁ ∧ … ∧ premₙ) |-tla- goal`
    into the `Entails [h₁ : prem₁, …, hₙ : premₙ] goal` proof-mode view, with
    the user supplying one name per premise. The list of premises is obtained
    by `splitAndIntoParts`, which treats the conjunction associatively; but the
@@ -19,15 +19,15 @@ variable {σ : Type u} (p q r : pred σ)
 -- Zero premises: `⊤ |-tla- p` should become `Entails [] p`.
 example : (⊤) |-tla- (p) → (⊤) |-tla- (p) := by
   intro h
-  tla_start
-  tla_check_goal Entails [] p
+  tstart
+  tcheck_goal Entails [] p
   exact h
 
 -- One premise, single label.
 example : (p) |-tla- (q) → (p) |-tla- (q) := by
   intro h
-  tla_start hp
-  tla_check_goal Entails [⟨"hp", p⟩] q
+  tstart hp
+  tcheck_goal Entails [⟨"hp", p⟩] q
   exact h
 
 -- Two premises (right-associated by parser): `(p ∧ q) |-tla- r`
@@ -35,62 +35,62 @@ example : (p) |-tla- (q) → (p) |-tla- (q) := by
 -- assigned in order.
 example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
   intro h
-  tla_start hp hq
-  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
+  tstart hp hq
+  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
 -- Three premises (right-associated): `p ∧ q ∧ r` parses as `p ∧ (q ∧ r)`,
 -- which matches the `foldrD`-style reconstruction in `repeatedAnd`.
 example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
-  tla_start a b c
-  tla_check_goal Entails [⟨"a", p⟩, ⟨"b", q⟩, ⟨"c", r⟩] r
+  tstart a b c
+  tcheck_goal Entails [⟨"a", p⟩, ⟨"b", q⟩, ⟨"c", r⟩] r
   exact h
 
 -- The labels are recorded as strings of the identifier; unicode names are
 -- preserved.
 example : (p) |-tla- (p) := by
-  tla_start ψ
-  tla_check_goal Entails [⟨"ψ", p⟩] p
+  tstart ψ
+  tcheck_goal Entails [⟨"ψ", p⟩] p
   exact pred_implies_refl _
 
 -- Wrong number of labels (too few).
 /--
-error: tla_start expected 2 names, but got 1
+error: tstart expected 2 names, but got 1
 -/
 #guard_msgs in
 example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
   intro h
-  tla_start hp
+  tstart hp
   exact h
 
 -- Wrong number of labels (too many).
 /--
-error: tla_start expected 1 names, but got 2
+error: tstart expected 1 names, but got 2
 -/
 #guard_msgs in
 example : (p) |-tla- (q) → (p) |-tla- (q) := by
   intro h
-  tla_start hp hq
+  tstart hp hq
   exact h
 
 -- Duplicate labels are rejected up front.
 /--
-error: tla_start hypothesis names must be distinct
+error: tstart hypothesis names must be distinct
 -/
 #guard_msgs in
 example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
   intro h
-  tla_start hp hp
+  tstart hp hp
   exact h
 
--- `tla_start` only operates on `|-tla-` sequents; a `|-tla-`-free goal is
+-- `tstart` only operates on `|-tla-` sequents; a `|-tla-`-free goal is
 -- rejected with a message naming the offending type.
 /--
-error: tla_start only supports goals reduced to a single |-tla- sequent, but got True
+error: tstart only supports goals reduced to a single |-tla- sequent, but got True
 -/
 #guard_msgs in
 example : True := by
-  tla_start
+  tstart
 
 end TLA.ProofMode.Test.Start
