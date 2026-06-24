@@ -52,24 +52,24 @@ def tlaRename (old : TemporalHypLoc) (newStr : String) : TacticM Unit := do
   postDSimpAfterApplyingReflectionTheorem renameTacDSimps
 
 /--
-`tla_rename h => h'` renames a proof-mode temporal hypothesis. The predicate
+`trename h => h'` renames a proof-mode temporal hypothesis. The predicate
 and the hypothesis position are unchanged.
 
 For example, if the context contains `hp : p`, then
 ```lean
-tla_rename hp => hp'
+trename hp => hp'
 ```
 changes the context entry to `hp' : p`. A numeric index can be used instead of
 a name:
 ```lean
-tla_rename 0 => hHead
+trename 0 => hHead
 ```
 -/
-syntax (name := tlaRenameTac) "tla_rename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
+syntax (name := tlaRenameTac) "trename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rename $old:temporalHypLoc => $new:ident) => do
-    let old ← parseTemporalHypLoc old "tla_rename: invalid syntax for renaming position"
+  | `(tactic| trename $old:temporalHypLoc => $new:ident) => do
+    let old ← parseTemporalHypLoc old "trename: invalid syntax for renaming position"
     let newStr := toString new.getId
     tlaRename old newStr
 

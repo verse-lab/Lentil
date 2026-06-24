@@ -76,11 +76,11 @@ private def restoreBinderNameInForallCase : TacticM Unit := do
     replaceMainGoal [g']
 
 /--
-`tla_revert h₁ h₂ ...` moves assumptions back into the proof-mode goal.
+`trevert h₁ h₂ ...` moves assumptions back into the proof-mode goal.
 
 If `hp : p` is a temporal hypothesis and the current goal is `q`, then
 ```lean
-tla_revert hp
+trevert hp
 ```
 removes `hp` from the proof-mode context and changes the goal to `p → q`.
 
@@ -88,29 +88,29 @@ Lean locals can also be reverted: a proof `hP : P` becomes a pure implication
 `⌞P⌟ → q`, while a non-Prop local such as `n : Nat` becomes a universal
 quantifier in the goal.
 -/
-syntax (name := tlaRevertTac) "tla_revert" (ppSpace colGt ident)+ : tactic
+syntax (name := tlaRevertTac) "trevert" (ppSpace colGt ident)+ : tactic
 
 /--
-`tla_revert_all` moves every temporal hypothesis back into the proof-mode goal.
+`trevert_all` moves every temporal hypothesis back into the proof-mode goal.
 
 For example, if the proof-mode context contains `hp : p`, `hq : q`, and the
 goal is `r`, then
 ```lean
-tla_revert_all
+trevert_all
 ```
 leaves an empty temporal context and changes the goal to `p → q → r`.
-Lean-local variables and pure assumptions are not reverted; use `tla_revert`
+Lean-local variables and pure assumptions are not reverted; use `trevert`
 with explicit names for those.
 -/
-syntax (name := tlaRevertAllTac) "tla_revert_all" : tactic
+syntax (name := tlaRevertAllTac) "trevert_all" : tactic
 
 -- FIXME: Better error message? Since the current semantics is if the target is missing,
 -- then do nothing
 elab_rules : tactic
-  | `(tactic| tla_revert_all) => do
+  | `(tactic| trevert_all) => do
     evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_revert_all) ?_)
     postDSimpAfterApplyingReflectionTheorem revertAllTacDSimps
-  | `(tactic| tla_revert $[$names:ident]*) => do
+  | `(tactic| trevert $[$names:ident]*) => do
     -- Revert in reverse order so that the resulting nested implication mirrors
     -- the order of the names in the user's invocation (left-to-right becomes
     -- outermost-to-innermost in the goal).

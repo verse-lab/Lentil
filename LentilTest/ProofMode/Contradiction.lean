@@ -1,6 +1,6 @@
 import Lentil
 
-/- Tests for `tla_contradiction`, which closes any proof-mode goal when its
+/- Tests for `tcontradiction`, which closes any proof-mode goal when its
    context contains either `tla_false` or a pair `p`, `¬ p`. -/
 
 namespace TLA.ProofMode.Test.Contradiction
@@ -11,41 +11,41 @@ variable {σ : Type u} (a p q : pred σ)
 
 -- A `⊥` hypothesis closes any goal.
 example (lem : (a) |-tla- (⊥)) : (a) |-tla- (q) := by
-  tla_start ha
-  tla_have hf : ⊥ by tla_apply lem ; tla_assumption
-  tla_contradiction
+  tstart ha
+  thave hf : ⊥ by tapply lem ; tassumption
+  tcontradiction
 
 -- A pair `p`, `¬ p` closes any goal.
 example (lem_p : (a) |-tla- (p)) (lem_np : (a) |-tla- (¬ p)) :
     (a) |-tla- (q) := by
-  tla_start ha
-  tla_have hp : p by tla_apply lem_p ; tla_assumption
-  tla_have hnp : ¬ p by tla_apply lem_np ; tla_assumption
-  tla_contradiction
+  tstart ha
+  thave hp : p by tapply lem_p ; tassumption
+  thave hnp : ¬ p by tapply lem_np ; tassumption
+  tcontradiction
 
 -- Order of `p` and `¬ p` in the context doesn't matter.
 example (lem_p : (a) |-tla- (p)) (lem_np : (a) |-tla- (¬ p)) :
     (a) |-tla- (q) := by
-  tla_start ha
-  tla_have hnp : ¬ p by tla_apply lem_np ; tla_assumption
-  tla_have hp : p by tla_apply lem_p ; tla_assumption
-  tla_contradiction
+  tstart ha
+  thave hnp : ¬ p by tapply lem_np ; tassumption
+  thave hp : p by tapply lem_p ; tassumption
+  tcontradiction
 
 -- No contradiction → fails with a clear message.
 /--
-error: tla_contradiction: no contradiction found in proof-mode context
+error: tcontradiction: no contradiction found in proof-mode context
 -/
 #guard_msgs in
 example : (a) |-tla- (a) := by
-  tla_start ha
-  tla_contradiction
+  tstart ha
+  tcontradiction
 
 -- Not in proof mode → fails.
 /--
-error: tla_contradiction: goal is not an Entails sequent
+error: tcontradiction: goal is not an Entails sequent
 -/
 #guard_msgs in
 example : (a) |-tla- (a) := by
-  tla_contradiction
+  tcontradiction
 
 end TLA.ProofMode.Test.Contradiction

@@ -18,15 +18,15 @@ theorem Entails_or_right : Entails hyps b → Entails hyps (tla_or a b) :=
 end
 
 /--
-`tla_left` reduces a disjunctive proof-mode goal `p ∨ q` to its left disjunct
+`tleft` reduces a disjunctive proof-mode goal `p ∨ q` to its left disjunct
 `p`.
 -/
-macro "tla_left" : tactic => `(tactic| refine $(mkIdent ``Entails_or_left) ?_)
+macro "tleft" : tactic => `(tactic| refine $(mkIdent ``Entails_or_left) ?_)
 
 /--
-`tla_right` reduces a disjunctive proof-mode goal `p ∨ q` to its right
+`tright` reduces a disjunctive proof-mode goal `p ∨ q` to its right
 disjunct `q`.
 -/
-macro "tla_right" : tactic => `(tactic| refine $(mkIdent ``Entails_or_right) ?_)
+macro "tright" : tactic => `(tactic| refine $(mkIdent ``Entails_or_right) ?_)
 
 end TLA.ProofMode

@@ -1,8 +1,8 @@
 import Lentil
 
-/- Tests for the `tla_revert` tactic.
+/- Tests for the `trevert` tactic.
 
-   `tla_revert h₁ … hₙ` is the inverse of `tla_intro`. For each name (processed
+   `trevert h₁ … hₙ` is the inverse of `tintro`. For each name (processed
    right-to-left, so the left-most ends up outermost in the rebuilt goal):
      * If the name is a Lean-local non-Prop variable → `Entails_revert_forall`
        (= `forall_elim.mpr`), preceded by Lean's `revert`.
@@ -25,40 +25,40 @@ variable {σ : Type u} (p q r : pred σ)
 -- context to a `p → ..` antecedent of the goal pred.
 example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
-  tla_start hp hq
-  tla_revert hp
-  tla_check_goal_form
-  tla_check_goal Entails [⟨"hq", q⟩] [tlafml| p → q]
+  tstart hp hq
+  trevert hp
+  tcheck_goal_form
+  tcheck_goal Entails [⟨"hq", q⟩] [tlafml| p → q]
   intro e hq _ ; exact hq
 
 -- Reverting then re-introducing should round-trip back to the same shape.
 example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
-  tla_start hp hq
-  tla_revert hp
-  tla_check_goal_form
-  tla_intro hp
-  tla_check_goal Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
+  tstart hp hq
+  trevert hp
+  tcheck_goal_form
+  tintro hp
+  tcheck_goal Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
   intro e ⟨hq, _⟩ ; exact hq
 
 -- Revert multiple temporal hypotheses; the leftmost name ends up as the
 -- outermost antecedent of the resulting `→`-chain.
 example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
-  tla_start hp hq
-  tla_revert hp hq
-  tla_check_goal_form
-  tla_check_goal Entails [] [tlafml| p → q → q]
+  tstart hp hq
+  trevert hp hq
+  tcheck_goal_form
+  tcheck_goal Entails [] [tlafml| p → q → q]
   intro e _ _ hq ; exact hq
 
 -- Reverting a temporal hyp from the *middle* of the list filters it cleanly
 -- without disturbing the order of the rest.
 example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
-  tla_start hp hq hr
-  tla_revert hq
-  tla_check_goal_form
-  tla_check_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
+  tstart hp hq hr
+  trevert hq
+  tcheck_goal_form
+  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
   intro e ⟨_, hr⟩ _ ; exact hr
 
 /-! ## Revert all temporal hypotheses -/
@@ -66,19 +66,19 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
 -- Revert every temporal hypothesis at once. The temporal context becomes empty
 -- and the hypotheses are rebuilt as a left-to-right implication chain.
 example : (p ∧ q) |-tla- (p) := by
-  tla_start hp hq
-  tla_revert_all
-  tla_check_goal_form
-  tla_check_goal Entails [] [tlafml| p → q → p]
+  tstart hp hq
+  trevert_all
+  tcheck_goal_form
+  tcheck_goal Entails [] [tlafml| p → q → p]
   intro _ _ hp _ ; exact hp
 
--- On an empty temporal context, `tla_revert_all` is a no-op on the goal shape.
+-- On an empty temporal context, `trevert_all` is a no-op on the goal shape.
 example : (q) |-tla- (⊤) := by
-  tla_start hq
-  tla_clear hq
-  tla_revert_all
-  tla_check_goal_form
-  tla_check_goal Entails [] [tlafml| ⊤]
+  tstart hq
+  tclear hq
+  trevert_all
+  tcheck_goal_form
+  tcheck_goal Entails [] [tlafml| ⊤]
   intro _ _ ; exact True.intro
 
 /-! ## ∀-revert (Lean-local non-Prop var) -/
@@ -87,19 +87,19 @@ example : (q) |-tla- (⊤) := by
 example (P : Nat → pred σ) :
     (⊤) |-tla- (∀ n : Nat, (P n)) → (⊤) |-tla- (∀ n : Nat, (P n)) := by
   intro h
-  tla_start
-  tla_intro n
-  tla_revert n
-  tla_check_goal Entails [] (TLA.tla_forall P)
+  tstart
+  tintro n
+  trevert n
+  tcheck_goal Entails [] (TLA.tla_forall P)
   exact h
 
 -- Round-trip: intro then revert should be a no-op (up to displayed shape).
 example (P : Nat → pred σ) :
     (⊤) |-tla- (∀ n : Nat, (P n)) → (⊤) |-tla- (∀ n : Nat, (P n)) := by
   intro h
-  tla_start
-  tla_intro n
-  tla_revert n
+  tstart
+  tintro n
+  trevert n
   exact h
 
 /-! ## Pure-revert (Lean-local Prop hypothesis) -/
@@ -108,24 +108,24 @@ example (P : Nat → pred σ) :
 example (Q : Prop) :
     (⊤) |-tla- (⌞ Q ⌟ → (p)) → (⊤) |-tla- (⌞ Q ⌟ → (p)) := by
   intro h
-  tla_start
-  tla_intro hQ
-  tla_revert hQ
-  tla_check_goal Entails [] [tlafml| ⌞ Q ⌟ → p]
+  tstart
+  tintro hQ
+  trevert hQ
+  tcheck_goal Entails [] [tlafml| ⌞ Q ⌟ → p]
   exact h
 
 /-! ## Mixed sequence -/
 
--- A `tla_revert hp n hQ` undoes a matching `tla_intro hp n hQ` in shape:
+-- A `trevert hp n hQ` undoes a matching `tintro hp n hQ` in shape:
 -- internally we revert right-to-left so that the user-written order matches
 -- the order of antecedents in the resulting goal.
 example (P : Nat → pred σ) (Q : Prop) :
     (⊤) |-tla- (∀ n : Nat, (p → ⌞ Q ⌟ → (P n))) →
     (⊤) |-tla- (p → (∀ n : Nat, (⌞ Q ⌟ → (P n)))) := by
   intro h
-  tla_start
-  tla_intro hp n hQ
-  tla_revert n hp hQ
+  tstart
+  tintro hp n hQ
+  trevert n hp hQ
   exact h
 
 end TLA.ProofMode.Test.Revert

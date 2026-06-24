@@ -19,16 +19,16 @@ variable {σ : Type u}
 
 theorem repeatedAnd_map_later (ps : List (pred σ)) :
   repeatedAnd (ps.map TLA.later) = TLA.later (repeatedAnd ps) :=
-  repeatedAnd_map_comm ps TLA.later (by funext e ; tla_unfold_simp) later_and
+  repeatedAnd_map_comm ps TLA.later (by funext e ; tunfold_simp) later_and
 
 theorem repeatedAnd_map_always (ps : List (pred σ)) :
   repeatedAnd (ps.map TLA.always) = TLA.always (repeatedAnd ps) :=
-  repeatedAnd_map_comm ps TLA.always (by funext e ; tla_unfold_simp) (by intro p q ; symm ; apply always_and)
+  repeatedAnd_map_comm ps TLA.always (by funext e ; tunfold_simp) (by intro p q ; symm ; apply always_and)
 
 theorem repeatedAnd_map_eventually_always (ps : List (pred σ)) :
   repeatedAnd (ps.map (fun p => TLA.eventually (TLA.always p))) =
     TLA.eventually (TLA.always (repeatedAnd ps)) :=
-  repeatedAnd_map_comm ps (TLA.eventually ∘ TLA.always) (by funext e ; tla_unfold_simp) (by intro p q ; symm ; apply eventually_always_and_distrib)
+  repeatedAnd_map_comm ps (TLA.eventually ∘ TLA.always) (by funext e ; tunfold_simp) (by intro p q ; symm ; apply eventually_always_and_distrib)
 
 variable {hyps : List (NamedPred σ)} {goal : pred σ}
 
@@ -114,14 +114,14 @@ private def proofModeMonotone : TacticM Unit := withMainContext do
   -- TODO This pattern of recognizing the hypotheses from the goal is prevalent.
   -- Can we wrap it?
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
-    | throwError "tla_monotone: failed to read the hypotheses from the goal"
+    | throwError "tmonotone: failed to read the hypotheses from the goal"
   let some (nm, peeledHyps, peeledGoal) ← findMonotonePeel? hyps goal
-    | throwError "tla_monotone: expected every proof-mode hypothesis and the goal to have a common monotone temporal prefix"
+    | throwError "tmonotone: expected every proof-mode hypothesis and the goal to have a common monotone temporal prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHyps
   let thm ← do
     if nm ∈ [``Entails_eventually_monotone_single, ``Entails_always_eventually_monotone_single] then
       unless peeledHyps.length == 1 do
-        throwError "tla_monotone: this modality can only be peeled from a single proof-mode hypothesis"
+        throwError "tmonotone: this modality can only be peeled from a single proof-mode hypothesis"
       mkAppOptM nm #[none, some peeledHypsExpr, some peeledGoal, none, none, some (← mkEqRefl peeledHypsExpr)]
     else
       mkAppOptM nm #[none, some peeledHypsExpr, some peeledGoal]
@@ -129,12 +129,12 @@ private def proofModeMonotone : TacticM Unit := withMainContext do
   replaceMainGoal gs
 
 /--
-`tla_monotone` removes a common monotone temporal prefix from the proof-mode
+`tmonotone` removes a common monotone temporal prefix from the proof-mode
 context and goal.
 
 For example, if every temporal hypothesis and the goal are prefixed by `□`, then
 ```lean
-tla_monotone
+tmonotone
 ```
 turns a context such as `hp : □ p`, `hq : □ q` with goal `□ r` into
 `hp : p`, `hq : q` with goal `r`.
@@ -149,13 +149,13 @@ recognizing the prefix. This includes the built-in wrappers `TLA.always_implies`
 
 Outside proof mode it applies the corresponding raw monotonicity theorem:
 ```lean
-tla_monotone
+tmonotone
 ```
 changes a raw goal `□ p |-tla- □ q` to `p |-tla- q`.
 -/
-syntax (name := tlaMonotoneTac) "tla_monotone" : tactic
+syntax (name := tlaMonotoneTac) "tmonotone" : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_monotone) => proofModeMonotone
+  | `(tactic| tmonotone) => proofModeMonotone
 
 end TLA.ProofMode

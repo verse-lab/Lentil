@@ -94,20 +94,20 @@ def deriveForPredImpliesOrValid (nm : Name) : CoreM Unit := do
       -- since the thing brought by `have` is not used in the proof term.
       -- to avoid this, we add a separate branch where there is no `have`.
       (← `(term| by solve
-        | tla_nontemporal_simp ; aesop
-        | have := @$(mkIdent nm) ; tla_nontemporal_simp ; aesop)) noncomputable?
+        | tnontemporal_simp ; aesop
+        | have := @$(mkIdent nm) ; tnontemporal_simp ; aesop)) noncomputable?
     simpleProveTheorem thmName2 lvlParams thmStmt2
       (← do
         let htmp ← mkIdent <$> mkFreshUserName `htmp
         let htmp' ← mkIdent <$> mkFreshUserName `htmp'
         let introNames ← ty.getForallBinderNames.toArray.mapM (mkIdent <$> mkFreshUserName ·)
         `(term| by solve
-        | tla_nontemporal_simp ; aesop
+        | tnontemporal_simp ; aesop
         | intro $introNames* ; have $htmp := @$(mkIdent nm) $introNames*
           (try rw [← TLA.impl_intro] at $htmp:ident)
           repeat (first
             | (solve
-              | tla_nontemporal_simp ; aesop)
+              | tnontemporal_simp ; aesop)
             | have $htmp' := @$htmp ; clear $htmp ; have $htmp := @TLA.impl_decouple _ _ _ $htmp' ; clear $htmp'
             | unfold TLA.always_implies at $htmp:ident
             | rw [← TLA.always_intro] at $htmp:ident

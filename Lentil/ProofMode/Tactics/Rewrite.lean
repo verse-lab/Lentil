@@ -8,7 +8,7 @@ open Lean.Parser.Tactic
 /-
 Design notes.
 
-`tla_rewrite` operates on selected pieces of a proof-mode sequent
+`trewrite` operates on selected pieces of a proof-mode sequent
 
   `Entails [⟨h₀, p₀⟩, ..., ⟨hₙ, pₙ⟩] goal`.
 
@@ -40,7 +40,7 @@ reverting and unfolding `cont` restores a literal `Entails` target with the
 original hypothesis order and names. The final target is computed here at the
 meta level; we do not rely on `dsimp` to clean up `replacePredsAtIndices`.
 
-`tla_simp` and `tla_dsimp` deliberately do not use this helper. They are
+`tsimp` and `tdsimp` deliberately do not use this helper. They are
 implemented as direct `conv` visits to the selected expressions because
 simplification does not need `rewrite`'s theorem-premise side-goal behavior.
 -/
@@ -70,7 +70,7 @@ private def unfoldPartialHiddenTarget (target : Expr) : MetaM (Option Expr) := t
     return none
   let some (_, preds) := predsExpr.listLit? | return none
   unless idxs.length == preds.length do
-    throwError "tla_rewrite: internal error: length of indices and predicates do not match in partial hidden target"
+    throwError "trewrite: internal error: length of indices and predicates do not match in partial hidden target"
   -- Build `Entails`
   let hyps := idxs.zip preds |>.foldl (init := hyps) fun hyps' (idx, pred) =>
     hyps'.modify idx fun (name, _) => (name, pred)
@@ -95,7 +95,7 @@ private def restorePartiallyHiddenGoals (contFVar : FVarId) : TacticM Unit := do
       pure g'
   setGoals gs'
 
--- NOTE: This is an overkill for the current `tla_rewrite`, but might be useful
+-- NOTE: This is an overkill for the current `trewrite`, but might be useful
 -- in the future for other things? So just keep it for now.
 private def exposeSelectedLocations (hypsExpr goal : Expr)
     (hyps : List (String × Expr)) (loc : RewriteLocation) (mainGoal : MVarId) :
@@ -141,10 +141,10 @@ private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : 
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
   let_expr Entails _ hypsExpr goal := target
-    | throwError "tla_rewrite: goal is not an Entails sequent, but {target}"
+    | throwError "trewrite: goal is not an Entails sequent, but {target}"
   -- CHECK `recognizeEntailsHyps` is repetitively called. Will this be slow?
   let some (_, hyps) ← recognizeEntailsHyps target
-    | throwError "tla_rewrite: failed to read the hypotheses from the goal"
+    | throwError "trewrite: failed to read the hypotheses from the goal"
   let (contFVar, g') ← exposeOneLocation hypsExpr goal hyps loc g
   replaceMainGoal [g']
   g'.withContext k
@@ -153,8 +153,8 @@ private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : 
 private def rewriteAtProofModeLocations
     (loc? : Option (TSyntax ``Lean.Parser.Tactic.location)) (k : TacticM Unit) : TacticM Unit := do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal
-    | throwError "tla_rewrite: goal is not an Entails sequent"
-  let loc ← parseRewriteLocation hyps loc? "tla_rewrite"
+    | throwError "trewrite: goal is not an Entails sequent"
+  let loc ← parseRewriteLocation hyps loc? "trewrite"
   if loc.isWildCard then
     let mut worked := false
     let ok ← tryTactic <| withMainContext <| withExposedLocation .goal k
@@ -173,30 +173,30 @@ private def rewriteAtProofModeLocations
       withExposedLocation .goal k
 
 /--
-`tla_rewrite [rules]` rewrites predicates in a proof-mode goal or selected
+`trewrite [rules]` rewrites predicates in a proof-mode goal or selected
 proof-mode hypotheses.
 
 With no location, it rewrites the goal predicate. For example, if the goal is
 `q` and `heq : q = r`, then
 ```lean
-tla_rewrite [heq]
+trewrite [heq]
 ```
 changes the goal to `r`.
 
 Locations use Lean's location syntax, but refer to proof-mode hypotheses:
 ```lean
-tla_rewrite [heq] at hp
-tla_rewrite [← heq] at hp hq ⊢
+trewrite [heq] at hp
+trewrite [← heq] at hp hq ⊢
 ```
 The first rewrites only `hp`; the second rewrites `hp`, `hq`, and the goal.
 With `at *`, each proof-mode hypothesis and the goal are considered separately;
 locations that do not contain a matching occurrence are skipped as in Lean's
 `rewrite`.
 -/
-syntax (name := tlaRewrite) "tla_rewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
+syntax (name := tlaRewrite) "trewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rewrite $cfg:optConfig $rules:rwRuleSeq $[$loc]?) => do
+  | `(tactic| trewrite $cfg:optConfig $rules:rwRuleSeq $[$loc]?) => do
     rewriteAtProofModeLocations loc do
       evalTactic <| ← `(tactic| rewrite $cfg:optConfig $rules:rwRuleSeq)
 

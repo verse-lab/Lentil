@@ -31,7 +31,7 @@ theorem Entails_of_contradicting_hyps {p : pred σ}
 end
 
 /--
-`tla_contradiction` closes any proof-mode goal whose context contains an
+`tcontradiction` closes any proof-mode goal whose context contains an
 explicit contradiction:
 
 * a temporal hypothesis with predicate `⊥` (i.e. `tla_false`), or
@@ -39,12 +39,12 @@ explicit contradiction:
 
 It fails if neither pattern is found.
 -/
-syntax (name := tlaContradictionTac) "tla_contradiction" : tactic
+syntax (name := tlaContradictionTac) "tcontradiction" : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_contradiction) => withMainContext do
+  | `(tactic| tcontradiction) => withMainContext do
     let some (_, hyps) ← recognizeEntailsHypsFromGoal
-      | throwError "tla_contradiction: goal is not an Entails sequent"
+      | throwError "tcontradiction: goal is not an Entails sequent"
     -- Step 1: a `tla_false` hypothesis closes the goal directly.
     if let some idx := hyps.findIdx? fun x => x.2.isAppOf' ``TLA.tla_false then
       evalTactic <| ← `(tactic| exact $(mkIdent ``Entails_of_false_in_hyps) ($(quote idx)) (by rfl))
@@ -57,6 +57,6 @@ elab_rules : tactic
         evalTactic <| ← `(tactic|
           exact $(mkIdent ``Entails_of_contradicting_hyps) ($(quote idx1)) ($(quote idx2)) (by rfl) (by rfl))
         return
-    throwError "tla_contradiction: no contradiction found in proof-mode context"
+    throwError "tcontradiction: no contradiction found in proof-mode context"
 
 end TLA.ProofMode

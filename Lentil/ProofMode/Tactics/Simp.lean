@@ -6,8 +6,8 @@ open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
 
 /-
-`tla_simp` and `tla_dsimp` are implemented directly with `conv`, separately
-from `tla_rewrite`'s local-`let` hiding pipeline. The simplifier does not create
+`tsimp` and `tdsimp` are implemented directly with `conv`, separately
+from `trewrite`'s local-`let` hiding pipeline. The simplifier does not create
 rewrite-theorem premise goals, so we can visit each selected expression inside
 the literal `Entails` target and run the requested conv tactic there.
 
@@ -38,49 +38,49 @@ where
     [1] ++ List.replicate idx 2 ++ [1, 2] |>.toArray
 
 /--
-`tla_simp` simplifies predicates in a proof-mode goal or selected proof-mode
+`tsimp` simplifies predicates in a proof-mode goal or selected proof-mode
 hypotheses, using Lean's `simp` arguments.
 
 With no location, it simplifies the goal predicate. For example,
 ```lean
-tla_simp [heq]
+tsimp [heq]
 ```
 simplifies the goal using `heq`. With a location,
 ```lean
-tla_simp [heq] at hp hq
+tsimp [heq] at hp hq
 ```
 simplifies only the temporal hypotheses `hp` and `hq`.
 -/
-syntax (name := tlaSimp) "tla_simp" optConfig (discharger)? (&" only")?
+syntax (name := tlaSimp) "tsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
 /--
-`tla_dsimp` definitionally simplifies predicates in a proof-mode goal or
+`tdsimp` definitionally simplifies predicates in a proof-mode goal or
 selected proof-mode hypotheses, using Lean's `dsimp` arguments.
 
 For example, if `hp` has predicate `wrap p` and `wrap` unfolds to the identity,
 then
 ```lean
-tla_dsimp [wrap] at hp
+tdsimp [wrap] at hp
 ```
 changes `hp` to have predicate `p`.
 -/
-syntax (name := tlaDsimp) "tla_dsimp" optConfig (discharger)? (&" only")?
+syntax (name := tlaDsimp) "tdsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
-syntax (name := tlaUnfold) "tla_unfold" (ppSpace colGt ident)+ (Lean.Parser.Tactic.location)? : tactic
+syntax (name := tlaUnfold) "tunfold" (ppSpace colGt ident)+ (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_simp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
-    runConvAtProofModeLocations "tla_simp" loc do
+  | `(tactic| tsimp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
+    runConvAtProofModeLocations "tsimp" loc do
       `(conv| simp $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
-  | `(tactic| tla_dsimp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
-    runConvAtProofModeLocations "tla_dsimp" loc do
+  | `(tactic| tdsimp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
+    runConvAtProofModeLocations "tdsimp" loc do
       `(conv| dsimp $cfg:optConfig $[$discharger]? $[only%$o]? $[[$args,*]]?)
-  | `(tactic| tla_unfold $defs:ident* $[$loc]?) => do
-    runConvAtProofModeLocations "tla_unfold" loc do
+  | `(tactic| tunfold $defs:ident* $[$loc]?) => do
+    runConvAtProofModeLocations "tunfold" loc do
       `(conv| unfold $defs:ident*)
 
 end TLA.ProofMode

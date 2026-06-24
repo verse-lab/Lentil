@@ -34,7 +34,7 @@ def tla_or {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∨ q σ
 def tla_implies {α : Type u} (p q : pred α) : pred α := fun σ => p σ → q σ
 def tla_not {α : Type u} (p : pred α) : pred α := fun σ => ¬ p σ
 def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
-def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
+def texists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
 
 -- NOTE: this all could be automatically lifted, but to avoid dependency circles, we don't do that
 instance {α : Type u} : Std.Commutative (@tla_and α) := by
@@ -167,8 +167,8 @@ macro_rules
   | `([tlafml| $f1:tlafml 𝑈 $f2:tlafml ]) => `(TLA.tla_until [tlafml| $f1 ] [tlafml| $f2 ])
   | `([tlafml| ∀ $x:ident, $f:tlafml]) => `(TLA.tla_forall fun $x:ident => [tlafml| $f ])
   | `([tlafml| ∀ $x:ident : $t, $f:tlafml]) => `(TLA.tla_forall fun $x:ident : $t => [tlafml| $f ])
-  | `([tlafml| ∃ $x:ident, $f:tlafml]) => `(TLA.tla_exists fun $x:ident => [tlafml| $f ])
-  | `([tlafml| ∃ $x:ident : $t, $f:tlafml]) => `(TLA.tla_exists fun $x:ident : $t => [tlafml| $f ])
+  | `([tlafml| ∃ $x:ident, $f:tlafml]) => `(TLA.texists fun $x:ident => [tlafml| $f ])
+  | `([tlafml| ∃ $x:ident : $t, $f:tlafml]) => `(TLA.texists fun $x:ident : $t => [tlafml| $f ])
   | `([tlafml| $op:tlafml_bigop $x:binderIdent ∈ $l:term, $f:tlafml]) =>
     -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
     match op with
@@ -267,7 +267,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       | ``TLA.tla_until => `(tlafml| $f1:tlafml 𝑈 $f2:tlafml)
       | ``TLA.always_implies => `(tlafml| $f1:tlafml ⇒ $f2:tlafml)
       | _ => unreachable!
-    | ``TLA.tla_forall | ``TLA.tla_exists =>
+    | ``TLA.tla_forall | ``TLA.texists =>
       /- we are not sure about whether the argument is a `fun _ => _` or something else,
          so here we first `delab` the argument and then look into it;
          this seems to work, as `delab` would also call `delab_tlafml_inner` on the argument,
@@ -276,7 +276,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
       let (a, stx) ← get_bindername_funbody body
       match fn with
       | ``TLA.tla_forall => do `(tlafml| ∀ $a:ident, $stx )
-      | ``TLA.tla_exists => do `(tlafml| ∃ $a:ident, $stx )
+      | ``TLA.texists => do `(tlafml| ∃ $a:ident, $stx )
       | _ => unreachable!
     | ``TLA.tla_bigwedge | ``TLA.tla_bigvee =>
       let body ← withAppFn <| withAppArg delab
@@ -310,7 +310,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
         ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
       && e.getAppNumArgs' == 2 + offset) ||
     (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to, ``TLA.tla_until, ``TLA.always_implies,
-        ``TLA.tla_forall, ``TLA.tla_exists]
+        ``TLA.tla_forall, ``TLA.texists]
       && e.getAppNumArgs' == 3 + offset) ||
     (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
       && e.getAppNumArgs' == 1 + offset) ||
@@ -330,7 +330,7 @@ attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.acti
 attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
 attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to, delab app.TLA.tla_until, delab app.TLA.always_implies] delab_tlafml
 attribute [delab app.TLA.tla_true, delab app.TLA.tla_false] delab_tlafml
-attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
+attribute [delab app.TLA.tla_forall, delab app.TLA.texists] delab_tlafml
 attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
 
 @[app_unexpander TLA.pred_implies] def TLA.unexpand_pred_implies : Lean.PrettyPrinter.Unexpander

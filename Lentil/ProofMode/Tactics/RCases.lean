@@ -10,7 +10,7 @@ open Lean.Parser.Tactic
 
 -- Not sure if this is generally useful, so just make it as a `private theorem` for now
 private theorem exists_put_witness_back {α : Sort v} {p : α → pred σ} {Γ g : pred σ} :
-  (∀ x, ((Γ) |-tla- ((p x) → g))) = ((Γ) |-tla- ((∃ x, (p x)) → g)) := by tla_unfold_simp ; grind
+  (∀ x, ((Γ) |-tla- ((p x) → g))) = ((Γ) |-tla- ((∃ x, (p x)) → g)) := by tunfold_simp ; grind
 
 section
 
@@ -68,7 +68,7 @@ variable (newName : String) {α : Sort v} {p : α → pred σ}
 
 -- NOTE: This proof is slightly repetitive with the one above
 theorem Entails_rcases_exists_by_idx (idx : Nat)
-  (heq : hyps[idx]?.map NamedPred.pred = some (tla_exists p)) :
+  (heq : hyps[idx]?.map NamedPred.pred = some (texists p)) :
   letI hyps' := hyps.eraseIdx idx
   (∀ x : α, Entails (hyps' ++ [⟨newName, p x⟩]) goal) → Entails hyps goal := by
   unfold Entails
@@ -113,16 +113,16 @@ private def nameStrForPat (pat : TSyntax `rcasesPat) : TacticM String := do
 private def unwrapPatLo (p : TSyntax ``Lean.Parser.Tactic.rcasesPatLo) : TacticM (TSyntax `rcasesPat) := do
   match p with
   | `(rcasesPatLo| $_:rcasesPatMed : $_:term) =>
-    throwError "tla_rcases: type ascription ': ty' is not supported"
+    throwError "trcases: type ascription ': ty' is not supported"
   | `(rcasesPatLo| $med:rcasesPatMed) =>
     match med with
     | `(rcasesPatMed| $ps:rcasesPat|*) =>
       let elems := ps.getElems
-      if elems.size == 0 then throwError "tla_rcases: empty pattern"
+      if elems.size == 0 then throwError "trcases: empty pattern"
       else if elems.size == 1 then return elems[0]!
       else `(rcasesPat| ( $med:rcasesPatMed ))
-    | _ => throwError "tla_rcases: unexpected rcasesPatMed shape"
-  | _ => throwError "tla_rcases: unexpected rcasesPatLo shape"
+    | _ => throwError "trcases: unexpected rcasesPatMed shape"
+  | _ => throwError "trcases: unexpected rcasesPatLo shape"
 
 /-- If `pat` is a parenthesized alternation `(p₁ | p₂ | …)` with at least two
     branches, return its branches; otherwise `none`. -/
@@ -147,8 +147,8 @@ private def asAlternation? (pat : TSyntax `rcasesPat) : Option (Array (TSyntax `
 private def splitBinaryRightAssoc (pats : Array (TSyntax ``Lean.Parser.Tactic.rcasesPatLo))
     : TacticM (TSyntax `rcasesPat × TSyntax `rcasesPat) := do
   match pats.toList with
-  | [] => throwError "tla_rcases: empty tuple ⟨⟩ is not supported"
-  | [_] => throwError "tla_rcases: unary tuple ⟨..⟩ is not supported; drop the brackets"
+  | [] => throwError "trcases: empty tuple ⟨⟩ is not supported"
+  | [_] => throwError "trcases: unary tuple ⟨..⟩ is not supported; drop the brackets"
   | [p1, p2] => return (← unwrapPatLo p1, ← unwrapPatLo p2)
   | p1 :: rest =>
     let restArr := rest.toArray
@@ -160,7 +160,7 @@ private def splitBinaryRightAssoc (pats : Array (TSyntax ``Lean.Parser.Tactic.rc
 private def splitAltRightAssoc (branches : Array (TSyntax `rcasesPat))
     : TacticM (TSyntax `rcasesPat × TSyntax `rcasesPat) := do
   match branches.toList with
-  | [] | [_] => throwError "tla_rcases: alternation needs at least two branches"
+  | [] | [_] => throwError "trcases: alternation needs at least two branches"
   | [b1, b2] => return (b1, b2)
   | b1 :: rest =>
     let restArr := rest.toArray
@@ -173,20 +173,20 @@ mutual
     Precondition: the goal list contains exactly one goal — every caller
     enforces this by running through `focus` or `Tactic.run`.
 
-    A tuple `⟨..⟩` destructures `tla_and` / `tla_exists`; a parenthesized
+    A tuple `⟨..⟩` destructures `tla_and` / `texists`; a parenthesized
     alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
 partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
-  -- FIXME: This handling also appears in the implementation of `tla_specialize`,
+  -- FIXME: This handling also appears in the implementation of `tspecialize`,
   -- so maybe reuse it?
-  let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tla_rcases: failed to read the hypotheses from the goal"
-  let (currentHypStr, pred) ← findByTemporalHypLoc hyps currentHyp "tla_rcases" "the goal's Entails list"
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "trcases: failed to read the hypotheses from the goal"
+  let (currentHypStr, pred) ← findByTemporalHypLoc hyps currentHyp "trcases" "the goal's Entails list"
   match pat with
   | `(rcasesPat| $name:ident) =>
     let nameStr := toString name.getId
     -- Essentially renaming
     if nameStr != currentHypStr then
       let currentHypStx ← quoteTemporalHypLoc currentHyp
-      evalTactic <| ← `(tactic| tla_rename $currentHypStx:temporalHypLoc => $name:ident)
+      evalTactic <| ← `(tactic| trename $currentHypStx:temporalHypLoc => $name:ident)
   | `(rcasesPat| _) =>
     -- FIXME: This is not very good, since the generated names are not readable.
     -- A better design should be to only support `-` at the tail positions.
@@ -212,7 +212,7 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
       -- must then be applied to every goal `pat1` produced.
       tlaRcasesCoreFocused (.byName n1Str) pat1
       tlaRcasesCoreAllGoals (.byName n2Str) pat2
-    | TLA.tla_exists _ _ _ =>
+    | TLA.texists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
       let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote nInnerStr))
@@ -220,7 +220,7 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
       tlaRcasesCoreAllGoals (.byName nInnerStr) pat2
     | _ =>
-      throwError "tla_rcases: cannot destructure pred {pred} with pattern {pat}"
+      throwError "trcases: cannot destructure pred {pred} with pattern {pat}"
   | _ =>
     match asAlternation? pat with
     | some branches =>
@@ -240,11 +240,11 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
           let g1s ← Tactic.run g1 (tlaRcasesCoreFocused (.byName n1Str) pat1)
           let g2s ← Tactic.run g2 (tlaRcasesCoreFocused (.byName n2Str) pat2)
           setGoals (g1s ++ g2s)
-        | _ => throwError "tla_rcases: expected exactly two subgoals after the or-split"
+        | _ => throwError "trcases: expected exactly two subgoals after the or-split"
       | _ =>
-        throwError "tla_rcases: cannot case-split pred {pred} with alternation {pat}"
+        throwError "trcases: cannot case-split pred {pred} with alternation {pat}"
     | none =>
-      throwError "tla_rcases: unsupported pattern (use ident, '_', ⟨..⟩ tuples, or | alternations)"
+      throwError "trcases: unsupported pattern (use ident, '_', ⟨..⟩ tuples, or | alternations)"
 
 /-- Run `tlaRcasesCoreFocused` on every current goal, collecting all resulting
     goals. Needed because an or-split multiplies goals, and sibling or
@@ -262,60 +262,60 @@ def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : Tac
   focus (tlaRcasesCoreFocused currentHyp pat)
 
 /--
-`tla_rcases h with pat` destructures a temporal hypothesis in the proof-mode
+`trcases h with pat` destructures a temporal hypothesis in the proof-mode
 context.
 
 If `h : p ∧ q`, then
 ```lean
-tla_rcases h with ⟨hp, hq⟩
+trcases h with ⟨hp, hq⟩
 ```
 removes `h` and adds `hp : p` and `hq : q`. If `h : ∃ x, P x`, then
 ```lean
-tla_rcases h with ⟨x, hx⟩
+trcases h with ⟨x, hx⟩
 ```
 introduces a Lean witness `x` and a temporal hypothesis `hx : P x`. If
 `h : p ∨ q`, then
 ```lean
-tla_rcases h with (hp | hq)
+trcases h with (hp | hq)
 ```
 case-splits into two subgoals, with `hp : p` in the first and `hq : q` in the
 second. A `-` pattern clears the targeted hypothesis:
 ```lean
-tla_rcases h with -
-tla_rcases h with ⟨ha, -⟩  -- destructure and discard the second conjunct
+trcases h with -
+trcases h with ⟨ha, -⟩  -- destructure and discard the second conjunct
 ```
 A numeric index can be used instead of a name:
 ```lean
-tla_rcases 0 with ⟨hp, hq⟩
+trcases 0 with ⟨hp, hq⟩
 ```
 -/
-syntax (name := tlaRcasesTac) "tla_rcases" temporalHypLoc " with " rcasesPat : tactic
+syntax (name := tlaRcasesTac) "trcases" temporalHypLoc " with " rcasesPat : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rcases $hyp:temporalHypLoc with $pat) => withMainContext do
-    let hyp ← parseTemporalHypLoc hyp "tla_rcases: invalid syntax for hypothesis position"
+  | `(tactic| trcases $hyp:temporalHypLoc with $pat) => withMainContext do
+    let hyp ← parseTemporalHypLoc hyp "trcases: invalid syntax for hypothesis position"
     -- `tlaRcasesCore` already acts only on the main goal.
     tlaRcasesCore hyp pat
 
 /--
-`tla_obtain pat := t` adds the temporal fact proved by `t` and immediately
+`tobtain pat := t` adds the temporal fact proved by `t` and immediately
 destructures it with `pat`.
 
 For example, if `h : |-tla- (p ∧ q)`, then
 ```lean
-tla_obtain ⟨hp, hq⟩ := h
+tobtain ⟨hp, hq⟩ := h
 ```
 adds `hp : p` and `hq : q` to the proof-mode context. If `t` proves an
 existential predicate, the pattern may introduce a Lean witness together with
 the temporal hypothesis for its body. A bare proof-mode hypothesis is
 destructured in place; other terms are first added as a new temporal hypothesis.
 -/
-syntax (name := tlaObtainTac) "tla_obtain" rcasesPat " := " term : tactic
+syntax (name := tlaObtainTac) "tobtain" rcasesPat " := " term : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_obtain $pat:rcasesPat := $tm:term) => withMainContext do
+  | `(tactic| tobtain $pat:rcasesPat := $tm:term) => withMainContext do
     let some (_, hyps) ← recognizeEntailsHypsFromGoal
-      | throwError "tla_obtain: failed to read the hypotheses from the goal"
+      | throwError "tobtain: failed to read the hypotheses from the goal"
     match ← temporalHypLocOfBareTerm? hyps tm with
     | some loc => tlaRcasesCore loc pat
     | none =>
@@ -323,50 +323,50 @@ elab_rules : tactic
       tlaRcasesCore (.byIdx idx) pat
 
 /--
-`tla_by_cases h : p` splits a proof-mode goal into the cases `h : p` and
+`tby_cases h : p` splits a proof-mode goal into the cases `h : p` and
 `h : ¬ p`.
 
 For example,
 ```lean
-tla_by_cases hp : p
+tby_cases hp : p
 ```
 creates two goals. The first has the temporal hypothesis `hp : p`; the second
 has `hp : ¬ p`.
 -/
-syntax (name := tlaByCasesTac) "tla_by_cases " ident " : " tlafml : tactic
+syntax (name := tlaByCasesTac) "tby_cases " ident " : " tlafml : tactic
 
 macro_rules
-  | `(tactic| tla_by_cases $h:ident : $p:tlafml) =>
-    `(tactic| tla_obtain ($h | $h) := TLA.excluded_middle [tlafml| $p])
+  | `(tactic| tby_cases $h:ident : $p:tlafml) =>
+    `(tactic| tobtain ($h | $h) := TLA.excluded_middle [tlafml| $p])
 
 /--
-`tla_rintro pat₁ pat₂ ...` introduces proof-mode goal binders like
-`tla_intro`, but each introduced item may be immediately destructured.
+`trintro pat₁ pat₂ ...` introduces proof-mode goal binders like
+`tintro`, but each introduced item may be immediately destructured.
 
 For Lean binders and pure antecedents, the pattern is handled by Lean's
 `rintro`. For a temporal implication, the antecedent is introduced as a new
-temporal hypothesis and then destructured by `tla_rcases`.
+temporal hypothesis and then destructured by `trcases`.
 
 For example, if the goal is `(p ∧ q) → r`, then
 ```lean
-tla_rintro ⟨hp, hq⟩
+trintro ⟨hp, hq⟩
 ```
 adds `hp : p` and `hq : q` to the proof-mode context and changes the goal to
 `r`. If the goal is `∀ x, P x`, then
 ```lean
-tla_rintro x
+trintro x
 ```
 introduces `x` as a Lean local and changes the goal to `P x`. A temporal
 antecedent `p ∨ q` can be case-split with a parenthesized alternation:
 ```lean
-tla_rintro (hp | hq)
+trintro (hp | hq)
 ```
 introduces the antecedent and splits into two subgoals.
 -/
-syntax (name := tlaRintroTac) "tla_rintro" (ppSpace colGt rintroPat)+ : tactic
+syntax (name := tlaRintroTac) "trintro" (ppSpace colGt rintroPat)+ : tactic
 
 elab_rules : tactic
-  | `(tactic| tla_rintro%$tk $[$pats:rintroPat]*) => do
+  | `(tactic| trintro%$tk $[$pats:rintroPat]*) => do
     let tacNonTemporal (pat : TSyntax `rintroPat) : TacticM (TSyntax `tactic) := `(tactic| rintro $pat:rintroPat)
     let rintroPatIdent? (pat : TSyntax `rintroPat) : TacticM (Option Ident) := do
       match pat with
@@ -374,14 +374,14 @@ elab_rules : tactic
       | _ => return none
     -- Introduce/destructure a single pattern on the current (single) main goal.
     let stepOne (pat : TSyntax `rintroPat) : TacticM Unit := do
-      let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "tla_rintro" tacNonTemporal
+      let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "trintro" tacNonTemporal
       if isTemporal? then
         -- FIXME: This "getting the last index" also appears frequently ...
         let some hypCount ← goalHypsLength
-          | throwError "tla_rintro: failed to read the hypotheses after temporal introduction"
+          | throwError "trintro: failed to read the hypotheses after temporal introduction"
         match pat with
         | `(rintroPat| $rpat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) rpat
-        | _ => throwError "tla_rintro: unsupported pattern (only rcasesPat is supported for `tla_rintro` temporal hypotheses)"
+        | _ => throwError "trintro: unsupported pattern (only rcasesPat is supported for `trintro` temporal hypotheses)"
     -- Focus the main goal; a case-splitting pattern multiplies goals, and
     -- `focus` merges any resulting subgoals back ahead of the others.
     focus do

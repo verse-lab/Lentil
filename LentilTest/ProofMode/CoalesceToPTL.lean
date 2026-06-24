@@ -1,6 +1,6 @@
 import Lentil
 
-/- Tests for `tla_coalesce_to_ptl`. -/
+/- Tests for `tcoalesce_to_ptl`. -/
 
 namespace TLA.ProofMode.Test.CoalesceToPTL
 
@@ -116,46 +116,46 @@ elab "guard_entails_always_hyp_atom_goal" : tactic => withMainContext do
   | _ => throwUnexpectedTarget "proof-mode Entails goal" target
 
 example (P : σ → Prop) : (⌜ P ⌝) |-tla- (⌜ P ⌝) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (P Q : σ → Prop) : (□ ⌜ P ⌝ ∧ □ ⌜ Q ⌝) |-tla- (□ ⌜ P ⌝) := by
-  tla_start hP hQ
-  tla_coalesce_to_ptl
+  tstart hP hQ
+  tcoalesce_to_ptl
   guard_entails_two_always_target
-  tla_monotone
-  tla_assumption
+  tmonotone
+  tassumption
 
 example (P : σ → Prop) : (□ ⌜ P ⌝) |-tla- (⌜ P ⌝) := by
-  tla_start hP
-  tla_coalesce_to_ptl
+  tstart hP
+  tcoalesce_to_ptl
   guard_entails_always_hyp_atom_goal
-  tla_toggle_goal_under_always
-  tla_monotone
-  tla_assumption
+  ttoggle_goal_under_always
+  tmonotone
+  tassumption
 
 example (P : σ → Prop) : (⌜ P ⌝) |-tla- (◯ ⌜ P ⌝ → ◇ ⌜ P ⌝) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
   guard_target =
     TLA.pred_implies ptlAtom (TLA.tla_implies (TLA.later ptlAtom) (TLA.eventually ptlAtom))
   intro e hP hLater
   exact later_weaken_to_eventually _ e hLater
 
 example (P Q : σ → Prop) : (⌜ P ⌝ 𝑈 ⌜ Q ⌝) |-tla- (⌜ P ⌝ 𝑈 ⌜ Q ⌝) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
   guard_until_refl_target
   exact pred_implies_refl _
 
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, ⌜ P x ⌝) |-tla- (∀ x, ⌜ P x ⌝) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, ⌜ P x ⌝) |-tla- (∀ x, ⌜ P x ⌝) := by
-  tla_coalesce_to_ptl (binders := .ignore)
+  tcoalesce_to_ptl (binders := .ignore)
   guard_target =
     TLA.pred_implies (TLA.tla_forall fun x => ptlAtom x)
       (TLA.tla_forall fun x => ptlAtom x)
@@ -163,7 +163,7 @@ example {α : Type v} (P : α → σ → Prop) :
 
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, □ ⌜ P x ⌝) |-tla- (∀ x, □ ⌜ P x ⌝) := by
-  tla_coalesce_to_ptl (binders := .ignore)
+  tcoalesce_to_ptl (binders := .ignore)
   guard_target =
     TLA.pred_implies (TLA.tla_forall fun x => TLA.always (ptlAtom x))
       (TLA.tla_forall fun x => TLA.always (ptlAtom x))
@@ -171,7 +171,7 @@ example {α : Type v} (P : α → σ → Prop) :
 
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, □ ⌜ P x ⌝) |-tla- (∀ y, □ ⌜ P y ⌝) := by
-  tla_coalesce_to_ptl (binders := .ignore)
+  tcoalesce_to_ptl (binders := .ignore)
   guard_target =
     TLA.pred_implies (TLA.tla_forall fun x => TLA.always (ptlAtom x))
       (TLA.tla_forall fun y => TLA.always (ptlAtom y))
@@ -179,44 +179,44 @@ example {α : Type v} (P : α → σ → Prop) :
 
 example {α : Type v} (P Q : α → σ → Prop) :
     (∀ x, □ (⌜ P x ⌝ ∧ ⌜ Q x ⌝)) |-tla- (∀ x, □ ⌜ P x ⌝) := by
-  tla_coalesce_to_ptl (binders := .ignore)
+  tcoalesce_to_ptl (binders := .ignore)
   guard_forall_always_and_implies_left_target
   intro e h x k
   exact (h x k).1
 
 example (a : action σ) : (𝒲ℱ a) |-tla- (𝒲ℱ a) := by
-  tla_coalesce_to_ptl (abstractOpaque := true)
+  tcoalesce_to_ptl (abstractOpaque := true)
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (P Q : σ → Prop) : (⌜ P ⌝ ↝ ⌜ Q ⌝) |-tla- (⌜ P ⌝ ↝ ⌜ Q ⌝) := by
-  tla_coalesce_to_ptl (abstractOpaque := true)
+  tcoalesce_to_ptl (abstractOpaque := true)
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (P Q : σ → Prop) : (⌜ P ⌝ ⇒ ⌜ Q ⌝) |-tla- (⌜ P ⌝ ⇒ ⌜ Q ⌝) := by
-  tla_coalesce_to_ptl (abstractOpaque := true)
+  tcoalesce_to_ptl (abstractOpaque := true)
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (p : pred σ) : (p) |-tla- (p) := by
-  tla_coalesce_to_ptl (abstractOpaque := true)
+  tcoalesce_to_ptl (abstractOpaque := true)
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (p : pred σ) : (p) |-tla- (p) := by
-  tla_coalesce_to_ptl (level := .formula)
+  tcoalesce_to_ptl (level := .formula)
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
 example (P Q : σ → Prop) :
     (□ (⌜ P ⌝ ∧ ⌜ Q ⌝)) |-tla- (□ (⌜ P ⌝ ∧ ⌜ Q ⌝)) := by
-  tla_coalesce_to_ptl (level := .modal)
+  tcoalesce_to_ptl (level := .modal)
   guard_target = TLA.pred_implies (TLA.always ptlAtom) (TLA.always ptlAtom)
   exact pred_implies_refl _
 
 example (p : pred σ) : (p) |-tla- (p) := by
-  tla_coalesce_to_ptl (config := { level := .formula : CoalesceConfig })
+  tcoalesce_to_ptl (config := { level := .formula : CoalesceConfig })
   guard_target = TLA.pred_implies ptlAtom ptlAtom
   exact pred_implies_refl _
 
@@ -225,7 +225,7 @@ section ConfigMatrix
 variable {α : Type v} (P : α → σ → Prop) (p : pred σ)
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .leaves, abstractOpaque := false :
       CoalesceConfig })
@@ -233,7 +233,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .leaves, abstractOpaque := true :
       CoalesceConfig })
@@ -241,7 +241,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .modal, abstractOpaque := false :
       CoalesceConfig })
@@ -249,7 +249,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .modal, abstractOpaque := true :
       CoalesceConfig })
@@ -257,7 +257,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .formula, abstractOpaque := false :
       CoalesceConfig })
@@ -265,7 +265,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .block, level := .formula, abstractOpaque := true :
       CoalesceConfig })
@@ -273,7 +273,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .leaves, abstractOpaque := false :
       CoalesceConfig })
@@ -284,7 +284,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .leaves, abstractOpaque := true :
       CoalesceConfig })
@@ -292,7 +292,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .modal, abstractOpaque := false :
       CoalesceConfig })
@@ -302,7 +302,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .modal, abstractOpaque := true :
       CoalesceConfig })
@@ -312,7 +312,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .formula, abstractOpaque := false :
       CoalesceConfig })
@@ -320,7 +320,7 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
   exact pred_implies_refl _
 
 example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p)) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
     (config := {
       binders := .ignore, level := .formula, abstractOpaque := true :
       CoalesceConfig })
@@ -330,24 +330,24 @@ example : (∀ x, □ (⌜ P x ⌝ ∧ p)) |-tla- (∀ x, □ (⌜ P x ⌝ ∧ p
 end ConfigMatrix
 
 /--
-error: tla_coalesce_to_ptl: found no non-PTL predicate blocks to abstract
+error: tcoalesce_to_ptl: found no non-PTL predicate blocks to abstract
 -/
 #guard_msgs in
 example (p : pred σ) : (□ p) |-tla- (□ p) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
 
 /--
-error: tla_coalesce_to_ptl: found no non-PTL predicate blocks to abstract
+error: tcoalesce_to_ptl: found no non-PTL predicate blocks to abstract
 -/
 #guard_msgs in
 example (a : action σ) : (𝒲ℱ a) |-tla- (𝒲ℱ a) := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
 
 /--
-error: tla_coalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal
+error: tcoalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal
 -/
 #guard_msgs in
 example : True := by
-  tla_coalesce_to_ptl
+  tcoalesce_to_ptl
 
 end TLA.ProofMode.Test.CoalesceToPTL

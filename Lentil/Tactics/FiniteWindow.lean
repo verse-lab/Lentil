@@ -21,7 +21,7 @@ with a theorem saying that evaluating `p` on a trace is equivalent to evaluating
 find a `HasFiniteWindow p n`, applies the certificate theorem, introduces the
 `n` state variables, and simplifies the resulting `core`.
 
-For sequents, `tla_finite_window` first changes `p |-tla- q` by definitional
+For sequents, `tfinite_window` first changes `p |-tla- q` by definitional
 equality into `|-tla- p → q`, so the rest of the pipeline only handles validity
 goals.
 -/
@@ -170,7 +170,7 @@ structure FiniteWindow {σ : Type u} (p : pred σ) (n : Nat) where
 /-- A computable finite-window certificate.
 
 The window is an output parameter so that instance synthesis can compute a
-canonical bound for `p`. The certificate itself is data, because `tla_finite_window`
+canonical bound for `p`. The certificate itself is data, because `tfinite_window`
 uses its `core` field to produce the finite-state goal. -/
 class HasFiniteWindow {σ : Type u} (p : pred σ) (n : outParam Nat) where
   finite : FiniteWindow p n
@@ -182,7 +182,7 @@ def finiteWindowOfHasFiniteWindow {σ : Type u} {p : pred σ} {n : Nat}
     [h : HasFiniteWindow p n] : FiniteWindow p n :=
   h.finite
 
-/-- Soundness theorem used by `tla_finite_window`: proving the finite core for
+/-- Soundness theorem used by `tfinite_window`: proving the finite core for
 all choices of its state arguments proves validity of the original predicate. -/
 theorem FiniteWindow.valid_of_forall {σ : Type u} {p : pred σ} {n : Nat}
     (h : FiniteWindow p n) : IteratedForall n h.core → valid p := by
@@ -326,7 +326,7 @@ def finiteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat
 
 def finiteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
     (hp : ∀ x, FiniteWindow (p x) n) :
-    FiniteWindow (tla_exists p) n :=
+    FiniteWindow (texists p) n :=
   finiteWindowBinder (fun r => ∃ x, r x) exists_congr p n hp
 
 instance hasFiniteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
@@ -336,7 +336,7 @@ instance hasFiniteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) 
 
 instance hasFiniteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
     [hp : ∀ x, HasFiniteWindow (p x) n] :
-    HasFiniteWindow (tla_exists p) n where
+    HasFiniteWindow (texists p) n where
   finite := finiteWindowExists p n fun _ => finiteWindowOfHasFiniteWindow
 
 attribute [tla_finite_window_def]
@@ -368,11 +368,11 @@ private def finiteWindowOf (p : Expr) : MetaM (Expr × Nat) := do
   let instTy ← mkAppM ``HasFiniteWindow #[p, win]
   let inst ←
     try synthInstance instTy
-    catch _ => throwError "tla_finite_window: failed to synthesize a finite-window instance for {p}"
+    catch _ => throwError "tfinite_window: failed to synthesize a finite-window instance for {p}"
   let win ← instantiateMVars win
   let win ← withTransparency .all <| whnf win
   let some n ← (Lean.Meta.evalNat win).run
-    | throwError "tla_finite_window: synthesized finite window did not reduce to a numeral: {win}"
+    | throwError "tfinite_window: synthesized finite window did not reduce to a numeral: {win}"
   return (inst, n)
 
 private def introFiniteStates (n : Nat) : TacticM Unit := do
@@ -393,7 +393,7 @@ private def changeProofModeEntailsToValidRepeatedImplies : TacticM (List Name) :
     #[none, some hypsExpr, some goal]
   let gs ← g.apply thm
   let [g] := gs
-    | throwError "tla_finite_window: unexpected number of goals after converting proof-mode Entails goal (got {gs.length}, expected 1)"
+    | throwError "tfinite_window: unexpected number of goals after converting proof-mode Entails goal (got {gs.length}, expected 1)"
   replaceMainGoal [g]
   let implicationChain ← hyps.foldrM (init := goal) fun (_, hyp) acc =>
     mkAppM ``TLA.tla_implies #[hyp, acc]
@@ -403,7 +403,7 @@ private def changeProofModeEntailsToValidRepeatedImplies : TacticM (List Name) :
   return hyps.map fun (name, _) => Name.mkSimple name
 
 /--
-`tla_finite_window` reduces a finite-window TLA sequent to an ordinary Lean
+`tfinite_window` reduces a finite-window TLA sequent to an ordinary Lean
 goal over finitely many states.
 
 The tactic uses `HasFiniteWindow` instances for every predicate in the sequent.
@@ -412,7 +412,7 @@ predicates, Boolean connectives, implication, negation, and `◯`. It deliberate
 does not peel genuinely temporal structure such as `□`; use sequent/modal rules
 first to expose a finite local obligation.
 -/
-elab "tla_finite_window" : tactic => withMainContext do
+elab "tfinite_window" : tactic => withMainContext do
   let proofModeHypNames ← changeProofModeEntailsToValidRepeatedImplies
   -- Work only with validity goals. Sequents are definitional aliases for
   -- validity of temporal implication.
@@ -424,14 +424,14 @@ elab "tla_finite_window" : tactic => withMainContext do
     let target := target.headBeta.cleanupAnnotations
     match_expr target with
     | TLA.valid _ p => finiteWindowOf p
-    | _ => throwError "tla_finite_window: goal is not a TLA validity goal, but {target}"
+    | _ => throwError "tfinite_window: goal is not a TLA validity goal, but {target}"
   -- Replace the temporal goal by the finite core obligation, then expose the
   -- core as ordinary state variables.
   -- Apply at the meta level to avoid synthesizing instance twice
   let thm ← mkAppOptM ``HasFiniteWindow.valid_of_forall #[none, none, none, some inst]
   let g ← getMainGoal
   let gs ← g.apply thm
-  let [g] := gs | throwError "tla_finite_window: unexpected number of goals after applying finite-window validity theorem (got {gs.length}, expected 1)"
+  let [g] := gs | throwError "tfinite_window: unexpected number of goals after applying finite-window validity theorem (got {gs.length}, expected 1)"
   replaceMainGoal [g]
   introFiniteStates n
   -- The core still contains the instance constructors and computed `max` widths;
