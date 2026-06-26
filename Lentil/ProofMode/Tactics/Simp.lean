@@ -22,7 +22,7 @@ The goal predicate is just argument 2 of `Entails`.
 private def runConvAtProofModeLocations
     (tacticName : String)
     (loc? : Option (TSyntax ``Lean.Parser.Tactic.location))
-    (mkConv : TacticM (TSyntax `conv)) : TacticM Unit := do
+    (mkConv : TacticM (TSyntax `conv)) : TacticM Unit := withMainContext do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal
     | throwError "{tacticName}: goal is not an Entails sequent"
   let loc ← parseRewriteLocation hyps loc? tacticName

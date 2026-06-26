@@ -175,7 +175,7 @@ mutual
 
     A tuple `⟨..⟩` destructures `tla_and` / `texists`; a parenthesized
     alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
-partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := withMainContext do
   -- FIXME: This handling also appears in the implementation of `tspecialize`,
   -- so maybe reuse it?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "trcases: failed to read the hypotheses from the goal"

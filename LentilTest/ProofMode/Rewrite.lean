@@ -29,6 +29,15 @@ example (heq : p = q) : (p ∧ r) |-tla- (q) := by
   tcheck_goal Entails [⟨"hp", q⟩, ⟨"hr", r⟩] q
   intro _ h ; exact h.1
 
+-- Local variables introduced after entering proof mode remain visible to rewrite.
+example (P Q : Nat → pred σ) (heq : ∀ n, P n = Q n) :
+    (⊤) |-tla- (∀ n : Nat, (P n) → (Q n)) := by
+  tstart
+  tintro n hp
+  trewrite [heq n] at hp
+  tcheck_goal Entails [⟨"hp", Q n⟩] (Q n)
+  exact pred_implies_refl _
+
 -- Regression: unselected hypotheses must be hidden in the value body of the
 -- local continuation, otherwise Lean's `rewrite` traverses and rewrites them.
 example (heq : q = p) : (p ∧ p ∧ p) |-tla- (q) := by
