@@ -200,7 +200,7 @@ def recognizeEntailsHyps (e : Expr) : MetaM (Option (Expr × List (String × Exp
   let some (_, _, hypTy, hyps, _) ← recognizeCanonicalEntails e | return none
   return some (hypTy, hyps)
 
-def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr))) := do
+def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr))) := withMainContext do
   let g ← getMainTarget
   let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
   recognizeEntailsHyps g

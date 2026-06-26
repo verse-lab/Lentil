@@ -45,6 +45,15 @@ example (heq : p = q) : (p) |-tla- (p) := by
   tcheck_goal Entails [⟨"hp", q⟩] q
   exact pred_implies_refl _
 
+-- Local variables introduced after entering proof mode remain visible to conv.
+example (P Q : Nat → pred σ) (heq : ∀ n, P n = Q n) :
+    (⊤) |-tla- (∀ n : Nat, (P n) → (Q n)) := by
+  tstart
+  tintro n hp
+  tsimp [heq n] at hp
+  tcheck_goal Entails [⟨"hp", Q n⟩] (Q n)
+  exact pred_implies_refl _
+
 -- `at *` visits all temporal hypotheses and the goal.
 example (heq : p = q) : (p) |-tla- (q) := by
   tstart hp

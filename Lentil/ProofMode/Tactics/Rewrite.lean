@@ -137,7 +137,7 @@ private def exposeOneLocation (hypsExpr goal : Expr)
 
 /-- Expose one proof-mode location, run `k`, then restore all generated goals
 back from the local-`let` view to `Entails`. -/
-private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : TacticM Unit := do
+private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : TacticM Unit := withMainContext do
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
   let_expr Entails _ hypsExpr goal := target
@@ -151,7 +151,7 @@ private def withExposedLocation (loc : RewriteOneLocation) (k : TacticM Unit) : 
   restorePartiallyHiddenGoals contFVar
 
 private def rewriteAtProofModeLocations
-    (loc? : Option (TSyntax ``Lean.Parser.Tactic.location)) (k : TacticM Unit) : TacticM Unit := do
+    (loc? : Option (TSyntax ``Lean.Parser.Tactic.location)) (k : TacticM Unit) : TacticM Unit := withMainContext do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal
     | throwError "trewrite: goal is not an Entails sequent"
   let loc ← parseRewriteLocation hyps loc? "trewrite"
