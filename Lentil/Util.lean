@@ -36,9 +36,28 @@ register_simp_attr tladual
 /-- Marking the theorems that are used for normalizing sequents. -/
 register_simp_attr tlanormsimp
 
+/-- Declarations tagged with `[tla_modality_unfold]`. -/
+initialize tlaModalityUnfoldExt : SimplePersistentEnvExtension Name NameSet ←
+  registerSimplePersistentEnvExtension {
+    name := `tlaModalityUnfoldExt
+    addImportedFn := fun entries =>
+      entries.foldl (init := {}) fun s ns =>
+        ns.foldl (init := s) fun s n => s.insert n
+    addEntryFn := fun s n => s.insert n
+  }
+
+def hasTlaModalityUnfoldAttr (env : Environment) (decl : Name) : Bool :=
+  (tlaModalityUnfoldExt.getState env).contains decl
+
 /-- Marking definitions whose head may hide a leading modality operator. -/
-initialize tlaModalityUnfoldAttr : TagAttribute ←
-  registerTagAttribute `tla_modality_unfold
-    "definitions whose head may be unfolded by proof-mode modality tactics"
+initialize registerBuiltinAttribute {
+  name := `tla_modality_unfold
+  descr := "definitions whose head may be unfolded by proof-mode modality tactics"
+  add := fun decl stx kind => do
+    Attribute.Builtin.ensureNoArgs stx
+    unless kind == AttributeKind.global do
+      throwAttrMustBeGlobal `tla_modality_unfold kind
+    modifyEnv fun env => tlaModalityUnfoldExt.addEntry env decl
+}
 
 initialize registerTraceClass `lentil.debug

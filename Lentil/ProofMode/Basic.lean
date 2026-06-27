@@ -152,7 +152,7 @@ partial def recognizeWithTlaModalityHeadUnfold? {α : Type} (recognize : Expr �
   if let some res := recognize e then
     return some res
   let head := e.getAppFn'.constName
-  unless tlaModalityUnfoldAttr.hasTag (← getEnv) head do
+  unless hasTlaModalityUnfoldAttr (← getEnv) head do
     return none
   let some unfolded ← unfoldDefinition? e true
     | return none

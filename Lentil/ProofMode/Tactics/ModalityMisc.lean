@@ -53,8 +53,11 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
     | none => (false, goal)
   let thm ← mkAppOptM ``Entails_toggle_goal_under_always #[none, some peeledHypsExpr, some toggledGoal]
   let thm ← mkAppM (if leftToRight? then ``Eq.mp else ``Eq.mpr) #[thm]
-  replaceMainGoal (← g.apply thm)
-  postDSimpAfterApplyingReflectionTheorem #[``mapHypPreds, ``List.map]
+  let [g'] ← g.apply thm
+    | throwError "ttoggle_goal_under_always: unexpected number of goals after applying the reflection theorem"
+  let newGoal ← if leftToRight? then pure toggledGoal else mkAppM ``TLA.always #[toggledGoal]
+  let newTarget ← mkAppM ``Entails #[hypsExpr, newGoal]
+  replaceMainGoal [← g'.change newTarget]
 
 /--
 `ttoggle_goal_under_always` toggles one leading `□` on the current
