@@ -5,6 +5,7 @@ namespace TLA.Test.ModalityMisc
 open TLA TLA.ProofMode
 
 variable {σ : Type u} (p q r : pred σ)
+variable (a : action σ)
 
 def wrappedAlways {α : Type u} (p : pred α) : pred α := [tlafml| □ p]
 
@@ -34,6 +35,23 @@ example (h : (wrappedAlways p) |-tla- (r)) : (wrappedAlways p) |-tla- (□ r) :=
   tstart hp
   ttoggle_goal_under_always
   tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] r
+  exact h
+
+/--
+trace: σ : Type u
+p q r : pred σ
+a : action σ
+h : (𝒲ℱ a) |-tla- (r)
+⊢ 
+  hwf : 𝒲ℱ a
+  |-tla- r
+-/
+#guard_msgs in
+example (h : (𝒲ℱ a) |-tla- (r)) : (𝒲ℱ a) |-tla- (□ r) := by
+  tstart hwf
+  ttoggle_goal_under_always
+  tcheck_goal Entails [⟨"hwf", [tlafml| 𝒲ℱ a]⟩] r
+  trace_state
   exact h
 
 example (h : (p ∧ q) |-tla- (r)) :

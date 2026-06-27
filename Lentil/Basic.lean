@@ -182,7 +182,9 @@ def TLA.leads_to {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □
 def TLA.always_implies {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → q) ]
 def TLA.weak_fairness {α : Type u} (a : action α) : pred α := [tlafml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
 
-attribute [tla_modality_unfold] TLA.leads_to TLA.always_implies
+attribute [tla_modality_unfold] TLA.leads_to
+attribute [tla_modality_unfold] TLA.always_implies
+attribute [tla_modality_unfold] TLA.weak_fairness
 
 macro_rules
   | `([tlafml| $f1:tlafml ↝ $f2:tlafml ]) => `(TLA.leads_to [tlafml| $f1 ] [tlafml| $f2 ])
