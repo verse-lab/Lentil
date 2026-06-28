@@ -27,17 +27,31 @@ def quoteTemporalHypLocToTerm : TemporalHypLoc → TSyntax `term
   | .byName name => quote name
   | .byIdx idx => quote idx
 
-def findByTemporalHypLoc? (xs : List (String × α)) : TemporalHypLoc → Option (String × α)
-  | .byName name => xs.find? fun x => x.1 == name
-  | .byIdx idx => xs[idx]?
+def findIdxByTemporalHypLoc? (xs : List (String × α)) : TemporalHypLoc →
+    Option (Nat × String × α)
+  | .byName name =>
+    match xs.findFinIdx? (fun x => x.1 == name) with
+    | some idx => some (idx, xs[idx])
+    | none => none
+  | .byIdx idx => xs[idx]?.map fun x => (idx, x.1, x.2)
 
-def findByTemporalHypLoc [Monad m] [MonadError m] (xs : List (String × α)) (loc : TemporalHypLoc)  (errorMsgPrefix errorMsgSuffix : String) : m (String × α) := do
-  match findByTemporalHypLoc? xs loc with
+def findByTemporalHypLoc? (xs : List (String × α)) (loc : TemporalHypLoc) :
+    Option (String × α) :=
+  findIdxByTemporalHypLoc? xs loc |>.map Prod.snd
+
+def findIdxByTemporalHypLoc [Monad m] [MonadError m] (xs : List (String × α))
+    (loc : TemporalHypLoc) (errorMsgPrefix errorMsgSuffix : String) :
+    m (Nat × String × α) := do
+  match findIdxByTemporalHypLoc? xs loc with
   | some res => pure res
   | none =>
     match loc with
     | .byName name => throwError m!"{errorMsgPrefix}: hypothesis '{name}' not found in {errorMsgSuffix}"
     | .byIdx idx => throwError m!"{errorMsgPrefix}: hypothesis index {idx} not found in {errorMsgSuffix}"
+
+def findByTemporalHypLoc [Monad m] [MonadError m] (xs : List (String × α)) (loc : TemporalHypLoc) (errorMsgPrefix errorMsgSuffix : String) : m (String × α) := do
+  let (_, res) ← findIdxByTemporalHypLoc xs loc errorMsgPrefix errorMsgSuffix
+  return res
 
 /-- If `tm` is a bare identifier that names a proof-mode hypothesis in `hyps`,
 return that name. Lean locals shadow proof-mode hypotheses. -/

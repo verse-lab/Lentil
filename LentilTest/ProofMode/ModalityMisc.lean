@@ -61,6 +61,34 @@ example (h : (p ∧ q) |-tla- (r)) :
   tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
+example : (□ p ∧ ◇ q ∧ □ r) |-tla- (◇ q) := by
+  tstart hp hq hr
+  tadvance hq
+  tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] [tlafml| ◇ q]
+  tapply TLA.now_weaken_to_eventually
+  tassumption
+
+example (h : (𝒲ℱ a ∧ p) |-tla- (◇ q)) :
+    (𝒲ℱ a ∧ ◇ p) |-tla- (◇ q) := by
+  tstart hwf hp
+  tadvance hp
+  tcheck_goal Entails [⟨"hwf", [tlafml| 𝒲ℱ a]⟩, ⟨"hp", p⟩] [tlafml| ◇ q]
+  exact h
+
+example (h : (□ p ∧ q ∧ □ r) |-tla- (□ ◇ r)) :
+    (□ p ∧ ◇ q ∧ □ r) |-tla- (□ ◇ r) := by
+  tstart hp hq hr
+  tadvance hq
+  tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] [tlafml| □ ◇ r]
+  exact h
+
+example {P : Prop} (h : (□ p ∧ q) |-tla- (⌞ P ⌟)) :
+    (□ p ∧ ◇ q) |-tla- (⌞ P ⌟) := by
+  tstart hp hq
+  tadvance hq
+  tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩] [tlafml| ⌞ P ⌟]
+  exact h
+
 /--
 error: ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix
 -/
