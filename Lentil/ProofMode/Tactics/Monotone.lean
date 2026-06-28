@@ -9,6 +9,10 @@ def mapHypPreds {σ : Type u} (f : pred σ → pred σ) (hyps : List (NamedPred 
     List (NamedPred σ) :=
   hyps.map fun h => { h with pred := f h.pred }
 
+theorem mapHypPreds_append {σ : Type u} (f : pred σ → pred σ) (pre post : List (NamedPred σ)) :
+  mapHypPreds f (pre ++ post) = mapHypPreds f pre ++ mapHypPreds f post := by
+  simp [mapHypPreds]
+
 theorem mapHypPreds_preds {σ : Type u} (f : pred σ → pred σ) (hyps : List (NamedPred σ)) :
   (mapHypPreds f hyps).map NamedPred.pred = (hyps.map NamedPred.pred).map f := by
   simp [mapHypPreds]
