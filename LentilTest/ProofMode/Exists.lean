@@ -2,7 +2,7 @@ import Lentil
 
 /- Tests for the `texists` tactic.
 
-   `texists t` provides a witness `t` for a `texists`-headed goal,
+   `texists t` provides a witness `t` for a `tla_exists`-headed goal,
    reducing `Entails hyps (∃ x, p x)` to `Entails hyps (p t)`. The soundness
    theorem is a thin wrapper around `exists_elim`.
 -/
