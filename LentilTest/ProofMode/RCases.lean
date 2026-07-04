@@ -3,7 +3,7 @@ import Lentil.ProofMode.Display
 
 /- Tests for the `trcases` tactic.
 
-   Initial scope: destructuring `tla_and` (via `⟨pat₁, pat₂⟩`) and `texists`
+   Initial scope: destructuring `tla_and` (via `⟨pat₁, pat₂⟩`) and `tla_exists`
    (via `⟨witness, pat⟩`), mutually nested. The pattern syntax reuses Lean's
    built-in `rcasesPat` category, restricted to ident / `_` / tuple shapes.
 
@@ -59,7 +59,7 @@ example (P : Nat → pred σ) :
   tstart hex
   trcases hex with ⟨n, hp⟩
   tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", P n⟩] (TLA.texists P)
+  tcheck_goal Entails [⟨"hp", P n⟩] (TLA.tla_exists P)
   intro e hp
   exact ⟨n, hp⟩
 
@@ -298,7 +298,7 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (⊤) := by
 
 /-! ## Errors -/
 
--- Pred head is neither `tla_and` nor `texists`.
+-- Pred head is neither `tla_and` nor `tla_exists`.
 /--
 error: trcases: cannot destructure pred a with pattern ⟨ha, hb⟩
 -/

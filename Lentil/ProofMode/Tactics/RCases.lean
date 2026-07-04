@@ -68,7 +68,7 @@ variable (newName : String) {α : Sort v} {p : α → pred σ}
 
 -- NOTE: This proof is slightly repetitive with the one above
 theorem Entails_rcases_exists_by_idx (idx : Nat)
-  (heq : hyps[idx]?.map NamedPred.pred = some (texists p)) :
+  (heq : hyps[idx]?.map NamedPred.pred = some (tla_exists p)) :
   letI hyps' := hyps.eraseIdx idx
   (∀ x : α, Entails (hyps' ++ [⟨newName, p x⟩]) goal) → Entails hyps goal := by
   unfold Entails
@@ -173,7 +173,7 @@ mutual
     Precondition: the goal list contains exactly one goal — every caller
     enforces this by running through `focus` or `Tactic.run`.
 
-    A tuple `⟨..⟩` destructures `tla_and` / `texists`; a parenthesized
+    A tuple `⟨..⟩` destructures `tla_and` / `tla_exists`; a parenthesized
     alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
 partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := withMainContext do
   -- FIXME: This handling also appears in the implementation of `tspecialize`,
@@ -212,7 +212,7 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
       -- must then be applied to every goal `pat1` produced.
       tlaRcasesCoreFocused (.byName n1Str) pat1
       tlaRcasesCoreAllGoals (.byName n2Str) pat2
-    | TLA.texists _ _ _ =>
+    | TLA.tla_exists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
       let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote nInnerStr))

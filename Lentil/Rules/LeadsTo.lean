@@ -14,7 +14,7 @@ variable {σ : Type u}
 
 -- FIXME: any chance to make the following two lemmas more general
 theorem leads_to_exists (Γ q : pred σ) (p : α → pred σ) :
-  (∀ (x : α), (Γ) |-tla- ((p x) ↝ q)) ↔ (Γ) |-tla- ((texists p) ↝ q) := by
+  (∀ (x : α), (Γ) |-tla- ((p x) ↝ q)) ↔ (Γ) |-tla- ((tla_exists p) ↝ q) := by
   tunfold_simp ; aesop
 
 theorem leads_to_pure_pred_and (Γ p q : pred σ) (φ : Prop) :
