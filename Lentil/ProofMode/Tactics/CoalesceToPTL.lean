@@ -49,7 +49,7 @@ private def coalesceLeafHeads : List Name := [
 
 private def coalesceBinderHeads : List Name := [
   ``TLA.tla_forall,
-  ``TLA.texists,
+  ``TLA.tla_exists,
   ``TLA.tla_bigwedge,
   ``TLA.tla_bigvee
 ]
@@ -102,7 +102,7 @@ private partial def collectPTLBlocks (cfg : CoalesceConfig) (bound : Array Expr)
   | TLA.tla_or _ p q => collectBinary ``TLA.tla_or p q
   | TLA.tla_implies _ p q => collectBinary ``TLA.tla_implies p q
   | TLA.tla_forall _ _ p => collectBinder ``TLA.tla_forall p
-  | TLA.texists _ _ p => collectBinder ``TLA.texists p
+  | TLA.tla_exists _ _ p => collectBinder ``TLA.tla_exists p
   -- NOTE: Design choice: big op should be first turned into `forall`/`exists`
   /-
   | TLA.tla_bigwedge _ _ _ _ p s => collectBigOp ``TLA.tla_bigwedge p s

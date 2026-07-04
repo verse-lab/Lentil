@@ -64,7 +64,7 @@ instance prefixClosedForall {α : Sort v} (p : α → pred σ)
 
 instance prefixClosedExists {α : Sort v} (p : α → pred σ)
     [∀ x, PrefixClosed (p x)] :
-    PrefixClosed (TLA.texists p) where
+    PrefixClosed (TLA.tla_exists p) where
   prefix_closed := by
     intro e k h
     rcases h with ⟨x, hx⟩

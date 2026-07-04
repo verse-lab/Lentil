@@ -49,10 +49,10 @@ partial def convertPropToTLAPredAux (alist : AssocList Expr Expr) (σ p : Expr) 
         let b_ := b.instantiate1 avar
         let b' ← go b_
         let b'' ← mkLambdaFVars #[avar] b'
-        mkAppM ``TLA.texists #[b'']
+        mkAppM ``TLA.tla_exists #[b'']
     | _ =>
       let f' ← go f
-      mkAppM ``TLA.texists #[f']
+      mkAppM ``TLA.tla_exists #[f']
   | _ =>
     -- `p` is not any propositional connective listed above
     match p with

@@ -326,7 +326,7 @@ def finiteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat
 
 def finiteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
     (hp : ∀ x, FiniteWindow (p x) n) :
-    FiniteWindow (texists p) n :=
+    FiniteWindow (tla_exists p) n :=
   finiteWindowBinder (fun r => ∃ x, r x) exists_congr p n hp
 
 instance hasFiniteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
@@ -336,7 +336,7 @@ instance hasFiniteWindowForall {σ : Type u} {α : Sort v} (p : α → pred σ) 
 
 instance hasFiniteWindowExists {σ : Type u} {α : Sort v} (p : α → pred σ) (n : Nat)
     [hp : ∀ x, HasFiniteWindow (p x) n] :
-    HasFiniteWindow (texists p) n where
+    HasFiniteWindow (tla_exists p) n where
   finite := finiteWindowExists p n fun _ => finiteWindowOfHasFiniteWindow
 
 attribute [tla_finite_window_def]
