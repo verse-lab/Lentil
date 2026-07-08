@@ -27,7 +27,7 @@ example (heq : p = q) : (p ∧ r) |-tla- (q) := by
   tstart hp hr
   trewrite [heq] at 0
   guard_target =ₛ Entails [⟨"hp", q⟩, ⟨"hr", r⟩] q
-  intro _ h ; exact h.1
+  tassumption
 
 -- Local variables introduced after entering proof mode remain visible to rewrite.
 example (P Q : Nat → pred σ) (heq : ∀ n, P n = Q n) :
@@ -44,7 +44,7 @@ example (heq : q = p) : (p ∧ p ∧ p) |-tla- (q) := by
   tstart hp1 hp2 hp3
   trewrite [← heq] at hp1 hp3
   guard_target =ₛ Entails [⟨"hp1", q⟩, ⟨"hp2", p⟩, ⟨"hp3", q⟩] q
-  intro _ h ; exact h.1
+  tassumption
 
 -- Rewriting can create ordinary Lean side goals, so `trewrite` is not
 -- implemented as a `conv` tactic.
@@ -68,13 +68,13 @@ example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
   tstart hp hq hr
   trewrite [always_idem] at *
   guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
-  intro _ h ; exact h.2.1
+  tassumption
 
 example : (□□p ∧ q ∧ □□r) |-tla- (q) := by
   tstart hp hq hr
   trewrite [always_idem] at hp hr
   guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩, ⟨"hr", [tlafml| □ r]⟩] q
-  intro _ h ; exact h.2.1
+  tassumption
 
 -- Lean-style locations can include both selected hypotheses and the target.
 example (heq : p = q) : (p) |-tla- (p) := by

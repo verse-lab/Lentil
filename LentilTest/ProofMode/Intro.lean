@@ -35,8 +35,11 @@ example (Q : Prop) (P : Q → pred σ) :
   tstart
   tintro hQ
   guard_target =ₛ Entails [] (P hQ)
-  intro e _
-  exact h e True.intro hQ
+  thave htop : ⊤ by
+    tprove_pure
+    trivial
+  thave := h htop hQ
+  tassumption
 
 -- Intro a pure-predicate antecedent (`⌞q⌟ → …`).
 example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
@@ -62,8 +65,11 @@ example (P : Nat → Nat → pred σ) :
   tstart
   tintro x hxx y
   guard_target =ₛ Entails [] (P x y)
-  intro e _
-  exact h e True.intro x hxx y
+  thave htop : ⊤ by
+    tprove_pure
+    trivial
+  thave := h htop x hxx y
+  tassumption
 
 -- Multiple ∀ introductions in one call.
 example (P : Nat → Nat → pred σ) :
@@ -73,8 +79,11 @@ example (P : Nat → Nat → pred σ) :
   tstart
   tintro x y
   guard_target =ₛ Entails [] (P x y)
-  intro e _
-  exact h e True.intro x y
+  thave htop : ⊤ by
+    tprove_pure
+    trivial
+  thave := h htop x y
+  tassumption
 
 -- Error: goal is not an `Entails` (we never called `tstart`).
 /--
@@ -99,8 +108,8 @@ example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
   tstart hp
   tintro hp'
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
-  intro e ⟨_, hp'⟩
-  exact h e hp' hp'
+  thave hpq := h hp'
+  tapply hpq hp'
 
 -- Multiple temporal intros stack the new hypotheses at the end of the list,
 -- in the order they were introduced.
@@ -108,7 +117,7 @@ example : (⊤) |-tla- (p → q → p) := by
   tstart
   tintro hp hq
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
-  intro _ ⟨hp, _⟩ ; exact hp
+  tassumption
 
 -- Mixed: temporal intro followed by ∀-intro and pure-intro.
 example (P : Nat → pred σ) :
@@ -118,7 +127,10 @@ example (P : Nat → pred σ) :
   tstart
   tintro hp n heq
   guard_target =ₛ Entails [⟨"hp", p⟩] (P n)
-  intro e hp
-  exact h e True.intro hp n heq
+  thave htop : ⊤ by
+    tprove_pure
+    trivial
+  thave := h htop hp n heq
+  tassumption
 
 end TLA.ProofMode.Test.Intro

@@ -29,7 +29,7 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
     guard_target =ₛ Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- Multi-step `by`-block: nested `t*` tactics work as expected.
 example (lem1 : (a) |-tla- (b)) (lem2 : (b) |-tla- (c)) :
@@ -41,7 +41,7 @@ example (lem1 : (a) |-tla- (b)) (lem2 : (b) |-tla- (c)) :
     guard_target =ₛ Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hc", c⟩] c
-  intro _ ⟨_, hc⟩ ; exact hc
+  tassumption
 
 -- "Duplicate" an existing hyp under a different name (the by-block just
 -- restates the hyp via reflexivity).
@@ -51,14 +51,14 @@ example : (a) |-tla- (a) := by
     guard_target =ₛ Entails [⟨"ha", a⟩] a
     exact pred_implies_refl _
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"ha'", a⟩] a
-  intro _ ⟨ha, _⟩ ; exact ha
+  tassumption
 
 -- Add a valid TLA fact as a temporal hypothesis.
 example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave hb := lem
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- The restricted prime form accepts formula syntax as theorem arguments.
 example (lem : ∀ p : pred σ, |-tla- (p → p)) : (a) |-tla- (a) := by
@@ -79,21 +79,21 @@ example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave' hb := lem (0 + 1) ha
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- Valid implication chains still specialize through proof-mode hypotheses.
 example (lem : |-tla- (a → b → c)) : (a ∧ b) |-tla- (c) := by
   tstart ha hb
   thave' hc := lem ha hb
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
-  intro _ ⟨_, _, hc⟩ ; exact hc
+  tassumption
 
 -- Formula arguments and tuple temporal arguments can appear in the same application.
 example (lem : ∀ p : pred σ, (p) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   tstart ha hc
   thave' hb := lem (a ∧ c) ⟨ha, hc⟩
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, _, hb⟩ ; exact hb
+  tassumption
 
 -- Explicit and implicit predicate parameters can appear in the same theorem.
 example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
@@ -132,7 +132,7 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave hb := lem ha
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- Replace a named proof-mode hypothesis with a theorem derived from it.
 example (lem : (a) |-tla- (b)) : (a ∧ c) |-tla- (b) := by
@@ -146,7 +146,7 @@ example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave hb := lem (0 + 1) ha
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- The direct theorem prefix can also be kept as a residual implication.
 example (lem : ∀ _ : Nat, (a) |-tla- (b)) : (a) |-tla- (b) := by
@@ -160,35 +160,35 @@ example (lem : |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave := lem
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"this", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- Valid implication chains share the same mixed-argument path as `tapply`.
 example (lem : |-tla- (a → b → c)) : (a ∧ b) |-tla- (c) := by
   tstart ha hb
   thave hc := lem ha hb
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
-  intro _ ⟨_, _, hc⟩ ; exact hc
+  tassumption
 
 -- Tuple temporal arguments conjunct multiple proof-mode hypotheses.
 example (lem : (a ∧ b) |-tla- (c)) : (a ∧ b) |-tla- (c) := by
   tstart ha hb
   thave hc := lem ⟨ha, hb⟩
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
-  intro _ ⟨_, _, hc⟩ ; exact hc
+  tassumption
 
 -- The head can be a temporal hypothesis already in the proof-mode context.
 example : ([tlafml| (a → b) ∧ a]) |-tla- (b) := by
   tstart h ha
   thave hb := h ha
   guard_target =ₛ Entails [⟨"h", [tlafml| a → b]⟩, ⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, _, hb⟩ ; exact hb
+  tassumption
 
 -- The term can be an expression, and the new hypothesis is appended.
 example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   tstart ha hc
   thave hb := (show |-tla- (b) from lem)
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, _, hb⟩ ; exact hb
+  tassumption
 
 /-! ## `tsuffices` -/
 
@@ -211,7 +211,7 @@ example (lem : (a) |-tla- (b ∧ c)) : (a) |-tla- (c) := by
   tsuffices hbc : b ∧ c by
     trcases hbc with ⟨hb, hc⟩
     guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
-    intro _ ⟨_, _, hc⟩ ; exact hc
+    tassumption
   guard_target =ₛ Entails [⟨"ha", a⟩] [tlafml| b ∧ c]
   exact lem
 
@@ -228,11 +228,11 @@ example (lemAB : (a) |-tla- (b)) (lemBC : (b) |-tla- (c)) :
     exact pred_implies_refl _
   tsuffices hc : c by
     guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
-    intro _ ⟨_, _, hc⟩ ; exact hc
+    tassumption
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] c
   tapply lemBC
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
   (b → c) |-tla- (c) := by
@@ -250,7 +250,7 @@ example (q : (i : Nat) → i < n → pred σ) :
   -- NOTE: If we do not specify `p` here, unification will unfold related definitions
   thave := (TLA.find_min (p := fun j_ => [tlafml| ∃ hltj, (q j_ hltj)]) j) h
   tobtain ⟨j, hle, ⟨hltj, htmp⟩, hmin⟩ := this
-  intro _ _
+  tprove_pure
   trivial
 
 -- Replacing one of two identically named hypotheses preserves the other one.

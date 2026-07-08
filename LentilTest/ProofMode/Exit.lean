@@ -14,7 +14,7 @@ variable {σ : Type u} (p q r : pred σ)
 example : (p ∧ q) |-tla- (p) := by
   tstart hp hq
   texit
-  intro _ ⟨h, _⟩ ; exact h
+  exact TLA.and_left
 
 -- Singleton proof-mode context becomes a single-premise raw sequent.
 example : (p) |-tla- (p) := by
@@ -30,7 +30,7 @@ example : (q) |-tla- (⊤) := by
   tclear hq
   texit
   -- Goal is now `valid (tla_true : pred σ) = ∀ σ', σ'.satisfies tla_true`.
-  intro _ ; exact True.intro
+  exact valid_pure True.intro
 
 -- After some proof-mode tactics we can drop back to the raw view to finish.
 example : (p) |-tla- (p ∨ q) := by

@@ -27,14 +27,14 @@ example : (a ∧ b ∧ c) |-tla- (b) := by
   tstart ha hb hc
   trename hb => hMid
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hMid", b⟩, ⟨"hc", c⟩] b
-  intro _ ⟨_, hb, _⟩ ; exact hb
+  tassumption
 
 -- Renaming an unknown name is a no-op.
 example : (a ∧ b) |-tla- (a) := by
   tstart ha hb
   trename noSuchHyp => hX
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
-  intro _ ⟨ha, _⟩ ; exact ha
+  tassumption
 
 -- Multiple renames chain.
 example : (a ∧ b) |-tla- (a) := by
@@ -42,7 +42,7 @@ example : (a ∧ b) |-tla- (a) := by
   trename ha => x
   trename hb => y
   guard_target =ₛ Entails [⟨"x", a⟩, ⟨"y", b⟩] a
-  intro _ ⟨ha, _⟩ ; exact ha
+  tassumption
 
 -- Renaming after `thave`: the freshly-derived hypothesis can be renamed.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
@@ -50,7 +50,7 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   thave hb := lem ha
   trename hb => result
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"result", b⟩] b
-  intro _ ⟨_, hb⟩ ; exact hb
+  tassumption
 
 -- Rename to the same name is a no-op (just verifies it doesn't choke).
 example : (a) |-tla- (a) := by

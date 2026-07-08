@@ -139,8 +139,7 @@ example (P : σ → Prop) : (⌜ P ⌝) |-tla- (◯ ⌜ P ⌝ → ◇ ⌜ P ⌝)
   tcoalesce_to_ptl
   guard_target =
     TLA.pred_implies ptlAtom (TLA.tla_implies (TLA.later ptlAtom) (TLA.eventually ptlAtom))
-  intro e hP hLater
-  exact later_weaken_to_eventually _ e hLater
+  tstart hP ; tapply' later_weaken_to_eventually
 
 example (P Q : σ → Prop) : (⌜ P ⌝ 𝑈 ⌜ Q ⌝) |-tla- (⌜ P ⌝ 𝑈 ⌜ Q ⌝) := by
   tcoalesce_to_ptl
@@ -181,8 +180,7 @@ example {α : Type v} (P Q : α → σ → Prop) :
     (∀ x, □ (⌜ P x ⌝ ∧ ⌜ Q x ⌝)) |-tla- (∀ x, □ ⌜ P x ⌝) := by
   tcoalesce_to_ptl (binders := .ignore)
   guard_forall_always_and_implies_left_target
-  intro e h x k
-  exact (h x k).1
+  tstart h ; tsimp only [always_and] at h ; tintro x ; tapply TLA.and_left ; tapply h x
 
 example (a : action σ) : (𝒲ℱ a) |-tla- (𝒲ℱ a) := by
   tcoalesce_to_ptl (abstractOpaque := true)

@@ -28,7 +28,8 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   tstart hp hq
   trevert hp
   guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
-  intro e hq _ ; exact hq
+  tintro hp
+  tassumption
 
 -- Reverting then re-introducing should round-trip back to the same shape.
 example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
@@ -38,7 +39,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
   tintro hp
   guard_target =ₛ Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
-  intro e ⟨hq, _⟩ ; exact hq
+  tassumption
 
 -- Revert multiple temporal hypotheses; the leftmost name ends up as the
 -- outermost antecedent of the resulting `→`-chain.
@@ -47,7 +48,8 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   tstart hp hq
   trevert hp hq
   guard_target =ₛ Entails [] [tlafml| p → q → q]
-  intro e _ _ hq ; exact hq
+  tintro hp hq
+  tassumption
 
 -- Reverting a temporal hyp from the *middle* of the list filters it cleanly
 -- without disturbing the order of the rest.
@@ -56,7 +58,8 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   tstart hp hq hr
   trevert hq
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
-  intro e ⟨_, hr⟩ _ ; exact hr
+  tintro hq
+  tassumption
 
 /-! ## Revert all temporal hypotheses -/
 
@@ -66,15 +69,17 @@ example : (p ∧ q) |-tla- (p) := by
   tstart hp hq
   trevert_all
   guard_target =ₛ Entails [] [tlafml| p → q → p]
-  intro _ _ hp _ ; exact hp
+  tintro hp hq
+  tassumption
 
 -- On an empty temporal context, `trevert_all` is a no-op on the goal shape.
 example : (q) |-tla- (⊤) := by
   tstart hq
   tclear hq
   trevert_all
-  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
-  intro _ _ ; exact True.intro
+  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
+  tprove_pure
+  trivial
 
 /-! ## ∀-revert (Lean-local non-Prop var) -/
 

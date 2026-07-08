@@ -53,7 +53,7 @@ example (lem : |-tla- (p → q → s → r)) : (p ∧ q ∧ s) |-tla- (r) := by
   tstart hp hq hs
   tapply lem hp
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hs", s⟩] [tlafml| q ∧ s]
-  intro _ ⟨_, hq⟩ ; exact hq
+  tsplit_ands <;> tassumption
 
 -- Tuple arguments are flattened into the selected temporal premises.
 example (lem : (p ∧ q) |-tla- (r)) : (p ∧ q) |-tla- (r) := by

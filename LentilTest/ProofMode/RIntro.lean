@@ -16,8 +16,11 @@ example (P : Nat → pred σ) :
   tstart
   trintro n
   guard_target =ₛ Entails [] (P n)
-  intro e _
-  exact h e True.intro n
+  thave htop : ⊤ by
+    tprove_pure
+    trivial
+  thave hall := h htop n
+  tassumption
 
 -- Pure antecedents are introduced into the Lean context and may be destructured.
 example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
@@ -33,7 +36,7 @@ example : (p) |-tla- ((q ∧ r) → q) := by
   tstart hp
   trintro ⟨hq, hr⟩
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
-  intro _ ⟨_, hq, _⟩ ; exact hq
+  tassumption
 
 -- Existential temporal antecedents introduce a Lean witness and a temporal hyp.
 example (P : Nat → pred σ) :
@@ -41,8 +44,8 @@ example (P : Nat → pred σ) :
   tstart
   trintro ⟨n, hp⟩
   guard_target =ₛ Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
-  intro _ hp
-  exact ⟨n, hp⟩
+  texists n
+  tassumption
 
 -- Mixed introductions proceed from left to right.
 example (P : Nat → pred σ) :
@@ -50,7 +53,7 @@ example (P : Nat → pred σ) :
   tstart
   trintro n ⟨hp, hq⟩ hr
   guard_target =ₛ Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
-  intro _ ⟨hp, _⟩ ; exact hp
+  tassumption
 
 -- Numeric `trcases` targets the chosen proof-mode hypothesis, even when
 -- names are duplicated.
@@ -61,32 +64,38 @@ example (lem1 : (p) |-tla- (p ∧ q)) (lem2 : (p) |-tla- (q ∧ r)) :
   thave h := lem2 hp
   trcases 2 with ⟨hq, hr⟩
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
-  intro _ ⟨_, _, hq, _⟩ ; exact hq
+  tassumption
 
 -- A temporal antecedent `q ∨ r` is case-split with a parenthesized
 -- alternation; the later pattern `hs` is introduced into both subgoals.
 example : (p) |-tla- ((q ∨ r) → s → (q ∨ r)) := by
   tstart hp
   trintro (hq | hr) hs
-  · intro _ ⟨_, hq, _⟩ ; exact Or.inl hq
-  · intro _ ⟨_, hr, _⟩ ; exact Or.inr hr
+  · tleft
+    tassumption
+  · tright
+    tassumption
 
 -- A later tuple pattern is destructured in both case-split subgoals.
 example : (p) |-tla- ((q ∨ r) → (q ∧ r) → q) := by
   tstart hp
   trintro (hq | hr) ⟨hc, hd⟩
-  · intro _ ⟨_, _, hc, _⟩ ; exact hc
-  · intro _ ⟨_, _, hc, _⟩ ; exact hc
+  · tassumption
+  · tassumption
 
 -- Two successive case-splitting patterns: the second must fan out over both
 -- subgoals produced by the first. Four bullets pin the goal count.
 example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
   tstart hp
   trintro (hq1 | hr1) (hq2 | hr2)
-  · intro _ _ ; exact True.intro
-  · intro _ _ ; exact True.intro
-  · intro _ _ ; exact True.intro
-  · intro _ _ ; exact True.intro
+  · tprove_pure
+    trivial
+  · tprove_pure
+    trivial
+  · tprove_pure
+    trivial
+  · tprove_pure
+    trivial
 
 -- `trintro -` introduces a temporal antecedent and immediately clears it.
 example : (p) |-tla- (q → p) := by
@@ -94,6 +103,6 @@ example : (p) |-tla- (q → p) := by
   tstart h
   trintro -
   guard_target =ₛ Entails [⟨"h", p⟩] p
-  intro _ hp ; exact hp
+  tassumption
 
 end TLA.ProofMode.Test.RIntro

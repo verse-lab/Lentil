@@ -29,14 +29,14 @@ example (heq : p = q) : (p ∧ r) |-tla- (q) := by
   tstart hp hr
   tsimp [heq] at 0
   guard_target =ₛ Entails [⟨"hp", q⟩, ⟨"hr", r⟩] q
-  intro _ h ; exact h.1
+  tassumption
 
 -- The direct conv implementation must not simplify unselected hypotheses.
 example (heq : p = q) : (p ∧ p ∧ p) |-tla- (q) := by
   tstart hp1 hp2 hp3
   tsimp [heq] at hp1 hp3
   guard_target =ₛ Entails [⟨"hp1", q⟩, ⟨"hp2", p⟩, ⟨"hp3", q⟩] q
-  intro _ h ; exact h.1
+  tassumption
 
 -- Lean-style locations can include both selected hypotheses and the target.
 example (heq : p = q) : (p) |-tla- (p) := by
@@ -94,13 +94,11 @@ example : (wrapPred p ∧ wrapPred q) |-tla- (wrapPred p) := by
   tstart hp hq
   tunfold wrapPred at *
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
-  intro _ h
-  exact h.1
+  tassumption
 
 -- The old all-definition unfolding tactic is still available under its new name.
 example : |-tla- ([tlafml| ⊤] : pred σ) := by
   tunfold_defs
-  intro _
-  trivial
+  apply valid_pure True.intro
 
 end TLA.ProofMode.Test.Simp

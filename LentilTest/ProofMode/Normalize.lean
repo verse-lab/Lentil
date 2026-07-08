@@ -94,6 +94,6 @@ example : |-tla- (p → q ∧ r → p) := by
   tnormalize
   tstart hp hq hr
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] p
-  intro _ ⟨hp, _, _⟩ ; exact hp
+  tassumption
 
 end TLA.ProofMode.Test.Normalize

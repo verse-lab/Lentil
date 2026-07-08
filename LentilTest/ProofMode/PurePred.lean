@@ -29,7 +29,7 @@ example (Q : Prop) :
   tstart ha hQ hb
   tpull_pure hQ
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
-  intro _ ⟨ha, _⟩ ; exact ha
+  tassumption
 
 -- Pull and then use the pulled fact in subsequent reasoning.
 example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
