@@ -2,6 +2,7 @@
 -- Import modules here that should be built as part of the library.
 
 import «Lentil».Rules.Basic
+import «Lentil».Rules.ActionPred
 import «Lentil».Rules.BigOp
 import «Lentil».Rules.LeadsTo
 import «Lentil».Rules.StatePred

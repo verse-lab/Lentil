@@ -56,44 +56,6 @@ theorem state_pred_eq_iff (p q : σ → Prop) : ((⌜ p ⌝) =tla= (⌜ q ⌝)) 
     funext e i
     exact propext (h (e i))
 
-theorem state_pred_as_action (p : σ → Prop) : (⌜ p ⌝) =tla= ⟨ fun s _ => p s ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem later_state_pred_as_action (p : σ → Prop) : (◯ ⌜ p ⌝) =tla= ⟨ fun _ s' => p s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem state_pred_and_action (p : σ → Prop) (a : action σ) :
-    (⌜ p ⌝ ∧ ⟨ a ⟩) =tla= ⟨ fun s s' => p s ∧ a s s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem action_and_state_pred (a : action σ) (p : σ → Prop) :
-    (⟨ a ⟩ ∧ ⌜ p ⌝) =tla= ⟨ fun s s' => a s s' ∧ p s ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem later_state_pred_and_action (p : σ → Prop) (a : action σ) :
-    (◯ ⌜ p ⌝ ∧ ⟨ a ⟩) =tla= ⟨ fun s s' => p s' ∧ a s s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem action_and_later_state_pred (a : action σ) (p : σ → Prop) :
-    (⟨ a ⟩ ∧ ◯ ⌜ p ⌝) =tla= ⟨ fun s s' => a s s' ∧ p s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem state_pred_and_later_state_pred (p q : σ → Prop) :
-    (⌜ p ⌝ ∧ ◯ ⌜ q ⌝) =tla= ⟨ fun s s' => p s ∧ q s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem action_preds_and (a b : action σ) :
-    (⟨ a ⟩ ∧ ⟨ b ⟩) =tla= ⟨ fun s s' => a s s' ∧ b s s' ⟩ := by
-  funext e i ; tunfold_simp
-
-theorem enabled_state_pred_and_action (p : σ → Prop) (a : action σ) :
-    (Enabled (fun s s' => p s ∧ a s s')) =tla= ⌜ fun s => p s ∧ enabled a s ⌝ := by
-  funext e i ; simp [tla_enabled, state_pred, enabled]
-
-theorem enabled_action_and_later_state_pred (a : action σ) (p : σ → Prop) :
-    (Enabled (fun s s' => a s s' ∧ p s')) =tla= ⌜ fun s => ∃ s', a s s' ∧ p s' ⌝ := by
-  funext e i ; simp [tla_enabled, state_pred, enabled]
-
 theorem state_preds_bigwedge_list {α : Type v} (p : α → σ → Prop) (l : List α) :
     (⋀ x ∈ l, ⌜ p x ⌝) =tla= ⌜ fun s => ∀ x, x ∈ l → p x s ⌝ := by
   rw [bigwedge_forall_list]
