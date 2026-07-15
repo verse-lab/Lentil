@@ -23,8 +23,8 @@ theorem leads_to_pure_pred_and (Γ p q : pred σ) (φ : Prop) :
 
 @[tla_derive]
 theorem leads_to_conseq (p p' q q': pred σ) :
-  |-tla- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) ⇒ (p' ↝ q')) := by
-  tunfold_simp ; intro e h1 h2 k h k' hh'
+  |-tla- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) → (p' ↝ q')) := by
+  tunfold_simp ; intro e h1 h2 h k hh'
   specialize h _ (h1 _ hh') ; rcases h with ⟨k1, h⟩ ; aesop
 
 @[tla_derive]
