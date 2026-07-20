@@ -98,6 +98,41 @@ theorem Entails_advance_eventually_under_always
 
 end
 
+section
+
+variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+
+private theorem Entails_step_aux
+    (stable stepped : List (NamedPred σ))
+    (h : Entails (mapHypPreds TLA.always stable ++ stepped) goal) :
+    Entails
+      (mapHypPreds TLA.always stable ++ mapHypPreds TLA.later stepped)
+      (TLA.later goal) := by
+  unfold Entails at h ⊢
+  simp only [List.map_append, mapHypPreds_preds,
+    repeatedAnd_append, repeatedAnd_map_always] at h ⊢
+  rw [repeatedAnd_map_later]
+  rw [← impl_intro_add_r] at h ⊢
+  rw [← later_implies]
+  rw [always_pred_implies] at h
+  apply pred_implies_trans ; refine h ; apply later_monotone'
+
+theorem Entails_step
+    (stable stepped : List (NamedPred σ))
+    (stableIdxs steppedIdxs : List Nat)
+    (heqStable :
+      stableIdxs.filterMap (hyps[·]?) = mapHypPreds TLA.always stable)
+    (heqStepped :
+      steppedIdxs.filterMap (hyps[·]?) = mapHypPreds TLA.later stepped)
+    (h : Entails (mapHypPreds TLA.always stable ++ stepped) goal) :
+    Entails hyps (TLA.later goal) := by
+  refine Entails_drop_hyps
+    (mapHypPreds TLA.always stable ++ mapHypPreds TLA.later stepped) ?_ ?_
+  · grind
+  · exact Entails_step_aux stable stepped h
+
+end
+
 -- FIXME: The following logic is very similar in `Lentil.ProofMode.Tactics.Monotone`,
 -- consider unifying them
 private def peelModalDirect? (modal : Name) (p : Expr) : Option Expr :=
@@ -114,6 +149,9 @@ private def peelAlways? (p : Expr) : MetaM (Option Expr) :=
 
 private def peelEventually? (p : Expr) : MetaM (Option Expr) :=
   peelModal? ``TLA.eventually p
+
+private def peelLater? (p : Expr) : MetaM (Option Expr) :=
+  peelModal? ``TLA.later p
 
 private def peelAlwaysHyps? (hyps : List (String × Expr)) : MetaM (Option (List (String × Expr))) := do
   let mut peeledHyps := []
@@ -179,6 +217,64 @@ private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := 
   let newTarget ← mkAppM ``Entails #[newHypsExpr, goal]
   replaceMainGoal [← g'.change newTarget]
 
+-- FIXME: This pattern repetitively appears in several places, like `tshift_nom`
+private def proofModeStep : TacticM Unit := withMainContext do
+  let g ← getMainGoal
+  let target ← cleanupAnnotAndMore (← g.getType)
+  let some (σExpr, hypsExpr, hypTy, hyps, goal) ← recognizeCanonicalEntails target
+    | throwError "tstep: expected a proof-mode Entails goal"
+  let some goalBody ← peelLater? goal
+    | throwError "tstep: expected the proof-mode goal to have a leading next (`◯`) prefix"
+
+  let (stableIdxs, steppedIdxs, stableHyps, steppedHyps) ← splitHyps hyps
+  let stableHypsExpr ← toHypsList hypTy stableHyps
+  let steppedHypsExpr ← toHypsList hypTy steppedHyps
+  let natTy := mkConst ``Nat
+  let stableIdxsExpr ← mkListLit natTy (stableIdxs.map toExpr)
+  let steppedIdxsExpr ← mkListLit natTy (steppedIdxs.map toExpr)
+  let thm ← mkAppOptM ``Entails_step
+    #[some σExpr, some hypsExpr, some goalBody,
+      some stableHypsExpr, some steppedHypsExpr,
+      some stableIdxsExpr, some steppedIdxsExpr]
+  let goals ← g.apply thm
+  let goals ← goals.filterM fun subgoal =>
+    (do
+      let _ ← subgoal.applyRfl
+      pure false)
+    <|> pure true
+  let [temporalGoal] := goals
+    | throwError "tstep: expected exactly one temporal subgoal after applying the soundness theorem"
+
+  let displayedStableHyps ← stableHyps.mapM fun (name, pred) => do
+    let pred ← mkAppM ``TLA.always #[pred]
+    pure (name, pred)
+  let advancedHypsExpr ← toHypsList hypTy (displayedStableHyps ++ steppedHyps)
+  let advancedTarget ← mkAppM ``Entails #[advancedHypsExpr, goalBody]
+  replaceMainGoal [← temporalGoal.change advancedTarget]
+where
+  splitHyps (hyps : List (String × Expr)) :
+      MetaM (List Nat × List Nat × List (String × Expr) × List (String × Expr)) := do
+    let mut stableIdxs : List Nat := []
+    let mut steppedIdxs : List Nat := []
+    let mut stableHyps : List (String × Expr) := []
+    let mut steppedHyps : List (String × Expr) := []
+    for ((name, pred), idx) in hyps.zipIdx do
+      if let some body ← peelAlways? pred then
+        stableIdxs := idx :: stableIdxs
+        stableHyps := (name, body) :: stableHyps
+      else if let some body ← peelLater? pred then
+        steppedIdxs := idx :: steppedIdxs
+        steppedHyps := (name, body) :: steppedHyps
+      else
+        throwError
+          "tstep: expected every temporal hypothesis to have a leading always (`□`) or next (`◯`) prefix"
+
+    stableIdxs := stableIdxs.reverse
+    steppedIdxs := steppedIdxs.reverse
+    stableHyps := stableHyps.reverse
+    steppedHyps := steppedHyps.reverse
+    return (stableIdxs, steppedIdxs, stableHyps, steppedHyps)
+
 /--
 `ttoggle_goal_under_always` toggles one leading `□` on the current
 proof-mode goal when every temporal hypothesis has a leading `□`.
@@ -215,10 +311,20 @@ For other prefix-closed goals, add a `PrefixClosed` instance.
 -/
 syntax (name := tlaAdvanceTac) "tadvance" (ppSpace colGt temporalHypLoc) : tactic
 
+/--
+`tstep` advances a proof-mode sequent by one deterministic temporal step.
+
+The goal must have a leading `◯`. Each temporal hypothesis must have either a
+leading `□` or `◯`; `□ p` remains `□ p`, while `◯ q` becomes `q`. The resulting
+context groups the always hypotheses before the peeled next hypotheses.
+-/
+syntax (name := tlaStepTac) "tstep" : tactic
+
 elab_rules : tactic
   | `(tactic| ttoggle_goal_under_always) => proofModeToggleGoalUnderAlways
   | `(tactic| tadvance $hyp:temporalHypLoc) => do
     let loc ← parseTemporalHypLoc hyp "tadvance: invalid syntax for hypothesis position"
     proofModeAdvanceEventually loc
+  | `(tactic| tstep) => proofModeStep
 
 end TLA.ProofMode

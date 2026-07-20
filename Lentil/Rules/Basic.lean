@@ -293,6 +293,9 @@ theorem always_and_eventually' : (◇ p ∧ □ q) |-tla- (◇ (p ∧ □ q)) :=
 theorem later_monotone : (p) |-tla- (q) → ◯ p |-tla- ◯ q := by
   tunfold_simp ; aesop
 
+theorem later_monotone' : |-tla- ((p ⇒ q) → (◯ p → ◯ q)) := by
+  tunfold_simp ; aesop
+
 theorem always_monotone : (p) |-tla- (q) → □ p |-tla- □ q := by
   tunfold_simp ; aesop
 
