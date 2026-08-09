@@ -24,8 +24,8 @@ introduces the `n` state variables, and simplifies the resulting `core`. Exact
 temporal hypotheses such as `□p` can provide only a necessary approximation.
 
 For sequents, `tfinite_window` first changes `p |-tla- q` by definitional
-equality into `|-tla- p → q`, so the rest of the pipeline only handles validity
-goals.
+equality into `|-tla- p → q`. For predicate equalities `p =tla= q`, it combines
+the certificates for both sides into one common-window pointwise `Iff` core.
 -/
 
 /-- A curried predicate over `n` consecutive states.
@@ -172,8 +172,15 @@ inductive ApproxDir where
   | sufficient
   /-- The formula implies the core. -/
   | necessary
+deriving ToExpr
 
 namespace ApproxDir
+
+instance : ToString ApproxDir where
+  toString
+    | .exact => "exact"
+    | .sufficient => "sufficient"
+    | .necessary => "necessary"
 
 /-- The semantic guarantee carried by a window approximation.
 
@@ -330,7 +337,31 @@ def finiteWindowEnabled {σ : Type u} (a : action σ) : FiniteWindow (tla_enable
 instance hasFiniteWindowEnabled {σ : Type u} (a : action σ) : HasFiniteWindow (tla_enabled a) 1 where
   build _ h := (finiteWindowEnabled a).weaken h
 
+def FiniteWindow.binary {σ : Type u} {p q : pred σ} {w : Nat}
+    (op : Prop → Prop → Prop)
+    (hp : FiniteWindow p w) (hq : FiniteWindow q w) :
+    FiniteWindow (fun e i => op (p e i) (q e i)) w where
+  core := IteratedHomPred.mkBinary op hp.core hq.core
+  sound := by
+    intro e i
+    rw [IteratedHomPred.evalExec_mkBinary]
+    have hps := hp.sound e i
+    have hqs := hq.sound e i
+    simp only [ApproxDir.Sound] at hps hqs ⊢ ; grind
+
 end FiniteWindowInstances
+
+theorem HasFiniteWindow.eq_of_forall_iff {σ : Type u} {p q : pred σ} {n m : Nat}
+    [hp : HasFiniteWindow p n] [hq : HasFiniteWindow q m] :
+    IteratedForall
+      (FiniteWindow.binary Iff
+        (hp.build _ (Nat.le_max_left n m))
+        (hq.build _ (Nat.le_max_right n m))).core → p = q := by
+  intro hcore
+  have hvalid : valid (fun e i => p e i ↔ q e i) :=
+    FiniteWindow.valid_of_forall _ hcore
+  funext e i
+  exact propext (hvalid e i)
 
 /-! Directional instances. Temporal formulas need not have exact certificates:
 in particular, `□p` has a necessary approximation, suitable for a hypothesis,
@@ -353,6 +384,8 @@ small propositional cases after the direction is exposed. -/
 
 section WindowApproxInstances
 
+-- NOTE: Compared with `FiniteWindow.binary`, this one requires a `op_mono` condition,
+-- so it does not apply for operators like `Iff`.
 /-- Combine two approximations of the same direction using a connective that
 is monotone in both arguments. -/
 def WindowApprox.binary {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat}
@@ -631,17 +664,20 @@ attribute [tla_finite_window_def]
   IteratedHomPred.mkImplies IteratedHomPred.mkBinary
   IteratedHomPred.mkForall IteratedHomPred.mkExists
   IteratedHomPred.mkBinder
+  FiniteWindow.binary
 
 attribute [tla_finite_window_def ↓] dreduceIte dreduceDIte reduceIte reduceDIte
 
 open Elab Tactic Meta
 
-private def sufficientWindowApproxOf (p : Expr) : MetaM (Expr × Nat) := do
+private def windowApproxOf (dir : ApproxDir) (p : Expr) : MetaM (Expr × Nat) := do
   let win ← mkFreshExprMVar (some (mkConst ``Nat))
-  let instTy ← mkAppM ``HasWindowApprox #[mkConst ``ApproxDir.sufficient, p, win]
+  let instTy ← mkAppM ``HasWindowApprox #[toExpr dir, p, win]
   let inst ←
     try synthInstance instTy
-    catch _ => throwError "tfinite_window: failed to synthesize a sufficient finite-window approximation for {p}"
+    catch _ =>
+      let s := toString dir
+      throwError "tfinite_window: failed to synthesize {s} finite-window approximation for {p}"
   let win ← instantiateMVars win
   let win ← withTransparency .all <| whnf win
   let some n ← (Lean.Meta.evalNat win).run
@@ -676,11 +712,13 @@ private def changeProofModeEntailsToValidRepeatedImplies : TacticM (List Name) :
   return hyps.map fun (name, _) => Name.mkSimple name
 
 /--
-Reduce a TLA obligation whose proof only needs a bounded execution prefix to an
-ordinary Lean proposition over explicit states.
+`tfinite_window` reduces a TLA validity, sequent, or predicate equality
+whose proof only needs a bounded execution prefix to an ordinary Lean goal
+over finitely many states.
 
-The tactic accepts validity goals (`|-tla- p`), sequents (`p |-tla- q`), and
-proof-mode `Entails` goals.  It computes one finite window for the whole
+The tactic accepts validity goals (`|-tla- p`), sequents (`p |-tla- q`),
+proof-mode `Entails` goals and equality goals (`p =tla= q`).
+It computes one finite window for the whole
 obligation, introduces its states as `s`, `s'`, `s''`, and so on, and leaves the
 resulting non-temporal proposition for subsequent tactics to prove.  For
 example, it turns
@@ -695,6 +733,8 @@ into a goal of the following shape:
 s s' : σ
 ⊢ inv s ∧ next s s' → inv s'
 ```
+
+An equality `p =tla= q` becomes one pointwise `Iff` goal; it is not split into two sequents.
 
 “Needs a bounded execution prefix” refers to the obligation as a whole, not to
 every temporal formula appearing in it.  State predicates observe one state,
@@ -711,26 +751,37 @@ directional `HasWindowApprox` instances.
 -/
 elab "tfinite_window" : tactic => withMainContext do
   let proofModeHypNames ← changeProofModeEntailsToValidRepeatedImplies
-  -- Work only with validity goals. Sequents are definitional aliases for
-  -- validity of temporal implication.
+  -- Normalize sequents first; predicate equalities remain equality goals.
   changePredImpliesToValid
-  -- Instance search computes the canonical minimum window. The directional
-  -- certificate is then built at that common enclosing width.
-  let (inst, n) ← withMainContext do
-    let target ← getMainTarget
-    let target := target.headBeta.cleanupAnnotations
-    match_expr target with
-    | TLA.valid _ p => sufficientWindowApproxOf p
-    | _ => throwError "tfinite_window: goal is not a TLA validity goal, but {target}"
-  -- Replace the temporal goal by the finite core obligation, then expose the
-  -- core as ordinary state variables.
-  -- Apply at the meta level to avoid synthesizing instance twice
-  let thm ← mkAppOptM ``HasWindowApprox.valid_of_forall_sufficient
-    #[none, none, none, some inst]
-  let g ← getMainGoal
-  let gs ← g.apply thm
-  let [g] := gs | throwError "tfinite_window: unexpected number of goals after applying finite-window validity theorem (got {gs.length}, expected 1)"
-  replaceMainGoal [g]
+  -- Instance search computes the canonical window size. For validity we expose
+  -- one core; for predicate equality we combine both cores pointwise with `Iff`
+  -- after weakening them to a common maximum width.
+  withMainContext do
+  let target ← getMainTarget
+  let target := target.headBeta.cleanupAnnotations
+  let n ← match_expr target with
+    | TLA.valid _ p =>
+      let (inst, n) ← windowApproxOf .sufficient p
+      -- Apply at the meta level to avoid synthesizing the instance twice.
+      let thm ← mkAppOptM ``HasWindowApprox.valid_of_forall_sufficient #[none, none, none, some inst]
+      let g ← getMainGoal
+      let gs ← g.apply thm
+      let [g] := gs | throwError "tfinite_window: unexpected number of goals after applying finite-window validity theorem (got {gs.length}, expected 1)"
+      replaceMainGoal [g]
+      pure n
+    | Eq _ p q =>
+      let (pInst, n) ← windowApproxOf .exact p
+      let (qInst, m) ← windowApproxOf .exact q
+      let thm ← mkAppOptM ``HasFiniteWindow.eq_of_forall_iff
+        #[none, none, none, none, none, some pInst, some qInst]
+      let g ← getMainGoal
+      let gs ← g.apply thm
+      let [g] := gs | throwError "tfinite_window: unexpected number of goals after applying finite-window equality theorem (got {gs.length}, expected 1)"
+      replaceMainGoal [g]
+      pure (max n m)
+    | _ =>
+      throwError "tfinite_window: goal is not a TLA validity goal or TLA predicate equality, but {target}"
+  -- Expose the finite core as ordinary state variables.
   introFiniteStates n
   -- The core still contains the instance constructors and computed `max` widths;
   -- reducing them produces the expected first-order state predicate goal.

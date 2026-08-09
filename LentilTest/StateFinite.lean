@@ -271,15 +271,27 @@ example {p q r t : σ → Prop} :
       ¬(p s'' ∧ q s''') ∧ ¬r s' → t s''
   aesop
 
+example {p q : σ → Prop} (h : ∀ s, p s ↔ q s) :
+    (⌜ p ⌝) =tla= (⌜ q ⌝) := by
+  tfinite_window
+  guard_target = p s ↔ q s
+  exact h _
+
+example {p q : σ → Prop} (h : ∀ s s', p s ↔ q s') :
+    (⌜ p ⌝) =tla= (◯ ⌜ q ⌝) := by
+  tfinite_window
+  guard_target = p s ↔ q s'
+  exact h _ _
+
 /--
-error: tfinite_window: failed to synthesize a sufficient finite-window approximation for [tlafml|□⌜ p ⌝ → □⌜ p ⌝]
+error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlafml|□⌜ p ⌝ → □⌜ p ⌝]
 -/
 #guard_msgs in
 example {p : σ → Prop} : (□ ⌜ p ⌝) |-tla- (□ ⌜ p ⌝) := by
   tfinite_window
 
 /--
-error: tfinite_window: failed to synthesize a sufficient finite-window approximation for [tlafml|□◇⌜ p ⌝ → ⌜ p ⌝]
+error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlafml|□◇⌜ p ⌝ → ⌜ p ⌝]
 -/
 #guard_msgs in
 example {p : σ → Prop} : (□ ◇ ⌜ p ⌝) |-tla- (⌜ p ⌝) := by
