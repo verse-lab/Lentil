@@ -38,6 +38,10 @@ instance prefixClosedAlwaysEventually (p : pred σ) :
 instance prefixClosedPure (p : Prop) : @PrefixClosed σ (TLA.pure_pred p) where
   prefix_closed := by tunfold_simp
 
+instance prefixClosedTrue : @PrefixClosed σ TLA.tla_true := prefixClosedPure _
+
+instance prefixClosedFalse : @PrefixClosed σ TLA.tla_false := prefixClosedPure _
+
 -- These are good, but let's have them later ...
 /-
 instance prefixClosedAnd (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
