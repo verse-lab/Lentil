@@ -9,6 +9,13 @@ open TLA TLA.ProofMode
 
 variable {σ : Type u} (a p q : pred σ)
 
+-- `texfalso` reduces any proof-mode goal to `⊥` while preserving its context.
+example (lem : (a) |-tla- (⊥)) : (a) |-tla- (q) := by
+  tstart ha
+  texfalso
+  tcheck_goal Entails [⟨"ha", a⟩] tla_false
+  exact lem
+
 -- A `⊥` hypothesis closes any goal.
 example (lem : (a) |-tla- (⊥)) : (a) |-tla- (q) := by
   tstart ha

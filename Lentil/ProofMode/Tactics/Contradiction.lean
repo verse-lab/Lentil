@@ -28,7 +28,15 @@ theorem Entails_of_contradicting_hyps {p : pred σ}
   · dsimp only [repeatedAnd, LentilLib.List.foldrD] ; rw [TLA.and_not_self_iff]
   · exact Entails_of_false_in_hyps hyps.length (by simp)
 
+/-- A proof of `⊥` in the current proof-mode context proves any goal. -/
+theorem Entails_false_elim (h : Entails hyps tla_false) : Entails hyps goal :=
+  fun e i hhyps => (h e i hhyps).elim
+
 end
+
+/-- `texfalso` changes the current proof-mode goal to `⊥`. -/
+macro "texfalso" : tactic =>
+  `(tactic| refine $(mkIdent ``Entails_false_elim) ?_)
 
 /--
 `tcontradiction` closes any proof-mode goal whose context contains an
