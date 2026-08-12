@@ -137,9 +137,10 @@ theorem later_not : (◯ ¬ p) =tla= (¬ ◯ p) := by
   funext e i ; tunfold_simp
 
 theorem later_always_comm : (◯ □ p) =tla= (□ ◯ p) := by
-  funext e i ; tunfold_simp
-  constructor <;> intro h k <;>
-    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h k
+  funext e i ; tunfold_simp ; grind
+
+theorem later_eventually_comm : (◯ ◇ p) =tla= (◇ ◯ p) := by
+  funext e i ; tunfold_simp ; grind
 
 theorem always_unroll : □ p =tla= (p ∧ ◯ □ p) := by
   rw [later_always_comm]
