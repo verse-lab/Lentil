@@ -151,6 +151,27 @@ theorem always_induction : □ p =tla= (p ∧ □ (p → ◯ p)) := by
 theorem always_weaken : □ p |-tla- (p) := by
   tunfold_simp ; intro e h ; apply h 0
 
+/-- The finite prefix of `p` of depth `n`.  Depth zero observes `p` now;
+depth `n + 1` additionally observes one more shifted copy of `p`. -/
+def alwaysPrefix (p : pred σ) : Nat → pred σ
+  | 0 => p
+  | n + 1 => tla_and p (later (alwaysPrefix p n))
+
+theorem alwaysPrefix_succ (p : pred σ) (n : Nat) :
+    alwaysPrefix p (n + 1) = tla_and p (later (alwaysPrefix p n)) := rfl
+
+/-- An `always` assumption can be weakened to any finite prefix. -/
+theorem always_weaken_n (n : Nat) :
+    (□ p) |-tla- (alwaysPrefix p n) := by
+  induction n with
+  | zero => apply always_weaken
+  | succ n ih =>
+    rw [alwaysPrefix, always_unroll]
+    generalize alwaysPrefix p n = x at *
+    generalize always p = y at *
+    tunfold_simp
+    grind
+
 theorem always_weaken_to_eventually : □ p |-tla- ◇ p := by
   tunfold_simp ; intro e h ; exists 0 ; apply h
 

@@ -37,12 +37,20 @@ example {p : σ → Prop} (h : ∀ s, p s) :
   tfinite_window
   exact h _
 
-/--
-error: tfinite_window: failed to synthesize a finite-window instance for [tlafml|□⌜ p ⌝ → ⌜ p ⌝]
--/
-#guard_msgs in
 example {p : σ → Prop} :
     Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩] [tlafml|⌜ p ⌝] := by
   tfinite_window
+  exact hp
+
+example {p : σ → Prop} :
+    Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩] [tlafml|◯◯⌜ p ⌝] := by
+  tfinite_window
+  exact hp.2.2
+
+example {p q : σ → Prop} :
+    Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩, ⟨"hq", [tlafml|□⌜ q ⌝]⟩]
+      [tlafml|◯(⌜ p ⌝ ∧ ⌜ q ⌝)] := by
+  tfinite_window
+  exact ⟨hp.2, hq.2⟩
 
 end TLA.ProofMode.Test.FiniteWindow
