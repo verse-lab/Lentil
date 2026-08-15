@@ -27,8 +27,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tstart hp hq
   trevert hp
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"hq", q⟩] [tlafml| p → q]
+  guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
   intro e hq _ ; exact hq
 
 -- Reverting then re-introducing should round-trip back to the same shape.
@@ -36,9 +35,9 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tstart hp hq
   trevert hp
-  tcheck_goal_form
+  guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
   tintro hp
-  tcheck_goal Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
+  guard_target =ₛ Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
   intro e ⟨hq, _⟩ ; exact hq
 
 -- Revert multiple temporal hypotheses; the leftmost name ends up as the
@@ -47,8 +46,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tstart hp hq
   trevert hp hq
-  tcheck_goal_form
-  tcheck_goal Entails [] [tlafml| p → q → q]
+  guard_target =ₛ Entails [] [tlafml| p → q → q]
   intro e _ _ hq ; exact hq
 
 -- Reverting a temporal hyp from the *middle* of the list filters it cleanly
@@ -57,8 +55,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
   tstart hp hq hr
   trevert hq
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
   intro e ⟨_, hr⟩ _ ; exact hr
 
 /-! ## Revert all temporal hypotheses -/
@@ -68,8 +65,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
 example : (p ∧ q) |-tla- (p) := by
   tstart hp hq
   trevert_all
-  tcheck_goal_form
-  tcheck_goal Entails [] [tlafml| p → q → p]
+  guard_target =ₛ Entails [] [tlafml| p → q → p]
   intro _ _ hp _ ; exact hp
 
 -- On an empty temporal context, `trevert_all` is a no-op on the goal shape.
@@ -77,8 +73,7 @@ example : (q) |-tla- (⊤) := by
   tstart hq
   tclear hq
   trevert_all
-  tcheck_goal_form
-  tcheck_goal Entails [] [tlafml| ⊤]
+  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
   intro _ _ ; exact True.intro
 
 /-! ## ∀-revert (Lean-local non-Prop var) -/
@@ -90,7 +85,7 @@ example (P : Nat → pred σ) :
   tstart
   tintro n
   trevert n
-  tcheck_goal Entails [] (TLA.tla_forall P)
+  guard_target =ₛ Entails [] [tlafml| ∀ n : Nat, (P n)]
   exact h
 
 -- Round-trip: intro then revert should be a no-op (up to displayed shape).
@@ -111,7 +106,7 @@ example (Q : Prop) :
   tstart
   tintro hQ
   trevert hQ
-  tcheck_goal Entails [] [tlafml| ⌞ Q ⌟ → p]
+  guard_target =ₛ Entails [] [tlafml| ⌞ Q ⌟ → p]
   exact h
 
 /-! ## Mixed sequence -/

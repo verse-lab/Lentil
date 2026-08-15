@@ -11,7 +11,7 @@ variable {σ : Type u} (p : pred σ)
 example : (p) |-tla- (p) := by
   tstart hp
   tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 example (P : Nat → pred σ) :
@@ -19,7 +19,7 @@ example (P : Nat → pred σ) :
   tstart
   tintro n hp
   tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", P n⟩] (P n)
+  guard_target =ₛ Entails [⟨"hp", P n⟩] (P n)
   exact pred_implies_refl _
 
 /--
@@ -30,11 +30,18 @@ example : (p) |-tla- (p) := by
   tcheck_goal_form
 
 /--
-error: tcheck_goal: temporal hypothesis 0 is named 'hp', expected 'wrong'
+error: The main goal is
+
+  hp : p
+  |-tla- p
+but was expected to be
+
+  wrong : p
+  |-tla- p
 -/
 #guard_msgs in
 example : (p) |-tla- (p) := by
   tstart hp
-  tcheck_goal Entails [⟨"wrong", p⟩] p
+  guard_target =ₛ Entails [⟨"wrong", p⟩] p
 
 end TLA.ProofMode.Test.CheckGoalForm

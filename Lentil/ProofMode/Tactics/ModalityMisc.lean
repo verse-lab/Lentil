@@ -191,15 +191,15 @@ checking for the prefix. This includes the built-in wrappers
 
 For example, with `hp : □ p`, it changes a proof-mode goal `□ q` to `q`:
 ```lean
-tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
 ttoggle_goal_under_always
-tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
+guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] q
 ```
 If the current goal has no leading `□`, the same tactic changes `q` to `□ q`:
 ```lean
-tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] q
+guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] q
 ttoggle_goal_under_always
-tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
 ```
 -/
 syntax (name := tlaToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic

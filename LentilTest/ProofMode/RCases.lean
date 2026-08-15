@@ -27,8 +27,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   thave hab := lem ha0
   tclear ha0
   trcases hab with ⟨ha, hb⟩
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- N-ary tuple on a right-associated chain: `⟨ha, hb, hc⟩` on `h : a ∧ b ∧ c`.
@@ -37,8 +36,7 @@ example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
   thave h := lem ha0
   tclear ha0
   trcases h with ⟨ha, hb, hc⟩
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩, ⟨"hc", c⟩] c
   intro _ ⟨_, _, hc⟩ ; exact hc
 
 -- Wildcard sub-pattern: `⟨_, hb⟩` names only the right half (the left half
@@ -58,8 +56,7 @@ example (P : Nat → pred σ) :
     (∃ n : Nat, (P n)) |-tla- (∃ n : Nat, (P n)) := by
   tstart hex
   trcases hex with ⟨n, hp⟩
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", P n⟩] (TLA.tla_exists P)
+  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
   intro e hp
   exact ⟨n, hp⟩
 
@@ -68,7 +65,7 @@ example (Q : Prop) (P : Q → pred σ) :
     (∃ hQ : Q, (P hQ)) |-tla- (⊤) := by
   tstart h
   trcases h with ⟨hQ, hp⟩
-  tcheck_goal Entails [⟨"hp", P hQ⟩] [tlafml| ⊤]
+  guard_target =ₛ Entails [⟨"hp", P hQ⟩] [tlafml| ⊤]
   intro _ _
   trivial
 
@@ -77,8 +74,7 @@ example (P : Nat → Nat → pred σ) :
     (∃ x : Nat, (∃ y : Nat, (P x y))) |-tla- (∃ x : Nat, (∃ y : Nat, (P x y))) := by
   tstart h
   trcases h with ⟨x, y, hp⟩
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
+  guard_target =ₛ Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
   intro e hp
   exact ⟨x, y, hp⟩
 
@@ -89,8 +85,7 @@ example (PA PB : Nat → pred σ) :
     (∃ n : Nat, ((PA n) ∧ (PB n))) |-tla- (∃ n : Nat, (PA n)) := by
   tstart h
   trcases h with ⟨n, ⟨ha, hb⟩⟩
-  tcheck_goal_form
-  tcheck_goal Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
+  guard_target =ₛ Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
   intro e ⟨ha, _⟩
   exact ⟨n, ha⟩
 
@@ -103,7 +98,7 @@ example (P : Fin 3 → pred σ) :
   trcases h with ⟨⟨v, hlt⟩, hp⟩
   -- After the destructure: `v : Nat`, `hlt : v < 3` in the Lean ctx,
   -- and the temporal hyp is `hp : P ⟨v, hlt⟩`.
-  tcheck_goal Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlafml| ∃ i : Fin 3, (P i)]
+  guard_target =ₛ Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlafml| ∃ i : Fin 3, (P i)]
   intro e hp
   exact ⟨⟨v, hlt⟩, hp⟩
 
@@ -113,7 +108,7 @@ example (P : {n : Nat // n > 0} → pred σ) :
   tstart h
   trcases h with ⟨⟨n, hpos⟩, hp⟩
   -- `n : Nat`, `hpos : n > 0`, hyp `hp : P ⟨n, hpos⟩`.
-  tcheck_goal Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlafml| ∃ x : {n : Nat // n > 0}, (P x)]
+  guard_target =ₛ Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlafml| ∃ x : {n : Nat // n > 0}, (P x)]
   intro e hp
   exact ⟨⟨n, hpos⟩, hp⟩
 
@@ -133,7 +128,7 @@ example (P : Nat → pred σ) :
 example : (a) |-tla- (a) := by
   tstart h
   trcases h with h'
-  tcheck_goal Entails [⟨"h'", a⟩] a
+  guard_target =ₛ Entails [⟨"h'", a⟩] a
   exact pred_implies_refl _
 
 /-! ## Or destructure -/
@@ -145,11 +140,9 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (a ∨ b) := by
   thave hab := lem ha0
   tclear ha0
   trcases hab with (ha | hb)
-  · tcheck_goal_form
-    tcheck_goal Entails [⟨"ha", a⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] (TLA.tla_or a b)
     intro _ ha ; exact Or.inl ha
-  · tcheck_goal_form
-    tcheck_goal Entails [⟨"hb", b⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"hb", b⟩] (TLA.tla_or a b)
     intro _ hb ; exact Or.inr hb
 
 -- N-ary alternation on a right-associated chain: `(ha | hb | hc)` on
@@ -226,7 +219,7 @@ example (lem : |-tla- (a ∧ b)) : (⊤) |-tla- (a) := by
   tstart
   thave h := lem
   tobtain ⟨ha, hb⟩ := h
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   tassumption
 
 example (P : Nat → pred σ) (lem : |-tla- (∃ n : Nat, (P n))) :
@@ -240,7 +233,7 @@ example (Q : Prop) (P : Q → pred σ) (lem : |-tla- (∃ hQ : Q, (P hQ))) :
     (a) |-tla- (⊤) := by
   tstart ha
   tobtain ⟨hQ, hp⟩ := lem
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hp", P hQ⟩] [tlafml| ⊤]
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hp", P hQ⟩] [tlafml| ⊤]
   intro _ _
   trivial
 
@@ -256,7 +249,7 @@ example : (⊤) |-tla- (a ∨ ¬ a) := by
 example : (a) |-tla- (⊤) := by
   tstart h
   trcases h with -
-  tcheck_goal Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] (tla_true : pred σ)
   intro _ _ ; exact True.intro
 
 -- `-` in a tuple slot discards that conjunct after destructuring.
@@ -265,7 +258,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   thave hab := lem ha0
   tclear ha0
   trcases hab with ⟨ha, -⟩
-  tcheck_goal Entails [⟨"ha", a⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩] a
   intro _ ha ; exact ha
 
 -- Symmetric: discard the left conjunct, keep the right.
@@ -274,14 +267,14 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
   thave hab := lem ha0
   tclear ha0
   trcases hab with ⟨-, hb⟩
-  tcheck_goal Entails [⟨"hb", b⟩] b
+  guard_target =ₛ Entails [⟨"hb", b⟩] b
   intro _ hb ; exact hb
 
 -- `tobtain - := h` routes through `tlaRcasesCore` and clears `h`.
 example : (a) |-tla- (tla_true) := by
   tstart h
   tobtain - := h
-  tcheck_goal Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] (tla_true : pred σ)
   intro _ _ ; exact True.intro
 
 -- `-` inside an alternation discards the introduced hypothesis on that branch.
@@ -290,10 +283,10 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (⊤) := by
   thave h := lem ha0
   tclear ha0
   trcases h with (ha | -)
-  · tcheck_goal Entails [⟨"ha", a⟩] (tla_true : pred σ)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] (tla_true : pred σ)
     intro _ _ ; exact True.intro
   · -- the `b`-branch hypothesis was cleared
-    tcheck_goal Entails [] (tla_true : pred σ)
+    guard_target =ₛ Entails [] (tla_true : pred σ)
     intro _ _ ; exact True.intro
 
 /-! ## Errors -/

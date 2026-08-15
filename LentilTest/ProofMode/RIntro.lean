@@ -15,7 +15,7 @@ example (P : Nat → pred σ) :
   intro h
   tstart
   trintro n
-  tcheck_goal Entails [] (P n)
+  guard_target =ₛ Entails [] (P n)
   intro e _
   exact h e True.intro n
 
@@ -24,7 +24,7 @@ example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
     (p) |-tla- (⌞ Q ∧ R ⌟ → q) := by
   tstart hp
   trintro ⟨hQ, hR⟩
-  tcheck_goal Entails [⟨"hp", p⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩] q
   exact h hQ hR
 
 -- Temporal antecedents are introduced as proof-mode hypotheses and then
@@ -32,7 +32,7 @@ example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
 example : (p) |-tla- ((q ∧ r) → q) := by
   tstart hp
   trintro ⟨hq, hr⟩
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   intro _ ⟨_, hq, _⟩ ; exact hq
 
 -- Existential temporal antecedents introduce a Lean witness and a temporal hyp.
@@ -40,7 +40,7 @@ example (P : Nat → pred σ) :
     (⊤) |-tla- ((∃ n : Nat, (P n)) → (∃ n : Nat, (P n))) := by
   tstart
   trintro ⟨n, hp⟩
-  tcheck_goal Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
+  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
   intro _ hp
   exact ⟨n, hp⟩
 
@@ -49,7 +49,7 @@ example (P : Nat → pred σ) :
     (⊤) |-tla- (∀ n : Nat, (((P n) ∧ q) → r → (P n))) := by
   tstart
   trintro n ⟨hp, hq⟩ hr
-  tcheck_goal Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
+  guard_target =ₛ Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
   intro _ ⟨hp, _⟩ ; exact hp
 
 -- Numeric `trcases` targets the chosen proof-mode hypothesis, even when
@@ -60,7 +60,7 @@ example (lem1 : (p) |-tla- (p ∧ q)) (lem2 : (p) |-tla- (q ∧ r)) :
   thave h := lem1 hp
   thave h := lem2 hp
   trcases 2 with ⟨hq, hr⟩
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   intro _ ⟨_, _, hq, _⟩ ; exact hq
 
 -- A temporal antecedent `q ∨ r` is case-split with a parenthesized
@@ -92,7 +92,7 @@ example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
 example : (p) |-tla- (q → p) := by
   tstart hp
   trintro -
-  tcheck_goal Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩] p
   intro _ hp ; exact hp
 
 end TLA.ProofMode.Test.RIntro

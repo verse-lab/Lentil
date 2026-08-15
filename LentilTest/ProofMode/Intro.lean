@@ -24,7 +24,7 @@ set_option linter.unusedVariables false in
 example : (p) |-tla- (∀ n : Nat, (p)) := by
   tstart hp
   tintro n
-  tcheck_goal Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- Universal binders may range over proof values.
@@ -34,7 +34,7 @@ example (Q : Prop) (P : Q → pred σ) :
   intro h
   tstart
   tintro hQ
-  tcheck_goal Entails [] (P hQ)
+  guard_target =ₛ Entails [] (P hQ)
   intro e _
   exact h e True.intro hQ
 
@@ -42,7 +42,7 @@ example (Q : Prop) (P : Q → pred σ) :
 example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
   tstart hp
   tintro hQ
-  tcheck_goal Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- The introduced pure fact lands as a Lean hypothesis usable in subsequent
@@ -50,7 +50,7 @@ example (Q : Prop) : (p) |-tla- (⌞ Q ⌟ → (p)) := by
 example (Q : Prop) (h : Q → (p) |-tla- (q)) : (p) |-tla- (⌞ Q ⌟ → (q)) := by
   tstart hp
   tintro hQ
-  tcheck_goal Entails [⟨"hp", p⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩] q
   exact h hQ
 
 -- Mixed sequence: ∀, then ⌞..⌟→, then ∀ again. Starting from `⊤` on the
@@ -61,7 +61,7 @@ example (P : Nat → Nat → pred σ) :
   intro h
   tstart
   tintro x hxx y
-  tcheck_goal Entails [] (P x y)
+  guard_target =ₛ Entails [] (P x y)
   intro e _
   exact h e True.intro x hxx y
 
@@ -72,7 +72,7 @@ example (P : Nat → Nat → pred σ) :
   intro h
   tstart
   tintro x y
-  tcheck_goal Entails [] (P x y)
+  guard_target =ₛ Entails [] (P x y)
   intro e _
   exact h e True.intro x y
 
@@ -98,7 +98,7 @@ example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
   intro h
   tstart hp
   tintro hp'
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hp'", p⟩] q
   intro e ⟨_, hp'⟩
   exact h e hp' hp'
 
@@ -107,7 +107,7 @@ example : (p) |-tla- (p → q) → (p) |-tla- (p → q) := by
 example : (⊤) |-tla- (p → q → p) := by
   tstart
   tintro hp hq
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] p
   intro _ ⟨hp, _⟩ ; exact hp
 
 -- Mixed: temporal intro followed by ∀-intro and pure-intro.
@@ -117,7 +117,7 @@ example (P : Nat → pred σ) :
   intro h
   tstart
   tintro hp n heq
-  tcheck_goal Entails [⟨"hp", p⟩] (P n)
+  guard_target =ₛ Entails [⟨"hp", p⟩] (P n)
   intro e hp
   exact h e True.intro hp n heq
 

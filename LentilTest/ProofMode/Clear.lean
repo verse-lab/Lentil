@@ -18,7 +18,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tstart hp hq
   tclear hp
-  tcheck_goal Entails [⟨"hq", q⟩] q
+  guard_target =ₛ Entails [⟨"hq", q⟩] q
   exact pred_implies_refl _
 
 -- Clear multiple hypotheses in one call.
@@ -26,7 +26,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
   intro h
   tstart hp hq hr
   tclear hp hq
-  tcheck_goal Entails [⟨"hr", r⟩] r
+  guard_target =ₛ Entails [⟨"hr", r⟩] r
   exact pred_implies_refl _
 
 -- Clear all hypotheses leaves an empty hypothesis list. (The resulting
@@ -34,7 +34,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
 example : (p ∧ q) |-tla- (⊤) := by
   tstart hp hq
   tclear hp hq
-  tcheck_goal Entails [] [tlafml| ⊤]
+  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
   intro _ _ ; trivial
 
 -- Order of `tclear` arguments doesn't matter (filter is by membership);
@@ -43,7 +43,7 @@ example : (p ∧ q ∧ r) |-tla- (q) → (p ∧ q ∧ r) |-tla- (q) := by
   intro h
   tstart hp hq hr
   tclear hr hp
-  tcheck_goal Entails [⟨"hq", q⟩] q
+  guard_target =ₛ Entails [⟨"hq", q⟩] q
   exact pred_implies_refl _
 
 -- `tclear * - ...` clears every hypothesis except the listed ones.
@@ -51,7 +51,7 @@ example : (p ∧ q ∧ r) |-tla- (q) → (p ∧ q ∧ r) |-tla- (q) := by
   intro h
   tstart hp hq hr
   tclear * - hq
-  tcheck_goal Entails [⟨"hq", q⟩] q
+  guard_target =ₛ Entails [⟨"hq", q⟩] q
   exact pred_implies_refl _
 
 -- The clear-except form preserves the original order of the kept hypotheses.
@@ -59,14 +59,14 @@ example : (p ∧ q ∧ r) |-tla- ([tlafml| p ∧ r]) → (p ∧ q ∧ r) |-tla- 
   intro h
   tstart hp hq hr
   tclear *- hp hr
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| p ∧ r]
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| p ∧ r]
   exact pred_implies_refl _
 
 -- With no names after the minus, the clear-except form clears all hypotheses.
 example : (p ∧ q) |-tla- (⊤) := by
   tstart hp hq
   tclear * -
-  tcheck_goal Entails [] [tlafml| ⊤]
+  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
   intro _ _ ; trivial
 
 -- Clearing a name that isn't in the context is a no-op.
@@ -74,7 +74,7 @@ example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
   intro h
   tstart hp hq
   tclear nonexistent
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] q
   exact h
 
 -- Mid-proof use: derive a hypothesis with `thave`, then drop it.
@@ -82,7 +82,7 @@ example (lem : (p) |-tla- (q)) : (p) |-tla- (p) := by
   tstart hp
   thave hq := lem hp
   tclear hq
-  tcheck_goal Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 end TLA.ProofMode.Test.Clear

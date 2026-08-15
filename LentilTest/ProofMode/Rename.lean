@@ -19,21 +19,21 @@ variable {σ : Type u} (a b c : pred σ)
 example : (a) |-tla- (a) := by
   tstart ha
   trename ha => h
-  tcheck_goal Entails [⟨"h", a⟩] a
+  guard_target =ₛ Entails [⟨"h", a⟩] a
   exact pred_implies_refl _
 
 -- Rename preserves position and pred.
 example : (a ∧ b ∧ c) |-tla- (b) := by
   tstart ha hb hc
   trename hb => hMid
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hMid", b⟩, ⟨"hc", c⟩] b
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hMid", b⟩, ⟨"hc", c⟩] b
   intro _ ⟨_, hb, _⟩ ; exact hb
 
 -- Renaming an unknown name is a no-op.
 example : (a ∧ b) |-tla- (a) := by
   tstart ha hb
   trename noSuchHyp => hX
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- Multiple renames chain.
@@ -41,7 +41,7 @@ example : (a ∧ b) |-tla- (a) := by
   tstart ha hb
   trename ha => x
   trename hb => y
-  tcheck_goal Entails [⟨"x", a⟩, ⟨"y", b⟩] a
+  guard_target =ₛ Entails [⟨"x", a⟩, ⟨"y", b⟩] a
   intro _ ⟨ha, _⟩ ; exact ha
 
 -- Renaming after `thave`: the freshly-derived hypothesis can be renamed.
@@ -49,14 +49,14 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tstart ha
   thave hb := lem ha
   trename hb => result
-  tcheck_goal Entails [⟨"ha", a⟩, ⟨"result", b⟩] b
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"result", b⟩] b
   intro _ ⟨_, hb⟩ ; exact hb
 
 -- Rename to the same name is a no-op (just verifies it doesn't choke).
 example : (a) |-tla- (a) := by
   tstart ha
   trename ha => ha
-  tcheck_goal Entails [⟨"ha", a⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩] a
   exact pred_implies_refl _
 
 end TLA.ProofMode.Test.Rename
