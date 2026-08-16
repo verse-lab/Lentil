@@ -59,4 +59,13 @@ example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
   guard_target =ₛ Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
+-- Basic: pull a single pure fact, use it at the Lean level.
+example (b c : Nat) : (a ∧ ⌞ b ≤ c ⌟) |-tla- (a) := by
+  tstart ha hQ
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hQ", [tlafml| ⌞ b ≤ c ⌟]⟩] a
+  tpull_pure hQ
+  guard_hyp hQ :ₛ b ≤ c
+  guard_target =ₛ Entails [⟨"ha", a⟩] a
+  tapply ha
+
 end TLA.ProofMode.Test.PurePred

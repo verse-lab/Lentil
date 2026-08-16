@@ -27,9 +27,6 @@ theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pre
   rw [← Entails_pure_fact_intro]
   exact hh
 
-private def pullPureTacDSimps := #[``List.findIdx, ``List.findIdx.go, ``List.eraseIdx, ``String.reduceBEq,
-  ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
-
 /--
 `tpull_pure h₁ h₂ ...` moves pure temporal hypotheses into Lean's local
 context.
@@ -45,11 +42,32 @@ syntax (name := tlaPullPureTac) "tpull_pure" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic
   | `(tactic| tpull_pure $[$hs:ident]*) => do
-    for h in hs do
+    for h in hs do withMainContext do
+      let g ← getMainGoal
+      let target ← cleanupAnnotAndMore (← g.getType)
+      let (σ, hypsExpr, hypTy, hyps, goal) ←
+        parseCanonicalEntails target "tpull_pure: expected a proof-mode Entails goal"
       let nameStr := toString h.getId
-      evalTactic <| ← `(tactic|
-        refine $(mkIdent ``Entails_pull_pure) ($(quote nameStr)) (by rfl) ?_ ; intro $h:ident)
-      postDSimpAfterApplyingReflectionTheorem pullPureTacDSimps
+      let some idx := hyps.findIdx? fun hyp => hyp.1 == nameStr
+        | throwError "tpull_pure: hypothesis '{nameStr}' not found in the goal's Entails list"
+      let (_, pred) := hyps[idx]!
+      let_expr TLA.pure_pred _ q := pred
+        | throwError "tpull_pure: hypothesis '{nameStr}' is not a pure predicate; got {pred}"
+      -- Pass the original `q` explicitly: inferring it from the lookup equality can
+      -- unfold reducible typeclass projections such as `LE.le` to `Nat.le`.
+      let somePred ← mkAppM ``Option.some #[pred]
+      let heq ← mkEqRefl somePred
+      let thm ← mkAppOptM ``Entails_pull_pure
+        #[some σ, some hypsExpr, some goal, some (toExpr nameStr), some q, some heq]
+      let [g'] ← g.apply thm
+        | throwError "tpull_pure: unexpected number of goals after applying the reflection theorem"
+      let hypsExpr' ← toHypsList hypTy (hyps.eraseIdx idx)
+      let entails' ← mkAppM ``Entails #[hypsExpr', goal]
+      -- Restore a canonical target before `intro`, so the new local keeps the
+      -- original expression for `q` as well as the intended temporal context.
+      let newTarget ← mkArrow q entails'
+      replaceMainGoal [← g'.change newTarget]
+      evalTactic <| ← `(tactic| intro $h:ident)
 
 /--
 `tprove_pure` proves a pure TLA entailment by reducing it to an ordinary Lean
