@@ -73,7 +73,7 @@ example : (q) |-tla- (⊤) := by
   tstart hq
   tclear hq
   trevert_all
-  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
+  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
   intro _ _ ; exact True.intro
 
 /-! ## ∀-revert (Lean-local non-Prop var) -/

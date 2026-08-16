@@ -62,28 +62,28 @@ example (heq : p = q) : (p) |-tla- (q) := by
   exact pred_implies_refl _
 
 -- `tdsimp` unfolds selected proof-mode hypotheses.
-example : TLA.pred_implies (wrapPred p) p := by
+example : (wrapPred p) |-tla- (p) := by
   tstart hp
   tdsimp [wrapPred] at hp
   guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- `tunfold` directly runs Lean's conv-level `unfold` on the goal by default.
-example : TLA.pred_implies p (wrapPred p) := by
+example : (p) |-tla- (wrapPred p) := by
   tstart hp
   tunfold wrapPred
   guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- `tunfold` can unfold selected proof-mode hypotheses.
-example : TLA.pred_implies (wrapPred p) p := by
+example : (wrapPred p) |-tla- (p) := by
   tstart hp
   tunfold wrapPred at hp
   guard_target =ₛ Entails [⟨"hp", p⟩] p
   exact pred_implies_refl _
 
 -- Lean-style locations can include both selected hypotheses and the target.
-example : TLA.pred_implies (wrapPred p) (wrapPred p) := by
+example : (wrapPred p) |-tla- (wrapPred p) := by
   tstart hp
   tunfold wrapPred at hp ⊢
   guard_target =ₛ Entails [⟨"hp", p⟩] p
@@ -98,7 +98,7 @@ example : (wrapPred p ∧ wrapPred q) |-tla- (wrapPred p) := by
   exact h.1
 
 -- The old all-definition unfolding tactic is still available under its new name.
-example : @TLA.valid σ TLA.tla_true := by
+example : |-tla- ([tlafml| ⊤] : pred σ) := by
   tunfold_defs
   intro _
   trivial

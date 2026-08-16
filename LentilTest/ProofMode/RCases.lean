@@ -140,9 +140,9 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (a ∨ b) := by
   thave hab := lem ha0
   tclear ha0
   trcases hab with (ha | hb)
-  · guard_target =ₛ Entails [⟨"ha", a⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] [tlafml| a ∨ b]
     intro _ ha ; exact Or.inl ha
-  · guard_target =ₛ Entails [⟨"hb", b⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"hb", b⟩] [tlafml| a ∨ b]
     intro _ hb ; exact Or.inr hb
 
 -- N-ary alternation on a right-associated chain: `(ha | hb | hc)` on
@@ -249,7 +249,7 @@ example : (⊤) |-tla- (a ∨ ¬ a) := by
 example : (a) |-tla- (⊤) := by
   tstart h
   trcases h with -
-  guard_target =ₛ Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
   intro _ _ ; exact True.intro
 
 -- `-` in a tuple slot discards that conjunct after destructuring.
@@ -271,10 +271,10 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
   intro _ hb ; exact hb
 
 -- `tobtain - := h` routes through `tlaRcasesCore` and clears `h`.
-example : (a) |-tla- (tla_true) := by
+example : (a) |-tla- (⊤) := by
   tstart h
   tobtain - := h
-  guard_target =ₛ Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
   intro _ _ ; exact True.intro
 
 -- `-` inside an alternation discards the introduced hypothesis on that branch.
@@ -283,10 +283,10 @@ example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (⊤) := by
   thave h := lem ha0
   tclear ha0
   trcases h with (ha | -)
-  · guard_target =ₛ Entails [⟨"ha", a⟩] (tla_true : pred σ)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] ([tlafml| ⊤] : pred σ)
     intro _ _ ; exact True.intro
   · -- the `b`-branch hypothesis was cleared
-    guard_target =ₛ Entails [] (tla_true : pred σ)
+    guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
     intro _ _ ; exact True.intro
 
 /-! ## Errors -/

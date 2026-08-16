@@ -15,7 +15,7 @@ open TLA TLA.ProofMode
 variable {σ : Type u} (a b c : pred σ)
 
 -- Specialize a `∀` hypothesis with a Lean term.
-example (P : Nat → pred σ) : TLA.pred_implies (TLA.tla_forall P) (P 0) := by
+example (P : Nat → pred σ) : (∀ n : Nat, (P n)) |-tla- (P 0) := by
   tstart h
   tspecialize h 0
   guard_target =ₛ Entails [⟨"h", P 0⟩] (P 0)
@@ -23,7 +23,7 @@ example (P : Nat → pred σ) : TLA.pred_implies (TLA.tla_forall P) (P 0) := by
 
 -- Universal specialization also accepts proof-valued witnesses.
 example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
-    TLA.pred_implies (TLA.tla_forall P) (P hQ) := by
+    (∀ h : Q, (P h)) |-tla- (P hQ) := by
   tstart h
   tspecialize h hQ
   guard_target =ₛ Entails [⟨"h", P hQ⟩] (P hQ)
@@ -31,8 +31,7 @@ example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
 
 -- Multiple arguments specialize nested `∀` binders left-to-right.
 example (P : Nat → Nat → pred σ) :
-    TLA.pred_implies (TLA.tla_forall fun x : Nat => TLA.tla_forall fun y : Nat => P x y)
-      (P 1 2) := by
+    (∀ x : Nat, ∀ y : Nat, (P x y)) |-tla- (P 1 2) := by
   tstart h
   tspecialize h 1 2
   guard_target =ₛ Entails [⟨"h", P 1 2⟩] (P 1 2)
@@ -40,9 +39,7 @@ example (P : Nat → Nat → pred σ) :
 
 -- Mixed specialization: a `∀` binder followed by a temporal implication.
 example (P Q : Nat → pred σ) :
-    TLA.pred_implies
-      (TLA.tla_and (TLA.tla_forall fun n : Nat => TLA.tla_implies (P n) (Q n)) (P 0))
-      (Q 0) := by
+    ((∀ n : Nat, (P n) → (Q n)) ∧ (P 0)) |-tla- (Q 0) := by
   tstart h hp
   tspecialize h 0 hp
   guard_target =ₛ Entails [⟨"h", Q 0⟩, ⟨"hp", P 0⟩] (Q 0)
@@ -64,7 +61,7 @@ example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tla- (a) := by
 
 -- The specialized hypothesis keeps its original position in the context.
 example (P : Nat → pred σ) :
-    TLA.pred_implies (TLA.tla_and a (TLA.tla_and (TLA.tla_forall P) b)) (P 3) := by
+    (a ∧ (∀ n : Nat, (P n)) ∧ b) |-tla- (P 3) := by
   tstart ha h hb
   tspecialize h 3
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"h", P 3⟩, ⟨"hb", b⟩] (P 3)

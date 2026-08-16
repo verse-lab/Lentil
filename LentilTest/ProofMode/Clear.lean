@@ -34,7 +34,7 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
 example : (p ∧ q) |-tla- (⊤) := by
   tstart hp hq
   tclear hp hq
-  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
+  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
   intro _ _ ; trivial
 
 -- Order of `tclear` arguments doesn't matter (filter is by membership);
@@ -66,7 +66,7 @@ example : (p ∧ q ∧ r) |-tla- ([tlafml| p ∧ r]) → (p ∧ q ∧ r) |-tla- 
 example : (p ∧ q) |-tla- (⊤) := by
   tstart hp hq
   tclear * -
-  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
+  guard_target =ₛ Entails [] ([tlafml| ⊤] : pred σ)
   intro _ _ ; trivial
 
 -- Clearing a name that isn't in the context is a no-op.

@@ -33,7 +33,7 @@ example {p q : σ → Prop} {a : action σ}
   exact h _ _ hp ha
 
 example {p : σ → Prop} (h : ∀ s, p s) :
-    Entails ([] : List (NamedPred σ)) (TLA.state_pred p) := by
+    Entails ([] : List (NamedPred σ)) [tlafml| ⌜ p ⌝] := by
   tfinite_window
   exact h _
 
