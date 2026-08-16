@@ -55,7 +55,7 @@ theorem Entails_revert_all :
   Entails [] (repeatedImplies (hyps.map NamedPred.pred) goal) →
   Entails hyps goal := by
   intro h ; replace h := (valid_eq_true_implies _).mpr h
-  intro e h1 ; apply repeatedImplies_apply ; apply And.intro ; apply h1 ; apply h
+  intro e i h1 ; exact repeatedImplies_apply e i ⟨h1, h e i⟩
 
 end
 

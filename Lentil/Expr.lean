@@ -28,6 +28,7 @@ def splitPredImpliesIntoParts (p : Expr) : MetaM (List Expr × Expr) := do
     let (ps', q') ← splitImplicationsIntoParts q
     pure (ps ++ ps', q')
   | TLA.valid _ body => splitImplicationsIntoParts body
+  -- | TLA.valid_initial _ body => splitImplicationsIntoParts body
   | _ => throwError "not a |-tla- statement"
 
 /-- Given some TLA related expression and return the type of the state
@@ -38,6 +39,7 @@ def peekStateType (p : Expr) : Option Expr :=
   match_expr p with
   | TLA.pred_implies σ _ _ => .some σ
   | TLA.valid σ _ => .some σ
+  -- | TLA.valid_initial σ _ => .some σ
   | _ => .none
 
 end TLA.Expr

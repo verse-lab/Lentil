@@ -40,29 +40,32 @@ theorem wf1 (p q : pred σ) (next a : action σ) :
    (p ⇒ Enabled a ∨ q) ∧
    (□ ⟨next⟩ ∧ 𝒲ℱ a)) |-tla- (p ↝ q) := by
   rw [wf_alt1']
-  intro e ⟨hpuntilq, haq, henable, hnext, hwf_alt⟩ k hp
+  intro e i ⟨hpuntilq, haq, henable, hnext, hwf_alt⟩ k hp
   specialize hwf_alt k ; rcases hwf_alt with ⟨k1, hwf_alt⟩
   -- know that: either `q` holds between `k` and `k + k1`, or `p` holds at `k1`
   -- use `henable` to know that if it is the latter case, then `q` must hold in the next step
-  have htmp : (∃ k' ≤ k1, q <| e.drop (k + k')) ∨ (p <| e.drop (k + k1)) := by
+  have htmp : (∃ k' ≤ k1, q e (i + (k + k'))) ∨ p e (i + (k + k1)) := by
     clear hwf_alt
     induction k1 with
-    | zero => right ; assumption
+    | zero => right ; simpa using hp
     | succ n ih => {
       rw [← Nat.add_assoc]
       rcases ih with ⟨k', hle, ih⟩ | ih
       · left ; exists k' ; constructor ; omega ; apply ih
-      · specialize hpuntilq _ ⟨ih, (hnext _)⟩
+      · specialize hpuntilq (k + n) ⟨ih, hnext (k + n)⟩
         rcases hpuntilq with hq | hq <;> tunfold_simp'
-        · right ; apply hq
+        · right ; simpa [Nat.add_assoc] using hq
         · left ; exists (n + 1) ; aesop
     }
   rcases htmp with ⟨k', _, hq⟩ | hq <;> tunfold_simp'
-  · aesop
+  · exists k' ; simpa [Nat.add_assoc] using hq
   · rcases hwf_alt with hq2 | hq2
-    · specialize henable _ hq ; aesop
+    · rcases henable (k + k1) hq with henabled | hq'
+      · exact False.elim (hq2 (by simpa [Nat.add_assoc] using henabled))
+      · exists k1 ; simpa [Nat.add_assoc] using hq'
     · exists (k1 + 1)
-      specialize haq (k + k1) hq ; rw [← Nat.add_assoc] ; apply haq <;> aesop
+      specialize haq (k + k1) hq
+      simpa [Nat.add_assoc] using haq (hnext (k + k1)) (by simpa [Nat.add_assoc] using hq2)
 
 /-- A (relatively) original presentation of the `wf1` rule. -/
 theorem wf1_original (p q : pred σ) (next a : action σ) :
@@ -75,7 +78,7 @@ theorem wf1_original (p q : pred σ) (next a : action σ) :
   tsplit_ands
   · rw [later_or] ; tapply hpuntilq
   · tapply haq
-  · intro e ⟨_, _, henable, _⟩ k hp
+  · intro e i ⟨_, _, henable, _⟩ k hp
     exact Or.inl (henable k hp)
   · tapply hnext
   · tapply hfair

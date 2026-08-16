@@ -44,7 +44,7 @@ theorem repeatedAnd_reorder (ps1 ps2 : List (pred σ)) (p : pred σ) :
 theorem repeatedAnd_add_duplicate {ps : List (pred σ)} {p : pred σ} (h : p ∈ ps) :
   ((repeatedAnd ps)) =tla= ((repeatedAnd ps) ∧ p) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
-  funext e ; tunfold_simp ; grind
+  funext e i ; tunfold_simp ; grind
 
 theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
   ps1 ⊆ ps2 → ((repeatedAnd ps2)) |-tla- ((repeatedAnd ps1)) := by
@@ -55,7 +55,7 @@ theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
 theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred σ} :
   ((repeatedAnd hs) ∧ (repeatedImplies hs goal)) |-tla- (goal) := by
   induction hs with
-  | nil => intro e ⟨h1, h2⟩ ; exact h2
+  | nil => intro e i ⟨h1, h2⟩ ; exact h2
   | cons p ps ih => rw [repeatedAnd_cons, repeatedImplies, List.foldr_cons] ; tunfold_simp ; aesop
 
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
@@ -66,12 +66,12 @@ def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
 validity of that implication chain proves the original `Entails` sequent. -/
 theorem Entails_of_valid_repeatedImplies {σ : Type u} {hyps : List (NamedPred σ)}
     {goal : pred σ} :
-    valid (repeatedImplies (hyps.map NamedPred.pred) goal) →
+    |-tla- (repeatedImplies (hyps.map NamedPred.pred) goal) →
       Entails hyps goal := by
   intro h
   unfold Entails
-  intro e hhyps
-  exact repeatedImplies_apply e ⟨hhyps, h e⟩
+  intro e i hhyps
+  exact repeatedImplies_apply e i ⟨hhyps, h e i⟩
 
 theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   (idx : Nat) (h : idx < hyps.length) (f : NamedPred σ → NamedPred σ) :

@@ -40,10 +40,11 @@ def IteratedHomPred : Nat → Type u → Type u
 
 namespace IteratedHomPred
 
-/-- Evaluate a curried finite predicate on the first `n` states of a trace. -/
-def evalExec {σ : Type u} : {n : Nat} → IteratedHomPred n σ → exec σ → Prop
-  | 0, p, _ => p.down
-  | _ + 1, p, e => evalExec (p (e 0)) (e.drop 1)
+/-- Evaluate a curried finite predicate on `n` consecutive states of a trace,
+starting at index `i`. -/
+def evalExec {σ : Type u} : {n : Nat} → IteratedHomPred n σ → exec σ → Nat → Prop
+  | 0, p, _, _ => p.down
+  | _ + 1, p, e, i => evalExec (p (e i)) e (i + 1)
 
 /-- View an `n`-state core as an `m`-state core when `n ≤ m`, ignoring the
 additional trailing states. This is used to combine two formulas with different
@@ -57,12 +58,12 @@ def weaken {σ : Type u} : {n m : Nat} → n ≤ m → IteratedHomPred n σ → 
 /-- Weakening does not change how a core evaluates on any trace. -/
 theorem evalExec_weaken {σ : Type u} :
     ∀ {n m : Nat} (h : n ≤ m) (p : IteratedHomPred n σ) (e : exec σ),
-      evalExec (weaken h p) e ↔ evalExec p e
-  | 0, 0, _, _, _ => Iff.rfl
-  | 0, m + 1, _, p, e => evalExec_weaken (Nat.zero_le m) p (e.drop 1)
-  | n + 1, 0, h, _, _ => False.elim (Nat.not_succ_le_zero n h)
-  | _ + 1, _ + 1, h, p, e =>
-    evalExec_weaken (Nat.le_of_succ_le_succ h) (p (e 0)) (e.drop 1)
+      ∀ i, evalExec (weaken h p) e i ↔ evalExec p e i
+  | 0, 0, _, _, _, _ => Iff.rfl
+  | 0, m + 1, _, p, e, i => evalExec_weaken (Nat.zero_le m) p e (i + 1)
+  | n + 1, 0, h, _, _, _ => False.elim (Nat.not_succ_le_zero n h)
+  | _ + 1, _ + 1, h, p, e, i =>
+    evalExec_weaken (Nat.le_of_succ_le_succ h) (p (e i)) e (i + 1)
 
 /- Pointwise logical constructors for cores of the same width, with lemmas
 describing their behavior under `evalExec`. Binary connectives and binders
@@ -75,9 +76,9 @@ def mkNot {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred
 
 theorem evalExec_mkNot {σ : Type u} :
     ∀ {n : Nat} (p : IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkNot p) e ↔ ¬ evalExec p e
-  | 0, _, _ => Iff.rfl
-  | _ + 1, p, e => evalExec_mkNot (p (e 0)) (e.drop 1)
+      ∀ i, evalExec (mkNot p) e i ↔ ¬ evalExec p e i
+  | 0, _, _, _ => Iff.rfl
+  | _ + 1, p, e, i => evalExec_mkNot (p (e i)) e (i + 1)
 
 def mkBinary {σ : Type u} (op : Prop → Prop → Prop) :
     {n : Nat} → IteratedHomPred n σ → IteratedHomPred n σ →
@@ -87,9 +88,9 @@ def mkBinary {σ : Type u} (op : Prop → Prop → Prop) :
 
 theorem evalExec_mkBinary {σ : Type u} (op : Prop → Prop → Prop) :
     ∀ {n : Nat} (p q : IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkBinary op p q) e ↔ op (evalExec p e) (evalExec q e)
-  | 0, _, _, _ => Iff.rfl
-  | _ + 1, p, q, e => evalExec_mkBinary op (p (e 0)) (q (e 0)) (e.drop 1)
+      ∀ i, evalExec (mkBinary op p q) e i ↔ op (evalExec p e i) (evalExec q e i)
+  | 0, _, _, _, _ => Iff.rfl
+  | _ + 1, p, q, e, i => evalExec_mkBinary op (p (e i)) (q (e i)) e (i + 1)
 
 def mkAnd {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred n σ →
     IteratedHomPred n σ :=
@@ -97,7 +98,7 @@ def mkAnd {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred
 
 theorem evalExec_mkAnd {σ : Type u} :
     ∀ {n : Nat} (p q : IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkAnd p q) e ↔ evalExec p e ∧ evalExec q e :=
+      ∀ i, evalExec (mkAnd p q) e i ↔ evalExec p e i ∧ evalExec q e i :=
   evalExec_mkBinary (fun p q => p ∧ q)
 
 def mkOr {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred n σ →
@@ -106,7 +107,7 @@ def mkOr {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred 
 
 theorem evalExec_mkOr {σ : Type u} :
     ∀ {n : Nat} (p q : IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkOr p q) e ↔ evalExec p e ∨ evalExec q e :=
+      ∀ i, evalExec (mkOr p q) e i ↔ evalExec p e i ∨ evalExec q e i :=
   evalExec_mkBinary (fun p q => p ∨ q)
 
 def mkImplies {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHomPred n σ →
@@ -115,7 +116,7 @@ def mkImplies {σ : Type u} : {n : Nat} → IteratedHomPred n σ → IteratedHom
 
 theorem evalExec_mkImplies {σ : Type u} :
     ∀ {n : Nat} (p q : IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkImplies p q) e ↔ (evalExec p e → evalExec q e) :=
+      ∀ i, evalExec (mkImplies p q) e i ↔ (evalExec p e i → evalExec q e i) :=
   evalExec_mkBinary (fun p q => p → q)
 
 def mkBinder {σ : Type u} {α : Sort v} (op : (α → Prop) → Prop) :
@@ -126,9 +127,9 @@ def mkBinder {σ : Type u} {α : Sort v} (op : (α → Prop) → Prop) :
 
 theorem evalExec_mkBinder {σ : Type u} {α : Sort v} (op : (α → Prop) → Prop) :
     ∀ {n : Nat} (p : α → IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkBinder op p) e ↔ op (fun x => evalExec (p x) e)
-  | 0, _, _ => Iff.rfl
-  | _ + 1, p, e => evalExec_mkBinder op (fun x => p x (e 0)) (e.drop 1)
+      ∀ i, evalExec (mkBinder op p) e i ↔ op (fun x => evalExec (p x) e i)
+  | 0, _, _, _ => Iff.rfl
+  | _ + 1, p, e, i => evalExec_mkBinder op (fun x => p x (e i)) e (i + 1)
 
 def mkForall {σ : Type u} {α : Sort v} : {n : Nat} → (α → IteratedHomPred n σ) →
     IteratedHomPred n σ :=
@@ -136,7 +137,7 @@ def mkForall {σ : Type u} {α : Sort v} : {n : Nat} → (α → IteratedHomPred
 
 theorem evalExec_mkForall {σ : Type u} {α : Sort v} :
     ∀ {n : Nat} (p : α → IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkForall p) e ↔ ∀ x, evalExec (p x) e :=
+      ∀ i, evalExec (mkForall p) e i ↔ ∀ x, evalExec (p x) e i :=
   evalExec_mkBinder (fun p => ∀ x, p x)
 
 def mkExists {σ : Type u} {α : Sort v} : {n : Nat} → (α → IteratedHomPred n σ) →
@@ -145,7 +146,7 @@ def mkExists {σ : Type u} {α : Sort v} : {n : Nat} → (α → IteratedHomPred
 
 theorem evalExec_mkExists {σ : Type u} {α : Sort v} :
     ∀ {n : Nat} (p : α → IteratedHomPred n σ) (e : exec σ),
-      evalExec (mkExists p) e ↔ ∃ x, evalExec (p x) e :=
+      ∀ i, evalExec (mkExists p) e i ↔ ∃ x, evalExec (p x) e i :=
   evalExec_mkBinder (fun p => ∃ x, p x)
 
 end IteratedHomPred
@@ -155,13 +156,13 @@ def IteratedForall {σ : Type u} : {n : Nat} → IteratedHomPred n σ → Prop
   | 0, p => p.down
   | _ + 1, p => ∀ s, IteratedForall (p s)
 
-/-- A universally closed finite core holds on the first `n` states of every
+/-- A universally closed finite core holds on every `n`-state window of every
 trace. -/
 theorem IteratedForall.evalExec {σ : Type u} :
     ∀ {n : Nat} {p : IteratedHomPred n σ}, IteratedForall p →
-      ∀ e, IteratedHomPred.evalExec p e
-  | 0, _, h, _ => h
-  | _ + 1, _, h, e => IteratedForall.evalExec (h (e 0)) (e.drop 1)
+      ∀ e i, IteratedHomPred.evalExec p e i
+  | 0, _, h, _, _ => h
+  | _ + 1, _, h, e, i => IteratedForall.evalExec (h (e i)) e (i + 1)
 
 /-- The relationship between a finite core and its temporal formula. -/
 inductive ApproxDir where
@@ -204,7 +205,7 @@ temporal formulas such as `□p` in hypotheses without claiming that they are
 determined by a finite trace prefix. -/
 structure WindowApprox {σ : Type u} (dir : ApproxDir) (p : pred σ) (n : Nat) where
   core : IteratedHomPred n σ
-  sound : ∀ e, dir.Sound (IteratedHomPred.evalExec core e) (p e)
+  sound : ∀ e i, dir.Sound (IteratedHomPred.evalExec core e i) (p e i)
 
 /-- A computable family of directional finite-window approximations, indexed
 by the enclosing window size.
@@ -238,32 +239,32 @@ abbrev HasFiniteWindow {σ : Type u} (p : pred σ) (n : outParam Nat) :=
   HasWindowApprox .exact p n
 
 theorem FiniteWindow.iff_of_eval {σ : Type u} {p : pred σ} {n : Nat}
-    (h : FiniteWindow p n) (e : exec σ) :
-    p e ↔ IteratedHomPred.evalExec h.core e :=
-  h.sound e
+    (h : FiniteWindow p n) (e : exec σ) (i : Nat) :
+    p e i ↔ IteratedHomPred.evalExec h.core e i :=
+  h.sound e i
 
 /-- Enlarge an exact certificate without changing its meaning. -/
 def FiniteWindow.weaken {σ : Type u} {p : pred σ} {n w : Nat}
     (hp : FiniteWindow p n) (h : n ≤ w) : FiniteWindow p w where
   core := IteratedHomPred.weaken h hp.core
   sound := by
-    intro e
+    intro e i
     rw [IteratedHomPred.evalExec_weaken]
-    exact hp.iff_of_eval e
+    exact hp.iff_of_eval e i
 
 def FiniteWindow.toSufficient {σ : Type u} {p : pred σ} {w : Nat}
     (hp : FiniteWindow p w) : WindowApprox .sufficient p w where
   core := hp.core
   sound := by
-    intro e he
-    exact (FiniteWindow.iff_of_eval hp e).mpr he
+    intro e i he
+    exact (FiniteWindow.iff_of_eval hp e i).mpr he
 
 def FiniteWindow.toNecessary {σ : Type u} {p : pred σ} {w : Nat}
     (hp : FiniteWindow p w) : WindowApprox .necessary p w where
   core := hp.core
   sound := by
-    intro e he
-    exact (FiniteWindow.iff_of_eval hp e).mp he
+    intro e i he
+    exact (FiniteWindow.iff_of_eval hp e i).mp he
 
 -- Try exact ones first when synthesizing for sufficient or necessary approximations
 instance (priority := default + 100) hasWindowApproxSufficientOfFinite
@@ -285,14 +286,14 @@ def finiteWindowOfHasFiniteWindow {σ : Type u} {p : pred σ} {n : Nat}
 the predicate it represents is valid. -/
 theorem FiniteWindow.valid_of_forall {σ : Type u} {p : pred σ} {n : Nat}
     (h : FiniteWindow p n) : IteratedForall h.core → valid p := by
-  intro hcore e
-  exact (h.iff_of_eval e).mpr (IteratedForall.evalExec hcore e)
+  intro hcore e i
+  exact (h.iff_of_eval e i).mpr (IteratedForall.evalExec hcore e i)
 
 theorem HasFiniteWindow.valid_of_forall {σ : Type u} {p : pred σ} {n : Nat}
     [h : HasFiniteWindow p n] :
     IteratedForall (h.build n (Nat.le_refl n)).core → valid p :=
-  fun hcore e => FiniteWindow.iff_of_eval (h.build n (Nat.le_refl n)) e |>.mpr
-    (IteratedForall.evalExec hcore e)
+  fun hcore e i => FiniteWindow.iff_of_eval (h.build n (Nat.le_refl n)) e i |>.mpr
+    (IteratedForall.evalExec hcore e i)
 
 section FiniteWindowInstances
 
@@ -318,7 +319,7 @@ instance hasFiniteWindowState {σ : Type u} (p : σ → Prop) : HasFiniteWindow 
 
 def finiteWindowAction {σ : Type u} (a : action σ) : FiniteWindow (action_pred a) 2 where
   core := fun s s' => ULift.up (a s s')
-  sound := by simp [ApproxDir.Sound, action_pred, IteratedHomPred.evalExec, exec.drop]
+  sound := by simp [ApproxDir.Sound, action_pred, IteratedHomPred.evalExec]
 
 instance hasFiniteWindowAction {σ : Type u} (a : action σ) : HasFiniteWindow (action_pred a) 2 where
   build _ h := (finiteWindowAction a).weaken h
@@ -337,8 +338,8 @@ but no sufficient approximation, which would be unsound for a finite prefix. -/
 
 theorem WindowApprox.valid_of_forall_sufficient {σ : Type u} {p : pred σ} {n : Nat}
     (h : WindowApprox .sufficient p n) : IteratedForall h.core → valid p := by
-  intro hcore e
-  exact h.sound e (IteratedForall.evalExec hcore e)
+  intro hcore e i
+  exact h.sound e i (IteratedForall.evalExec hcore e i)
 
 /-- Soundness theorem used by `tfinite_window` for directional certificates. -/
 theorem HasWindowApprox.valid_of_forall_sufficient {σ : Type u} {p : pred σ} {n : Nat}
@@ -358,13 +359,13 @@ def WindowApprox.binary {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat
     (op : Prop → Prop → Prop)
     (op_mono : ∀ {p p' q q' : Prop}, (p → p') → (q → q') → op p q → op p' q')
     (hp : WindowApprox dir p w) (hq : WindowApprox dir q w) :
-    WindowApprox dir (fun e => op (p e) (q e)) w where
+    WindowApprox dir (fun e i => op (p e i) (q e i)) w where
   core := IteratedHomPred.mkBinary op hp.core hq.core
   sound := by
-    intro e
+    intro e i
     rw [IteratedHomPred.evalExec_mkBinary]
-    have hps := hp.sound e
-    have hqs := hq.sound e
+    have hps := hp.sound e i
+    have hqs := hq.sound e i
     cases dir <;> simp only [ApproxDir.Sound] at hps hqs ⊢ <;> grind
 
 def WindowApprox.and {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat}
@@ -383,21 +384,21 @@ def WindowApprox.binder {σ : Type u} {α : Sort v} {dir : ApproxDir}
     (op : (α → Prop) → Prop)
     (op_mono : ∀ {p q : α → Prop}, (∀ x, p x → q x) → op p → op q)
     {p : α → pred σ} {w : Nat} (hp : ∀ x, WindowApprox dir (p x) w) :
-    WindowApprox dir (fun e => op (fun x => p x e)) w where
+    WindowApprox dir (fun e i => op (fun x => p x e i)) w where
   core := IteratedHomPred.mkBinder op (fun x => (hp x).core)
   sound := by
-    intro e
+    intro e i
     rw [IteratedHomPred.evalExec_mkBinder]
-    have hps := fun x => (hp x).sound e
+    have hps := fun x => (hp x).sound e i
     cases dir <;> simp only [ApproxDir.Sound] at hps ⊢ <;> grind
 
 def WindowApprox.not {σ : Type u} {dir : ApproxDir} {p : pred σ} {w : Nat}
     (hp : WindowApprox dir.flip p w) : WindowApprox dir (tla_not p) w where
   core := IteratedHomPred.mkNot hp.core
   sound := by
-    intro e
+    intro e i
     rw [IteratedHomPred.evalExec_mkNot]
-    have hps := hp.sound e
+    have hps := hp.sound e i
     cases dir <;>
       simp only [ApproxDir.flip, ApproxDir.Sound, tla_not] at hps ⊢ <;> grind
 
@@ -406,10 +407,10 @@ def WindowApprox.implies {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Na
     WindowApprox dir (tla_implies p q) w where
   core := IteratedHomPred.mkImplies hp.core hq.core
   sound := by
-    intro e
+    intro e i
     rw [IteratedHomPred.evalExec_mkImplies]
-    have hps := hp.sound e
-    have hqs := hq.sound e
+    have hps := hp.sound e i
+    have hqs := hq.sound e i
     cases dir <;>
       simp only [ApproxDir.flip, ApproxDir.Sound, tla_implies] at hps hqs ⊢ <;> grind
 
@@ -417,9 +418,9 @@ def WindowApprox.later {σ : Type u} {dir : ApproxDir} {p : pred σ} {w : Nat}
     (hp : WindowApprox dir p w) : WindowApprox dir (TLA.later p) (w + 1) where
   core := fun _ => hp.core
   sound := by
-    intro e
+    intro e i
     cases dir <;>
-      simpa [ApproxDir.Sound, TLA.later, IteratedHomPred.evalExec] using hp.sound (e.drop 1)
+      simpa [ApproxDir.Sound, TLA.later, IteratedHomPred.evalExec] using hp.sound e (i + 1)
 
 instance hasWindowApproxAnd {σ : Type u} {dir : ApproxDir} (p q : pred σ) (n m : Nat)
     [hp : HasWindowApprox dir p n] [hq : HasWindowApprox dir q m] :
@@ -486,16 +487,16 @@ def tile {σ : Type u} {n : Nat} (core : IteratedHomPred n σ) :
         (fun _ => tile core k)
 
 theorem evalExec_tile {σ : Type u} {p : pred σ} {n : Nat}
-    (hp : FiniteWindow p n) : ∀ (k : Nat) (e : exec σ),
-    evalExec (tile hp.core k) e ↔ alwaysPrefix p k e
-  | 0, e => by
-      simpa [alwaysPrefix, tile] using (FiniteWindow.iff_of_eval hp e).symm
-  | k + 1, e => by
+    (hp : FiniteWindow p n) : ∀ (k : Nat) (e : exec σ) (i : Nat),
+    evalExec (tile hp.core k) e i ↔ alwaysPrefix p k e i
+  | 0, e, i => by
+      simpa [alwaysPrefix, tile] using (FiniteWindow.iff_of_eval hp e i).symm
+  | k + 1, e, i => by
       rw [alwaysPrefix]
       simp only [tla_and, later]
       rw [tile, evalExec_mkAnd, evalExec_weaken]
       rw [FiniteWindow.iff_of_eval hp e]
-      exact and_congr Iff.rfl (evalExec_tile hp k (e.drop 1))
+      exact and_congr Iff.rfl (evalExec_tile hp k e (i + 1))
 
 end IteratedHomPred
 
@@ -504,7 +505,7 @@ additional states. -/
 def finiteWindowAlwaysPrefix {σ : Type u} {p : pred σ} {n : Nat}
     (hp : FiniteWindow p n) (k : Nat) : FiniteWindow (alwaysPrefix p k) (n + k) where
   core := IteratedHomPred.tile hp.core k
-  sound e := (IteratedHomPred.evalExec_tile hp k e).symm
+  sound e i := (IteratedHomPred.evalExec_tile hp k e i).symm
 
 /-- `□p` is safe in necessary polarity: at an enclosing width `w`, weaken it
 to the finite prefix of depth `w - n`, where `n` is the exact width of `p`. -/
@@ -517,9 +518,9 @@ instance (priority := default + 100) hasWindowApproxNecessaryAlways {σ : Type u
     {
       core := hprefix.core
       sound := by
-        intro e halways
-        apply (hprefix.iff_of_eval e).mp
-        exact always_weaken_n (p := p) (w - n) e halways
+        intro e i halways
+        apply (hprefix.iff_of_eval e i).mp
+        exact always_weaken_n (p := p) (w - n) e i halways
     }
 
 /-- Reuse a necessary approximation of `p` for `□p`, retaining the consequence
@@ -528,7 +529,7 @@ def WindowApprox.ofAlways {σ : Type u} {p : pred σ} {w : Nat}
     (hp : WindowApprox .necessary p w) :
     WindowApprox .necessary (always p) w where
   core := hp.core
-  sound := fun e halways => hp.sound e (always_weaken (p := p) e halways)
+  sound := fun e i halways => hp.sound e i (always_weaken (p := p) e i halways)
 
 /-- Add the current-suffix approximation of `p` to an approximation of `□p`
 on the next suffix, producing the next wider approximation of `□p`. -/
@@ -540,8 +541,8 @@ def WindowApprox.alwaysCons {σ : Type u} {p : pred σ} {w : Nat}
   {
     core := hstep.core
     sound := by
-      intro e halways
-      apply hstep.sound e
+      intro e i halways
+      apply hstep.sound e i
       rw [← always_unroll]
       exact halways
   }

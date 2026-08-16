@@ -28,7 +28,7 @@ theorem Entails_rcases_and_by_idx (idx : Nat)
   simp only [List.map_append, repeatedAnd_append, ← impl_intro_add_r]
   intro h
   conv at h => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
-  apply Entails_revert_by_idx idx
+  refine Entails_revert_by_idx idx ?_
   simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2] ; exact h
 
@@ -49,11 +49,11 @@ theorem Entails_rcases_or_by_idx (idx : Nat)
   intro h1 h2
   conv at h1 => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
   conv at h2 => enter [2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
-  apply Entails_revert_by_idx idx
+  refine Entails_revert_by_idx idx ?_
   simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
   -- Oh
-  intro e hΓ hab ; exact TLA.or_elim e hab (h1 e hΓ) (h2 e hΓ)
+  intro e i hΓ hab ; exact TLA.or_elim e i hab (h1 e i hΓ) (h2 e i hΓ)
 
 theorem Entails_rcases_or_by_name (chosen : String) :
   letI idx := hyps.findIdx fun h => h.name == chosen
@@ -76,7 +76,7 @@ theorem Entails_rcases_exists_by_idx (idx : Nat)
   intro h
   conv at h => enter [x, 2] ; dsimp only [repeatedAnd, LentilLib.List.foldrD, List.map]
   rw [exists_put_witness_back] at h
-  apply Entails_revert_by_idx idx
+  refine Entails_revert_by_idx idx ?_
   simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2] ; exact h
 

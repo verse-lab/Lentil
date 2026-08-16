@@ -185,11 +185,13 @@ partial def liftTheorem (thmName : Name) (liftedThmName : Option Name)
     | apply $(mkIdent thmName) ))   -- if not using `_root_.` then this may apply the theorem being proved!
   match lcase with
   | LiftingCase.Iff =>
-    let defaultTac ← `(term| by intros ; funext $e ; apply $(mkIdent ``propext) ; $finalTac )
+    let i ← mkIdent <$> mkFreshUserName `i
+    let defaultTac ← `(term| by intros ; funext $e $i ; apply $(mkIdent ``propext) ; $finalTac )
     simpleProveTheorem newThmName (uName :: lvlParams) ty'
       (tactic?.getD defaultTac) noncomputable?
   | LiftingCase.Other =>
-    let defaultTac ← `(term| by intros ; (try intro $e:ident) ; $finalTac )
+    let i ← mkIdent <$> mkFreshUserName `i
+    let defaultTac ← `(term| by intros ; (try intro $e:ident) ; (try intro $i:ident) ; $finalTac )
     simpleProveTheorem newThmName (uName :: lvlParams) ty'
       (tactic?.getD defaultTac) noncomputable?
 

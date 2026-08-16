@@ -24,16 +24,18 @@ theorem leads_to_pure_pred_and (Γ p q : pred σ) (φ : Prop) :
 @[tla_derive]
 theorem leads_to_conseq (p p' q q': pred σ) :
   |-tla- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) → (p' ↝ q')) := by
-  tunfold_simp ; intro e h1 h2 h k hh'
-  specialize h _ (h1 _ hh') ; rcases h with ⟨k1, h⟩ ; aesop
+  tunfold_simp ; intro e i h1 h2 h k hp'
+  specialize h _ (h1 _ hp') ; rcases h with ⟨k1, h⟩
+  specialize h2 (k + k1) ; exists k1 ; grind
 
 @[tla_derive]
 theorem leads_to_trans (p q r : pred σ) :
   |-tla- ((p ↝ q) → (q ↝ r) → (p ↝ r)) := by
-  tunfold_simp ; intro e h1 h2 k hh
-  specialize h1 _ hh ; rcases h1 with ⟨k1, h1⟩
-  specialize h2 _ h1 ; rcases h2 with ⟨k2, h2⟩
-  exists (k1 + k2) ; rw [← Nat.add_assoc] ; assumption
+  tunfold_simp ; intro e i h1 h2 k hp
+  rcases h1 k hp with ⟨k1, hq⟩
+  rcases h2 (k + k1) (by simpa [Nat.add_assoc] using hq) with ⟨k2, hr⟩
+  exists k1 + k2
+  simpa [Nat.add_assoc] using hr
 
 theorem leads_to_combine (Γ Γ' p1 q1 p2 q2 : pred σ)
   (h1 : (□ Γ ∧ Γ') |-tla- (p1 ↝ q1))
@@ -41,14 +43,18 @@ theorem leads_to_combine (Γ Γ' p1 q1 p2 q2 : pred σ)
   (h1' : (q1 ∧ □ Γ) |-tla- □ q1) (h2' : (q2 ∧ □ Γ) |-tla- □ q2) :
   (□ Γ ∧ Γ') |-tla- (p1 ∧ p2 ↝ q1 ∧ q2) := by
   -- a semantic proof
-  tunfold_simp ; intro e hΓ hΓ' k hp1 hp2
-  specialize h1 _ hΓ hΓ' k hp1 ; rcases h1 with ⟨k1, h1⟩
-  specialize h2 _ hΓ hΓ' k hp2 ; rcases h2 with ⟨k2, h2⟩
+  tunfold_simp ; intro e i hΓ hΓ' k hp1 hp2
+  rcases h1 e i hΓ hΓ' k hp1 with ⟨k1, hq1⟩
+  rcases h2 e i hΓ hΓ' k hp2 with ⟨k2, hq2⟩
   exists k1 + k2
-  specialize h1' _ h1 (by intro q ; rw [exec.drop_drop] ; apply hΓ) k2
-  specialize h2' _ h2 (by intro q ; rw [exec.drop_drop] ; apply hΓ) k1
-  simp [exec.drop_drop] at h1' h2'
-  constructor ; rw [← Nat.add_assoc] ; assumption ; rw [Nat.add_comm k1 k2, ← Nat.add_assoc] ; assumption
+  constructor
+  · have hq1' := h1' e (i + k + k1) hq1
+      (fun l => by simpa [Nat.add_assoc] using hΓ (k + k1 + l)) k2
+    simpa [Nat.add_assoc] using hq1'
+  · have hq2' := h2' e (i + k + k2) hq2
+      (fun l => by simpa [Nat.add_assoc] using hΓ (k + k2 + l)) k1
+    have heq : i + k + k2 + k1 = i + k + (k1 + k2) := by omega
+    simpa [heq] using hq2'
 
 @[tla_derive]
 theorem leads_to_strengthen_lhs (p q inv : pred σ) :

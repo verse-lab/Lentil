@@ -31,12 +31,12 @@ theorem Entails_apply_hyp (hs : List (pred σ)) (h : hyps.getLast?.map NamedPred
   unfold Entails
   simp [List.getLast?_eq_some_iff] at h ; rcases h with ⟨a, ⟨hyps, rfl⟩, heq⟩
   simp [heq, repeatedAnd_append, repeatedAnd_singleton, ← impl_intro_add_r]
-  intro h ; apply pred_implies_trans h ; simp [impl_intro_add_r]
+  intro h ; refine pred_implies_trans h ?_ ; simp [impl_intro_add_r]
   apply repeatedImplies_apply
 
 -- FIXME: Generalize this to allow `tassumption`
 theorem Entails_apply_hyp_closing_goal (h : hyps.getLast?.map NamedPred.pred = some goal) :
-  Entails hyps goal := Entails_apply_hyp [] h (by intro _ _ ; exact True.intro)
+  Entails hyps goal := Entails_apply_hyp [] h (by intro _ _ _ ; exact True.intro)
 
 end
 
@@ -67,7 +67,7 @@ private def applyIntroducedHypByIdx (idx : Nat) : TacticM Unit := withMainContex
   -- The goal might be an implication, so need to find where to cut `premises`
   let premisesToProve ← goalDirectedPremisesCut premises goal conclusion
   if premisesToProve.isEmpty then
-    evalTactic <| ← `(tactic| apply $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
+    evalTactic <| ← `(tactic| exact $(mkIdent ``Entails_apply_hyp_closing_goal) (by rfl))
   else
     let holesListStx ← do
       let holes := Array.replicate premisesToProve.length (← `(_))

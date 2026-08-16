@@ -15,7 +15,7 @@ section state_pred_specialized
 variable {σ : Type u}
 
 theorem state_preds_and (p q : σ → Prop) : (⌜ p ⌝ ∧ ⌜ q ⌝) =tla= ⌜ λ s => p s ∧ q s ⌝ := by
-  funext e ; tnontemporal_simp
+  funext e i ; tnontemporal_simp
 
 theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Prop}
     (hinit : ∀ s, init s → inv s)
@@ -26,10 +26,10 @@ theorem init_invariant {init : σ → Prop} {next : action σ} {inv : σ → Pro
     aesop
   rw (occs := .pos [2]) [always_induction]
   rw [and_pred_implies_split] ; apply And.intro
-  · intro e ⟨hinit', _⟩
+  · intro e i ⟨hinit', _⟩
     exact hinit _ hinit'
-  · intro e ⟨_, hnext'⟩ k hinv
-    exact hstep (e.drop k) ⟨hinv, hnext' k⟩
+  · intro e i ⟨_, hnext'⟩ k hinv
+    exact hstep e (i + k) ⟨hinv, hnext' k⟩
 /-
 set_option maxHeartbeats 800000 in
 /-- `wf1` with `p`, `q`, `init` and `inv` being state predicates. -/

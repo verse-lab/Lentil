@@ -52,9 +52,7 @@ private theorem Entails_specializeHyp_aux
   intro h1 h2
   rcases h with rfl | ⟨hidx, rfl⟩
   on_goal 1=> exact h2
-  apply Entails_add_new (newHypName := (hyps[idx]'hidx).name)
-  on_goal 2=> apply h1
-  on_goal 1=> exact hinc
+  refine Entails_add_new subHyps hinc (hyps[idx]'hidx).name newHyp h1 ?_
   unfold Entails
   have htmp2 := repeatedAnd_modifyHyp_reorder hyps _ hidx fun ⟨name, _⟩ => NamedPred.mk name newHyp
   dsimp only at htmp2
@@ -67,21 +65,24 @@ include hidx hhyps'
 private theorem Entails_specialize_forall_aux {α : Sort v} {p : α → pred σ} (witness : α)
   (heq : newHyp = p witness) (hpred : (hyps[idx]'hidx).pred = tla_forall p) :
   Entails hyps' goal → Entails hyps goal := by
-  apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [TLA.tla_forall p])
+  refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
+    [TLA.tla_forall p] ?_ ?_
   · grind
   · simp [repeatedAnd_singleton] ; tunfold_simp ; subst newHyp ; grind
 
 private theorem Entails_specialize_pure_aux {rhs : pred σ} {q : Prop} (hq : q)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| ⌞ q ⌟ → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
-  apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [[tlafml| ⌞ q ⌟ → rhs]])
+  refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
+    [[tlafml| ⌞ q ⌟ → rhs]] ?_ ?_
   · grind
   · simp [repeatedAnd_singleton] ; tunfold_simp ; grind
 
 private theorem Entails_specialize_valid_aux {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| lhs → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
-  apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [[tlafml| lhs → rhs]])
+  refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
+    [[tlafml| lhs → rhs]] ?_ ?_
   · grind
   · subst newHyp ; simp [repeatedAnd_singleton] ; revert hlhs ; tunfold_simp ; grind
 
@@ -89,7 +90,8 @@ private theorem Entails_specialize_temporal_aux {rhs : pred σ} (lhss : List (pr
   (hin : lhss ⊆ hyps.map NamedPred.pred)
   (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| (repeatedAnd lhss) → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
-  apply Entails_specializeHyp_aux idx (by right ; constructor <;> assumption) (subHyps := [tlafml| (repeatedAnd lhss) → rhs] :: lhss)
+  refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
+    ([tlafml| (repeatedAnd lhss) → rhs] :: lhss) ?_ ?_
   · grind
   · rw [repeatedAnd_cons] ; tunfold_simp ; grind
 
@@ -111,14 +113,14 @@ theorem Entails_specialize_forall_by_name (chosen : String)
   Entails (replaceChosenPred hyps chosen (p witness)) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
-  apply Entails_specialize_forall_aux _ hidx rfl _ rfl (by grind)
+  exact Entails_specialize_forall_aux _ hidx rfl _ rfl (by grind)
 
 theorem Entails_specialize_forall_by_idx (idx : Nat)
   (hpred : hyps[idx]?.map NamedPred.pred = some (TLA.tla_forall p)) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, p witness⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
-  apply Entails_specialize_forall_aux _ hidx rfl _ rfl (by grind)
+  exact Entails_specialize_forall_aux _ hidx rfl _ rfl (by grind)
 
 end
 
@@ -132,14 +134,14 @@ theorem Entails_specialize_pure_by_name (chosen : String)
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
-  apply Entails_specialize_pure_aux _ hidx rfl hq rfl (by grind)
+  exact Entails_specialize_pure_aux _ hidx rfl hq rfl (by grind)
 
 theorem Entails_specialize_pure_by_idx (idx : Nat)
   (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| ⌞ q ⌟ → rhs]) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
-  apply Entails_specialize_pure_aux _ hidx rfl hq rfl (by grind)
+  exact Entails_specialize_pure_aux _ hidx rfl hq rfl (by grind)
 
 end
 
@@ -153,14 +155,14 @@ theorem Entails_specialize_valid_by_name (chosen : String)
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
-  apply Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
+  exact Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
 
 theorem Entails_specialize_valid_by_idx (idx : Nat)
   (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| lhs → rhs]) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
-  apply Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
+  exact Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
 
 end
 
@@ -176,7 +178,7 @@ theorem Entails_specialize_temporal_by_name (chosen : String)
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
-  apply Entails_specialize_temporal_aux _ hidx rfl lhss ?_ rfl (by grind)
+  refine Entails_specialize_temporal_aux _ hidx rfl lhss ?_ rfl (by grind)
   subst lhss ; rw [← List.map_filterMap] ; clear hpred ht heq1 heq2 ; grind
 
 theorem Entails_specialize_temporal_by_idx (idx : Nat)
@@ -184,7 +186,7 @@ theorem Entails_specialize_temporal_by_idx (idx : Nat)
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
-  apply Entails_specialize_temporal_aux _ hidx rfl lhss ?_ rfl (by grind)
+  refine Entails_specialize_temporal_aux _ hidx rfl lhss ?_ rfl (by grind)
   subst lhss ; rw [← List.map_filterMap] ; clear heq ; grind
 
 end

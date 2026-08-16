@@ -80,7 +80,7 @@ theorem Entails_advance_eventually_under_always
     Entails (mapHypPreds TLA.always pre ++ ⟨name, TLA.eventually p⟩ :: mapHypPreds TLA.always post) goal := by
   intro h
   apply Entails_trans ; apply inst.prefix_closed
-  apply Entails_revert_by_idx (mapHypPreds TLA.always pre).length
+  refine Entails_revert_by_idx (mapHypPreds TLA.always pre).length ?_
   simp
   rw [List.eraseIdx_append_of_length_le]
   on_goal 2=> simp

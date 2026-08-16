@@ -15,6 +15,7 @@ attribute [tlasimp_def] leads_to weak_fairness tla_and tla_or tla_not tla_implie
   always eventually later tla_until state_pred pure_pred action_pred
   valid pred_implies exec.satisfies exec.drop_drop
   tla_bigwedge tla_bigvee Foldable.fold
+  valid_initial equiv_init
 
 attribute [execsimp] exec.drop Nat.add_zero Nat.zero_add
 
@@ -30,6 +31,7 @@ attribute [tla_nontemporal_def] tla_and tla_or tla_not tla_implies tla_forall tl
   state_pred pure_pred action_pred
   valid pred_implies exec.satisfies
   tla_bigwedge tla_bigvee Foldable.fold
+  equiv_init valid_initial
 
 macro "tnontemporal_simp" : tactic => `(tactic| (simp [tla_nontemporal_def] at *))
 

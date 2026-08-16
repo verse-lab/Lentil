@@ -21,7 +21,7 @@ theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pre
   hyps[idx]?.map NamedPred.pred = some [tlafml| ⌞ q ⌟] →
   (q → Entails hyps' goal) → Entails hyps goal := by
   intro heq hh
-  apply Entails_revert_by_name (toRevert := toPull)
+  refine Entails_revert_by_name (toRevert := toPull) ?_
   simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
   rw [← Entails_pure_fact_intro]

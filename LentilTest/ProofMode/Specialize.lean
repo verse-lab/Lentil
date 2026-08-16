@@ -19,7 +19,7 @@ example (P : Nat → pred σ) : (∀ n : Nat, (P n)) |-tla- (P 0) := by
   tstart h
   tspecialize h 0
   guard_target =ₛ Entails [⟨"h", P 0⟩] (P 0)
-  intro _ hp ; exact hp
+  intro _ _ hp ; exact hp
 
 -- Universal specialization also accepts proof-valued witnesses.
 example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
@@ -27,7 +27,7 @@ example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
   tstart h
   tspecialize h hQ
   guard_target =ₛ Entails [⟨"h", P hQ⟩] (P hQ)
-  intro _ hp ; exact hp
+  intro _ _ hp ; exact hp
 
 -- Multiple arguments specialize nested `∀` binders left-to-right.
 example (P : Nat → Nat → pred σ) :
@@ -35,7 +35,7 @@ example (P : Nat → Nat → pred σ) :
   tstart h
   tspecialize h 1 2
   guard_target =ₛ Entails [⟨"h", P 1 2⟩] (P 1 2)
-  intro _ hp ; exact hp
+  intro _ _ hp ; exact hp
 
 -- Mixed specialization: a `∀` binder followed by a temporal implication.
 example (P Q : Nat → pred σ) :
@@ -43,21 +43,21 @@ example (P Q : Nat → pred σ) :
   tstart h hp
   tspecialize h 0 hp
   guard_target =ₛ Entails [⟨"h", Q 0⟩, ⟨"hp", P 0⟩] (Q 0)
-  intro _ ⟨hq, _⟩ ; exact hq
+  intro _ _ ⟨hq, _⟩ ; exact hq
 
 -- Temporal implication specialization keeps the premise hypothesis.
 example : ((a → b) ∧ a) |-tla- (b) := by
   tstart h ha
   tspecialize h ha
   guard_target =ₛ Entails [⟨"h", b⟩, ⟨"ha", a⟩] b
-  intro _ ⟨hb, _⟩ ; exact hb
+  intro _ _ ⟨hb, _⟩ ; exact hb
 
 -- Pure implication specialization uses a Lean-local proof.
 example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tla- (a) := by
   tstart h
   tspecialize h hQ
   guard_target =ₛ Entails [⟨"h", a⟩] a
-  intro _ ha ; exact ha
+  intro _ _ ha ; exact ha
 
 -- The specialized hypothesis keeps its original position in the context.
 example (P : Nat → pred σ) :
@@ -65,7 +65,7 @@ example (P : Nat → pred σ) :
   tstart ha h hb
   tspecialize h 3
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"h", P 3⟩, ⟨"hb", b⟩] (P 3)
-  intro _ ⟨_, hp, _⟩ ; exact hp
+  intro _ _ ⟨_, hp, _⟩ ; exact hp
 
 -- Error: the named temporal hypothesis does not exist.
 /--

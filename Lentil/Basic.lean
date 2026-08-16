@@ -18,44 +18,44 @@ namespace TLA
 -/
 
 def exec (σ : Type u) := Nat → σ
-def pred (σ : Type u) := exec σ → Prop
+def pred (σ : Type u) := exec σ → Nat → Prop
 def state_pred {σ : Type u} (f : σ → Prop) : pred σ :=
-  fun e => f (e 0)
+  fun e i => f (e i)
 def action (σ : Type u) := σ → σ → Prop
 def action_pred {σ : Type u} (a : action σ) : pred σ :=
-  fun e => a (e 0) (e 1)
+  fun e i => a (e i) (e (i + 1))
 
 def pure_pred {α : Type u} (p : Prop) : pred α := state_pred (fun _ => p)
 def tla_true {α : Type u} : pred α := pure_pred True
 def tla_false {α : Type u} : pred α := pure_pred False
 
-def tla_and {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∧ q σ
-def tla_or {α : Type u} (p q : pred α) : pred α := fun σ => p σ ∨ q σ
-def tla_implies {α : Type u} (p q : pred α) : pred α := fun σ => p σ → q σ
-def tla_not {α : Type u} (p : pred α) : pred α := fun σ => ¬ p σ
-def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∀ x, p x σ
-def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun σ => ∃ x, p x σ
+def tla_and {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∧ q e i
+def tla_or {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∨ q e i
+def tla_implies {α : Type u} (p q : pred α) : pred α := fun e i => p e i → q e i
+def tla_not {α : Type u} (p : pred α) : pred α := fun e i => ¬ p e i
+def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∀ x, p x e i
+def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∃ x, p x e i
 
 -- NOTE: this all could be automatically lifted, but to avoid dependency circles, we don't do that
 instance {α : Type u} : Std.Commutative (@tla_and α) := by
-  constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
+  constructor ; intros ; unfold tla_and ; funext e i ; ac_rfl
 
 instance {α : Type u} : Std.Associative (@tla_and α) := by
-  constructor ; intros ; unfold tla_and ; funext e ; ac_rfl
+  constructor ; intros ; unfold tla_and ; funext e i ; ac_rfl
 
 instance {α : Type u} : Std.Commutative (@tla_or α) := by
-  constructor ; intros ; unfold tla_or ; funext e ; ac_rfl
+  constructor ; intros ; unfold tla_or ; funext e i ; ac_rfl
 
 instance {α : Type u} : Std.Associative (@tla_or α) := by
-  constructor ; intros ; unfold tla_or ; funext e ; ac_rfl
+  constructor ; intros ; unfold tla_or ; funext e i ; ac_rfl
 
 def exec.drop {α : Type u} (k : Nat) (σ : exec α) : exec α := λ n => σ (n + k)
 def exec.take {α : Type u} (k : Nat) (σ : exec α) : List α := List.range k |>.map σ
 def exec.take_from {α : Type u} (start k : Nat) (σ : exec α) : List α := List.range' start k |>.map σ
 
-def always {α : Type u} (p : pred α) : pred α := λ σ => ∀ k, p <| σ.drop k
-def eventually {α : Type u} (p : pred α) : pred α := λ σ => ∃ k, p <| σ.drop k
-def later {α : Type u} (p : pred α) : pred α := λ σ => p <| σ.drop 1
+def always {α : Type u} (p : pred α) : pred α := fun e i => ∀ k, p e (i + k)
+def eventually {α : Type u} (p : pred α) : pred α := fun e i => ∃ k, p e (i + k)
+def later {α : Type u} (p : pred α) : pred α := fun e i => p e (i + 1)
 
 theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).length = k := by
   simp [exec.take]
@@ -63,14 +63,16 @@ theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).le
 theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by
   funext n ; simp [exec.drop] ; ac_rfl
 
-def exec.satisfies {α : Type u} (p : pred α) (σ : exec α) : Prop := p σ
-def valid {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p
-def pred_implies {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), σ.satisfies p → σ.satisfies q
+def exec.satisfies {α : Type u} (p : pred α) (σ : exec α) (i : Nat) : Prop := p σ i
+def pred_implies {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α) i, p σ i → q σ i
+def valid_initial {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α), p σ 0
+def valid {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α) i, p σ i
+def equiv_init {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), p σ 0 ↔ q σ 0
 
-@[refl] theorem pred_implies_refl {α : Type u} (p : pred α) : pred_implies p p := (fun _ => id)
+@[refl] theorem pred_implies_refl {α : Type u} (p : pred α) : pred_implies p p := fun _ _ => id
 
 theorem pred_implies_trans {p q r : pred α} : pred_implies p q → pred_implies q r → pred_implies p r := by
-  intros h1 h2 e hp ; apply h2 ; apply h1 ; assumption
+  intros h1 h2 e i hp ; exact h2 e i (h1 e i hp)
 
 def enabled {α : Type u} (a : action α) (s : α) : Prop := ∃ s', a s s'
 def tla_enabled {α : Type u} (a : action α) : pred α := state_pred (enabled a)
@@ -102,7 +104,8 @@ def tla_bigwedge {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred �
 def tla_bigvee {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
   Foldable.fold tla_or tla_false f s
 
-def tla_until {α : Type u} (p q : pred α) : pred α := λ σ => ∃ i, (q <| σ.drop i) ∧ ∀ j < i, (p <| σ.drop j)
+def tla_until {α : Type u} (p q : pred α) : pred α :=
+  fun e i => ∃ k, q e (i + k) ∧ ∀ l, l < k → p e (i + l)
 
 end TLA
 
@@ -196,13 +199,15 @@ macro_rules
 syntax:max tlafml:max " |-tla- " tlafml:max : term
 syntax:55 "|-tla- " tlafml:55 : term
 syntax:max tlafml:max " =tla= " tlafml:max : term
+syntax term " |=tla[" term "]=" tlafml : term
 syntax term " |=tla= " tlafml : term
 
 macro_rules
   | `($f1:tlafml |-tla- $f2:tlafml) => `(TLA.pred_implies [tlafml| $f1 ] [tlafml| $f2 ])
   | `(|-tla- $f1:tlafml) => `(TLA.valid [tlafml| $f1 ])
   | `($f1:tlafml =tla= $f2:tlafml) => `([tlafml| $f1 ] = [tlafml| $f2 ])
-  | `($e:term |=tla= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e)
+  | `($e:term |=tla[$i:term]= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e $i)
+  | `($e:term |=tla= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e 0)
 
 /-! ## Pretty-Printing for TLA Notations -/
 
@@ -344,7 +349,8 @@ attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
   | _ => throw ()
 
 @[app_unexpander TLA.exec.satisfies] def TLA.unexpand_satisfies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `($stx2 |=tla= $(← TLA.syntax_term_to_tlafml stx1))
+  | `($_ $stx1 $stx2 0) => do `($stx2 |=tla= $(← TLA.syntax_term_to_tlafml stx1))
+  | `($_ $stx1 $stx2 $i) => do `($stx2 |=tla[$i]= $(← TLA.syntax_term_to_tlafml stx1))
   | _ => throw ()
 
 @[app_unexpander Eq] def TLA.unexpand_tla_eq : Lean.PrettyPrinter.Unexpander

@@ -36,28 +36,28 @@ theorem bigwedge_list_append (l1 l2 : List β) : (⋀ x ∈ (l1 ++ l2), (f x)) =
 
 theorem bigwedge_forall_list : (⋀ x ∈ l, (f x)) =tla= (∀ x, (⌞ x ∈ l ⌟ → (f x))) := by
   induction l with
-  | nil => funext e ; tunfold_simp
+  | nil => funext e i ; apply propext ; tunfold_simp
   | cons b l ih =>
     simp [tlasimp, ih]
-    funext e ; tunfold_simp
+    funext e i ; tunfold_simp
 
 theorem bigwedge_forall_fintype_list : (⋀ x ∈ l, (f x)) =tla= (∀ x : Fin l.length, (f l[x])) := by
   rw [bigwedge_forall_list]
-  funext e ; tunfold_simp ; apply List.mem_forall_iff_fin_index
+  funext e i ; tunfold_simp ; apply List.mem_forall_iff_fin_index
 
 omit f in
 theorem bigwedge_forall_swap {γ : Type w} (f : β → γ → pred α) : (∀ c : γ, (⋀ x ∈ l, (f x c))) =tla= (⋀ x ∈ l, ∀ c : γ, ((f x c))) := by
   simp only [bigwedge_forall_fintype_list] ; apply TLA.forall_comm
 
 theorem bigwedge_inner_and_split : (⋀ x ∈ l, (f x) ∧ (g x)) =tla= ((⋀ x ∈ l, (f x)) ∧ (⋀ x ∈ l, (g x))) := by
-  (repeat rw [bigwedge_forall_list]) ; funext e ; tunfold_simp ; aesop
+  (repeat rw [bigwedge_forall_list]) ; funext e i ; tunfold_simp ; aesop
 
 theorem always_bigwedge : (□ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, □ (f x)) := by
-  (repeat rw [bigwedge_forall_list]) ; funext e ; tunfold_simp ; aesop
+  (repeat rw [bigwedge_forall_list]) ; funext e i ; tunfold_simp ; aesop
 
 theorem eventually_always_bigwedge_distrib : (◇ □ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, ◇ □ (f x)) := by
   induction l with
-  | nil => funext e ; tunfold_simp
+  | nil => funext e i ; tunfold_simp
   | cons x l ih => simp [tlasimp, eventually_always_and_distrib, ih]
 
 end bigwedge
@@ -72,18 +72,18 @@ theorem bigvee_list_cons (b : β) : (⋁ x ∈ (b :: l), (f x)) =tla= ((f b) ∨
 
 theorem bigvee_exists_list : (⋁ x ∈ l, (f x)) =tla= (∃ x, (⌞ x ∈ l ⌟ ∧ (f x))) := by
   induction l with
-  | nil => funext e ; tunfold_simp
+  | nil => funext e i ; tunfold_simp
   | cons b l ih =>
     simp [tlasimp, ih]
-    funext e ; tunfold_simp
+    funext e i ; tunfold_simp
 
 theorem bigvee_exists_fintype_list : (⋁ x ∈ l, (f x)) =tla= (∃ x : Fin l.length, (f l[x])) := by
   rw [bigvee_exists_list]
-  funext e ; tunfold_simp ; apply List.mem_exists_iff_fin_index
+  funext e i ; tunfold_simp ; rw [List.mem_exists_iff_fin_index] ; rfl
 
 theorem bigvee_and_distrib (p : pred α) : (p ∧ ⋁ x ∈ l, (f x)) =tla= (⋁ x ∈ l, p ∧ (f x)) := by
   repeat rw [bigvee_exists_list]
-  funext e ; tunfold_simp ; aesop
+  funext e i ; tunfold_simp ; aesop
 
 end bigvee
 
