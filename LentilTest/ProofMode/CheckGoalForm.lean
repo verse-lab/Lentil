@@ -31,11 +31,11 @@ example : (p) |-tla- (p) := by
 
 /--
 error: The main goal is
-
+  ⏎
   hp : p
   |-tla- p
 but was expected to be
-
+  ⏎
   wrong : p
   |-tla- p
 -/
