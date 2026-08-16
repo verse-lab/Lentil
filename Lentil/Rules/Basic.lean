@@ -25,6 +25,7 @@ open Classical LentilLib
 #tla_lift Or.inl => TLA.or_inl
 #tla_lift Or.inr => TLA.or_inr
 #tla_lift Or.elim => TLA.or_elim
+#tla_lift Or.imp => TLA.or_imp
 
 -- distributive laws
 #tla_lift and_or_left or_and_right or_and_left and_or_right
@@ -142,17 +143,6 @@ theorem later_always_comm : (◯ □ p) =tla= (□ ◯ p) := by
 theorem later_eventually_comm : (◯ ◇ p) =tla= (◇ ◯ p) := by
   funext e i ; tunfold_simp ; grind
 
-theorem always_unroll : □ p =tla= (p ∧ ◯ □ p) := by
-  rw [later_always_comm]
-  funext e i ; tunfold_simp
-  constructor
-  · intro h ; apply And.intro (h 0)
-      (by intro k ; simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h (k + 1))
-  · intro ⟨h0, hs⟩ k
-    cases k with
-    | zero => simpa using h0
-    | succ k => simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hs k
-
 theorem always_induction : □ p =tla= (p ∧ □ (p → ◯ p)) := by
   funext e i ; tunfold_simp
   constructor
@@ -247,6 +237,22 @@ theorem always_eventually_idem : (□ ◇ □ ◇ p) =tla= □ ◇ p := by
 theorem eventually_always_idem : (◇ □ ◇ □ p) =tla= ◇ □ p := by
   simp [always_eventually_always, eventually_idem]
 
+theorem always_unroll : □ p =tla= (p ∧ ◯ □ p) := by
+  rw [later_always_comm]
+  funext e i ; tunfold_simp
+  constructor
+  · intro h ; apply And.intro (h 0)
+      (by intro k ; simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h (k + 1))
+  · intro ⟨h0, hs⟩ k
+    cases k with
+    | zero => simpa using h0
+    | succ k => simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hs k
+
+@[tladual]
+theorem eventually_unroll : ◇ p =tla= (p ∨ ◇ ◯ p) := by
+  apply dual_lemma ; simp [not_eventually, not_or, ← later_not, ← later_always_comm]
+  apply always_unroll
+
 end one
 
 attribute [tlasimp] not_not not_always not_eventually always_idem eventually_idem
@@ -300,7 +306,13 @@ theorem later_monotone' : |-tla- ((p ⇒ q) → (◯ p → ◯ q)) := by
 theorem always_monotone : (p) |-tla- (q) → □ p |-tla- □ q := by
   tunfold_simp ; aesop
 
+theorem always_monotone' : |-tla- ((p ⇒ q) → (□ p → □ q)) := by
+  tunfold_simp ; aesop
+
 theorem eventually_monotone : (p) |-tla- (q) → ◇ p |-tla- ◇ q := by
+  tunfold_simp ; aesop
+
+theorem eventually_monotone' : |-tla- ((p ⇒ q) → (◇ p → ◇ q)) := by
   tunfold_simp ; aesop
 
 theorem always_eventually_monotone : (p) |-tla- (q) → (□ ◇ p) |-tla- (□ ◇ q) := by
@@ -332,6 +344,24 @@ theorem until_induction : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧
     induction j with
     | zero => simpa using hp
     | succ j ih => simpa [Nat.add_assoc] using h j ih (h' j)
+
+theorem eventually_and_eq
+    {p q : pred σ} :
+    (◇ p ∧ ◇ q) =tla= (◇ (p ∧ ◇ q) ∨ ◇ (q ∧ ◇ p)) := by
+  rw [pred_eq_iff_iff] ; constructor
+  · tunfold_simp
+    intro e i k1 hp k2 hq
+    by_cases h : k1 ≤ k2
+    · left ; exists k1 ; constructor ; assumption ; exists (k2 - k1) ; grind
+    · right ; exists k2 ; constructor ; assumption ; exists (k1 - k2) ; grind
+  · tunfold_simp
+    rintro e i (⟨k, hp, k', hq⟩ | ⟨k, hq, k', hp⟩)
+    · constructor
+      · exists k
+      · exists (k + k') ; grind
+    · constructor
+      · exists (k + k') ; grind
+      · exists k
 
 end two
 
