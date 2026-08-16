@@ -188,6 +188,9 @@ theorem later_weaken_to_eventually : ◯ p |-tla- ◇ p := by
 theorem now_weaken_to_eventually : (p) |-tla- ◇ p := by
   tunfold_simp ; intro e i h ; exists 0
 
+theorem eventually_as_until : (◇ p) =tla= (⊤ 𝑈 p) := by
+  funext e i ; tunfold_simp
+
 theorem not_always : (¬ □ p) =tla= (◇ ¬ p) := by
   funext e i ; tunfold_simp
 
@@ -201,6 +204,9 @@ theorem eventually_to_always : ◇ p =tla= ¬ □ ¬ p := by
 @[tladual]
 theorem always_to_eventually : □ p =tla= ¬ ◇ ¬ p := by
   funext e i ; tunfold_simp
+
+theorem always_as_until : (□ p) =tla= (¬ (⊤ 𝑈 ¬ p)) := by
+  rw [always_to_eventually, eventually_as_until]
 
 theorem always_idem : (□ □ p) =tla= □ p := by
   funext e i ; tunfold_simp
