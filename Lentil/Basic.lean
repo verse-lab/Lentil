@@ -231,6 +231,34 @@ open PrettyPrinter.Delaborator SubExpr in
 def annAsTerm {any} (stx : TSyntax any) : DelabM (TSyntax any) :=
   (⟨·⟩) <$> annotateTermInfo ⟨stx.raw⟩
 
+open PrettyPrinter.Delaborator SubExpr in
+def TLA.delab_binder_body_as_tlafml (body : Term) : DelabM (Ident × TSyntax `tlafml) := do
+  match body with
+  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) =>
+      pure (a, (← TLA.syntax_term_to_tlafml stx))
+  | _ =>
+    -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
+    -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
+    let x := mkIdent <| .mkSimple "x"
+    let bodyapp ← `(term| $body $x )
+    pure (x, (← `(tlafml| $bodyapp:term )))
+
+open PrettyPrinter.Delaborator SubExpr in
+def TLA.delab_tlafml_app
+    (check_applicable : Expr → Nat → Bool)
+    (inner : DelabM (TSyntax `tlafml)) : Delab :=
+  whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
+    let e ← getExpr
+    if check_applicable e 0
+    then inner >>= TLA.syntax_tlafml_to_term
+    else whenPPOption (fun o => o.get lentil.pp.autoRenderSatisfies.name true) do
+      if check_applicable e 1
+      then
+        let res ← withAppFn inner
+        let e ← withAppArg delab
+        `(term| $e |=tla= $res)
+      else failure
+
 -- heavily inspired by https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
 open PrettyPrinter.Delaborator SubExpr in
 partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
@@ -280,7 +308,7 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
          this seems to work, as `delab` would also call `delab_tlafml_inner` on the argument,
          so that we can match the inner syntax of `f` and use `TLA.syntax_term_to_tlafml`? -/
       let body ← withAppArg delab
-      let (a, stx) ← get_bindername_funbody body
+      let (a, stx) ← TLA.delab_binder_body_as_tlafml body
       match fn with
       | ``TLA.tla_forall => do `(tlafml| ∀ $a:ident, $stx )
       | ``TLA.tla_exists => do `(tlafml| ∃ $a:ident, $stx )
@@ -288,31 +316,21 @@ partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
     | ``TLA.tla_bigwedge | ``TLA.tla_bigvee =>
       let body ← withAppFn <| withAppArg delab
       let l ← withAppArg delab
-      let (a, stx) ← get_bindername_funbody body
+      let (a, stx) ← TLA.delab_binder_body_as_tlafml body
       match fn with
       | ``TLA.tla_bigwedge => do `(tlafml| ⋀ $a:ident ∈ $l, $stx )
       | ``TLA.tla_bigvee => do `(tlafml| ⋁ $a:ident ∈ $l, $stx )
       | _ => unreachable!
     | _ =>
       -- in this case, `e` may not even be an `.app`, so directly delab it
-      `(tlafml| $(← delab):term )
+      -- with `TLA.syntax_term_to_tlafml` might look nicer
+      TLA.syntax_term_to_tlafml (← delab)
   annAsTerm stx
-where get_bindername_funbody (body : Term) : DelabM (Ident × TSyntax `tlafml) := do
-  match body with
-  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) => pure (a, (← TLA.syntax_term_to_tlafml stx))
-  | _ =>
-    -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
-    -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
-    let x := mkIdent <| .mkSimple "x"
-    let bodyapp ← `(term| $body $x )
-    pure (x, (← `(tlafml| $bodyapp:term )))
 
 open PrettyPrinter.Delaborator SubExpr in
-partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
-  let e ← getExpr
-  let fn := e.getAppFn.constName
+partial def delab_tlafml : Delab := TLA.delab_tlafml_app (fun e offset =>
   -- need to consider implicit arguments below in comparing `e.getAppNumArgs'`
-  let check_applicable (offset : Nat) :=
+  let fn := e.getAppFn.constName;
     (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
         ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
       && e.getAppNumArgs' == 2 + offset) ||
@@ -323,15 +341,7 @@ partial def delab_tlafml : Delab := whenPPOption (fun o => o.get lentil.pp.useDe
       && e.getAppNumArgs' == 1 + offset) ||
     (List.elem fn [``TLA.tla_bigwedge, ``TLA.tla_bigvee]
       && e.getAppNumArgs' == 6 + offset)
-  if check_applicable 0
-  then delab_tlafml_inner >>= TLA.syntax_tlafml_to_term
-  else whenPPOption (fun o => o.get lentil.pp.autoRenderSatisfies.name true) do
-    if check_applicable 1
-    then
-      let res ← withAppFn delab_tlafml_inner
-      let e ← withAppArg delab
-      `(term| $e |=tla= $res)
-    else failure
+  ) delab_tlafml_inner
 
 attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
 attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
