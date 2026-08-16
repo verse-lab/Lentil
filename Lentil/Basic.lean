@@ -65,6 +65,7 @@ theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).dr
 
 def exec.satisfies {α : Type u} (p : pred α) (σ : exec α) (i : Nat) : Prop := p σ i
 def pred_implies {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α) i, p σ i → q σ i
+def pred_implies_initial {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), p σ 0 → q σ 0
 def valid_initial {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α), p σ 0
 def valid {α : Type u} (p : pred α) : Prop := ∀ (σ : exec α) i, p σ i
 def equiv_init {α : Type u} (p q : pred α) : Prop := ∀ (σ : exec α), p σ 0 ↔ q σ 0
@@ -198,6 +199,8 @@ macro_rules
    easily typed in Lean VSCode extension, so anyway -/
 syntax:max tlafml:max " |-tla- " tlafml:max : term
 syntax:55 "|-tla- " tlafml:55 : term
+syntax:max tlafml:max " |-tla[0]- " tlafml:max : term
+syntax:55 "|-tla[0]- " tlafml:55 : term
 syntax:max tlafml:max " =tla= " tlafml:max : term
 syntax term " |=tla[" term "]=" tlafml : term
 syntax term " |=tla= " tlafml : term
@@ -205,6 +208,8 @@ syntax term " |=tla= " tlafml : term
 macro_rules
   | `($f1:tlafml |-tla- $f2:tlafml) => `(TLA.pred_implies [tlafml| $f1 ] [tlafml| $f2 ])
   | `(|-tla- $f1:tlafml) => `(TLA.valid [tlafml| $f1 ])
+  | `($f1:tlafml |-tla[0]- $f2:tlafml) => `(TLA.pred_implies_initial [tlafml| $f1 ] [tlafml| $f2 ])
+  | `(|-tla[0]- $f1:tlafml) => `(TLA.valid_initial [tlafml| $f1 ])
   | `($f1:tlafml =tla= $f2:tlafml) => `([tlafml| $f1 ] = [tlafml| $f2 ])
   | `($e:term |=tla[$i:term]= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e $i)
   | `($e:term |=tla= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e 0)
@@ -354,8 +359,16 @@ attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
   | `($_ $stx1 $stx2) => do `(($(← TLA.syntax_term_to_tlafml stx1)) |-tla- ($(← TLA.syntax_term_to_tlafml stx2)))
   | _ => throw ()
 
+@[app_unexpander TLA.pred_implies_initial] def TLA.unexpand_pred_implies_initial : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx1 $stx2) => do `(($(← TLA.syntax_term_to_tlafml stx1)) |-tla[0]- ($(← TLA.syntax_term_to_tlafml stx2)))
+  | _ => throw ()
+
 @[app_unexpander TLA.valid] def TLA.unexpand_valid : Lean.PrettyPrinter.Unexpander
   | `($_ $stx) => do `(|-tla- ($(← TLA.syntax_term_to_tlafml stx)))
+  | _ => throw ()
+
+@[app_unexpander TLA.valid_initial] def TLA.unexpand_valid_initial : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx) => do `(|-tla[0]- ($(← TLA.syntax_term_to_tlafml stx)))
   | _ => throw ()
 
 @[app_unexpander TLA.exec.satisfies] def TLA.unexpand_satisfies : Lean.PrettyPrinter.Unexpander
