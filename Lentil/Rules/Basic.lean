@@ -124,10 +124,17 @@ theorem later_true :
   letI lhs : pred σ := [tlafml| ◯ ⊤]
   ((lhs)) =tla= (⊤) := by funext e i ; tunfold_simp'
 
+theorem later_false :
+  letI lhs : pred σ := [tlafml| ◯ ⊥]
+  ((lhs)) =tla= (⊥) := by funext e i ; tunfold_simp'
+
 theorem always_intro : (|-tla- (p)) = (|-tla- (□ p)) := by
   tunfold_simp ; constructor
   · aesop
   · intro h e i ; exact h e i 0
+
+theorem later_not : (◯ ¬ p) =tla= (¬ ◯ p) := by
+  funext e i ; tunfold_simp
 
 theorem later_always_comm : (◯ □ p) =tla= (□ ◯ p) := by
   funext e i ; tunfold_simp
@@ -361,6 +368,9 @@ theorem later_and : (◯ (p ∧ q)) =tla= (◯ p ∧ ◯ q) := by
   funext e i ; tunfold_simp
 
 theorem later_or : (◯ (p ∨ q)) =tla= (◯ p ∨ ◯ q) := by
+  funext e i ; tunfold_simp
+
+theorem later_implies : (◯ (p → q)) =tla= (◯ p → ◯ q) := by
   funext e i ; tunfold_simp
 
 theorem always_and : (□ (p ∧ q)) =tla= (□ p ∧ □ q) := by

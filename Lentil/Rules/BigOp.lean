@@ -55,6 +55,9 @@ theorem bigwedge_inner_and_split : (⋀ x ∈ l, (f x) ∧ (g x)) =tla= ((⋀ x 
 theorem always_bigwedge : (□ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, □ (f x)) := by
   (repeat rw [bigwedge_forall_list]) ; funext e i ; tunfold_simp ; aesop
 
+theorem later_bigwedge : (◯ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, ◯ (f x)) := by
+  (repeat rw [bigwedge_forall_list]) ; funext e i ; tunfold_simp
+
 theorem eventually_always_bigwedge_distrib : (◇ □ ⋀ x ∈ l, (f x)) =tla= (⋀ x ∈ l, ◇ □ (f x)) := by
   induction l with
   | nil => funext e i ; tunfold_simp
@@ -84,6 +87,9 @@ theorem bigvee_exists_fintype_list : (⋁ x ∈ l, (f x)) =tla= (∃ x : Fin l.l
 theorem bigvee_and_distrib (p : pred α) : (p ∧ ⋁ x ∈ l, (f x)) =tla= (⋁ x ∈ l, p ∧ (f x)) := by
   repeat rw [bigvee_exists_list]
   funext e i ; tunfold_simp ; aesop
+
+theorem later_bigvee : (◯ ⋁ x ∈ l, (f x)) =tla= (⋁ x ∈ l, ◯ (f x)) := by
+  (repeat rw [bigvee_exists_list]) ; funext e i ; tunfold_simp
 
 end bigvee
 
