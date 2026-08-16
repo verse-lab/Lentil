@@ -165,18 +165,6 @@ def alwaysPrefix (p : pred σ) : Nat → pred σ
 theorem alwaysPrefix_succ (p : pred σ) (n : Nat) :
     alwaysPrefix p (n + 1) = tla_and p (later (alwaysPrefix p n)) := rfl
 
-/-- An `always` assumption can be weakened to any finite prefix. -/
-theorem always_weaken_n (n : Nat) :
-    (□ p) |-tla- (alwaysPrefix p n) := by
-  induction n with
-  | zero => apply always_weaken
-  | succ n ih =>
-    rw [alwaysPrefix, always_unroll]
-    generalize alwaysPrefix p n = x at *
-    generalize always p = y at *
-    tunfold_simp
-    grind
-
 theorem always_weaken_to_eventually : □ p |-tla- ◇ p := by
   tunfold_simp ; intro e i h ; exists 0 ; apply h
 
@@ -252,6 +240,18 @@ theorem always_unroll : □ p =tla= (p ∧ ◯ □ p) := by
 theorem eventually_unroll : ◇ p =tla= (p ∨ ◇ ◯ p) := by
   apply dual_lemma ; simp [not_eventually, not_or, ← later_not, ← later_always_comm]
   apply always_unroll
+
+/-- An `always` assumption can be weakened to any finite prefix. -/
+theorem always_weaken_n (n : Nat) :
+    (□ p) |-tla- (alwaysPrefix p n) := by
+  induction n with
+  | zero => apply always_weaken
+  | succ n ih =>
+    rw [alwaysPrefix, always_unroll]
+    generalize alwaysPrefix p n = x at *
+    generalize always p = y at *
+    tunfold_simp
+    grind
 
 end one
 

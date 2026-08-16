@@ -13,7 +13,7 @@ variable {σ : Type u} (a p q : pred σ)
 example (lem : (a) |-tla- (⊥)) : (a) |-tla- (q) := by
   tstart ha
   texfalso
-  tcheck_goal Entails [⟨"ha", a⟩] tla_false
+  guard_target =ₛ Entails [⟨"ha", a⟩] tla_false
   exact lem
 
 -- A `⊥` hypothesis closes any goal.

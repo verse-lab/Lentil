@@ -46,7 +46,7 @@ trace: σ : Type u
 p q r : pred σ
 a : action σ
 h : (𝒲ℱ a) |-tla- (r)
-⊢ 
+⊢ ⏎
   hwf : 𝒲ℱ a
   |-tla- r
 -/
@@ -97,14 +97,14 @@ example (h : (p ∧ q) |-tla- (r)) :
     (◯ p ∧ ◯ q) |-tla- (◯ r) := by
   tstart hp hq
   tstep
-  tcheck_goal Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
 example (h : (□ p ∧ □ q) |-tla- (r)) :
     (□ p ∧ □ q) |-tla- (◯ r) := by
   tstart hp hq
   tstep
-  tcheck_goal Entails
+  guard_target =ₛ Entails
     [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", [tlafml| □ q]⟩] r
   exact h
 
@@ -112,21 +112,21 @@ example (s : pred σ) (h : (□ q ∧ p ∧ r) |-tla- (s)) :
     (◯ p ∧ □ q ∧ ◯ r) |-tla- (◯ s) := by
   tstart hp hq hr
   tstep
-  tcheck_goal Entails
+  guard_target =ₛ Entails
     [⟨"hq", [tlafml| □ q]⟩, ⟨"hp", p⟩, ⟨"hr", r⟩] s
   exact h
 
 example (h : (⊤) |-tla- (p)) : (⊤) |-tla- (◯ p) := by
   tstart
   tstep
-  tcheck_goal Entails [] p
+  guard_target =ₛ Entails [] p
   exact h
 
 example (h : (□ p ∧ q) |-tla- (r)) :
     (wrappedAlways p ∧ wrappedLater q) |-tla- (wrappedLater r) := by
   tstart hp hq
   tstep
-  tcheck_goal Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩] r
+  guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩, ⟨"hq", q⟩] r
   exact h
 
 /--
