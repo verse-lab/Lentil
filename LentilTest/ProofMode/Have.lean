@@ -114,11 +114,24 @@ example (lem : ∀ {p : pred σ} (q : pred σ), (p) |-tla- (q → p)) :
 -- Missing trailing theorem arguments are inserted as ordinary Lean holes.
 example : (⊥) |-tla- (a ↝ b) := by
   tstart h
-  thave' hw := wf1 a b
+  thave' hw := @wf1 _ a b
   on_goal 2=> exact fun _ _ => False
   on_goal 2=> exact fun _ _ => False
   tapply hw
   tcontradiction
+
+-- Formula parameters that are determined by a temporal argument stay implicit.
+example : (□ a) |-tla- (a) := by
+  tstart hall
+  thave ha := always_weaken hall
+  tapply ha
+
+-- Intermediate formulas are inferred from the temporal theorem arguments.
+example (hab : |-tla- (a ↝ b)) (hbc : |-tla- (b ↝ c)) :
+    (⊤) |-tla- (a ↝ c) := by
+  tstart
+  thave hac := leads_to_trans hab hbc
+  tapply hac
 
 -- Add a residual implication from a `pred_implies` theorem.
 example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by

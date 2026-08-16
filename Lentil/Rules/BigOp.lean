@@ -93,9 +93,16 @@ theorem later_bigvee : (◯ ⋁ x ∈ l, (f x)) =tla= (⋁ x ∈ l, ◯ (f x)) :
 
 end bigvee
 
-theorem bigwedge_bigvee_match : ((⋀ x ∈ l, (f x)) ∧ (⋁ x ∈ l, (g x))) |-tla- (⋁ x ∈ l, (f x) ∧ (g x)) := by
+end bigop
+
+section bigop_rule
+
+variable {α : Type u} {β : Type v}
+
+theorem bigwedge_bigvee_match {f g : β → pred α} (l : List β) :
+    ((⋀ x ∈ l, (f x)) ∧ (⋁ x ∈ l, (g x))) |-tla- (⋁ x ∈ l, (f x) ∧ (g x)) := by
   rw [bigwedge_forall_list, bigvee_exists_list, bigvee_exists_list] ; tunfold_simp ; aesop
 
-end bigop
+end bigop_rule
 
 end TLA

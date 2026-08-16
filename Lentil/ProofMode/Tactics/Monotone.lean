@@ -38,11 +38,11 @@ variable {hyps : List (NamedPred σ)} {goal : pred σ}
 
 private theorem Entails_monotone_aux (f : pred σ → pred σ)
   (h : ∀ ps, repeatedAnd (ps.map f) = f (repeatedAnd ps))
-  (hmono : ∀ (p q : pred σ), (p) |-tla- (q) → ((f p)) |-tla- ((f q))) :
+  (hmono : ∀ {p q : pred σ}, (p) |-tla- (q) → ((f p)) |-tla- ((f q))) :
   Entails hyps goal → Entails (mapHypPreds f hyps) (f goal) := by
   unfold Entails ; intro hh
   rw [mapHypPreds_preds, h]
-  exact hmono _ _ hh
+  exact hmono hh
 
 theorem Entails_later_monotone :
   Entails hyps goal → Entails (mapHypPreds TLA.later hyps) (TLA.later goal) :=
@@ -62,14 +62,14 @@ theorem Entails_eventually_monotone_single {name : String} {p : pred σ}
   (h : hyps = [⟨name, p⟩]) :
   Entails hyps goal →
   Entails (mapHypPreds TLA.eventually hyps) (TLA.eventually goal) := by
-  subst hyps ; exact TLA.eventually_monotone p goal
+  subst hyps ; exact TLA.eventually_monotone (p := p) (q := goal)
 
 theorem Entails_always_eventually_monotone_single {name : String} {p : pred σ}
   (h : hyps = [⟨name, p⟩]) :
   Entails hyps goal →
   Entails (mapHypPreds (fun p => TLA.always (TLA.eventually p)) hyps)
     (TLA.always (TLA.eventually goal)) := by
-  subst hyps ; exact TLA.always_eventually_monotone p goal
+  subst hyps ; exact TLA.always_eventually_monotone (p := p) (q := goal)
 
 end
 

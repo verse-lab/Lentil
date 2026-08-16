@@ -75,7 +75,7 @@ section structural
 
 theorem impl_intro (p q : pred σ) : |-tla- (p → q) = (p) |-tla- (q) := rfl
 
-theorem impl_decouple (p q : pred σ) : |-tla- (p → q) → |-tla- (p) → |-tla- (q) := by
+theorem impl_decouple {p q : pred σ} : |-tla- (p → q) → |-tla- (p) → |-tla- (q) := by
   tunfold_simp ; aesop
 
 theorem and_pred_implies_split (Γ p q : pred σ) : (Γ) |-tla- (p ∧ q) = ((Γ) |-tla- (p) ∧ (Γ) |-tla- (q)) := by
@@ -90,15 +90,17 @@ theorem and_valid_split (p q : pred σ) : |-tla- (p ∧ q) = (|-tla- (p) ∧ |-t
 theorem impl_intro_add_r (p q r : pred σ) : (r) |-tla- (p → q) = (r ∧ p) |-tla- (q) := by
   tunfold_simp
 
-theorem impl_drop_hyp (p q : pred σ) : |-tla- (q) → (p) |-tla- (q) := by
+theorem impl_drop_hyp (p : pred σ) {q : pred σ} : |-tla- (q) → (p) |-tla- (q) := by
   tunfold_simp ; aesop
 
-theorem impl_drop_hyp_one_r (p q r : pred σ) : (p) |-tla- (q) → (p ∧ r) |-tla- (q) := by
+theorem impl_drop_hyp_one_r {p q : pred σ} (r : pred σ) : (p) |-tla- (q) → (p ∧ r) |-tla- (q) := by
   tunfold_simp ; aesop
 
 end structural
 
 section one
+
+section one_explicit
 
 variable (p : pred σ)
 
@@ -153,26 +155,23 @@ theorem always_induction : □ p =tla= (p ∧ □ (p → ◯ p)) := by
     | zero => simpa using h0
     | succ k ih => simpa [Nat.add_assoc] using hs k ih
 
-theorem always_weaken : □ p |-tla- (p) := by
+end one_explicit
+
+theorem always_weaken {p : pred σ} : □ p |-tla- (p) := by
   tunfold_simp ; intro e i h ; simpa using h 0
 
-/-- The finite prefix of `p` of depth `n`.  Depth zero observes `p` now;
-depth `n + 1` additionally observes one more shifted copy of `p`. -/
-def alwaysPrefix (p : pred σ) : Nat → pred σ
-  | 0 => p
-  | n + 1 => tla_and p (later (alwaysPrefix p n))
-
-theorem alwaysPrefix_succ (p : pred σ) (n : Nat) :
-    alwaysPrefix p (n + 1) = tla_and p (later (alwaysPrefix p n)) := rfl
-
-theorem always_weaken_to_eventually : □ p |-tla- ◇ p := by
+theorem always_weaken_to_eventually {p : pred σ} : □ p |-tla- ◇ p := by
   tunfold_simp ; intro e i h ; exists 0 ; apply h
 
-theorem later_weaken_to_eventually : ◯ p |-tla- ◇ p := by
+theorem later_weaken_to_eventually {p : pred σ} : ◯ p |-tla- ◇ p := by
   tunfold_simp ; intro e i h ; exists 1
 
-theorem now_weaken_to_eventually : (p) |-tla- ◇ p := by
+theorem now_weaken_to_eventually {p : pred σ} : (p) |-tla- ◇ p := by
   tunfold_simp ; intro e i h ; exists 0
+
+section one_modal_rewrites
+
+variable (p : pred σ)
 
 theorem eventually_as_until : (◇ p) =tla= (⊤ 𝑈 p) := by
   funext e i ; tunfold_simp
@@ -241,8 +240,19 @@ theorem eventually_unroll : ◇ p =tla= (p ∨ ◇ ◯ p) := by
   apply dual_lemma ; simp [not_eventually, not_or, ← later_not, ← later_always_comm]
   apply always_unroll
 
+end one_modal_rewrites
+
+/-- The finite prefix of `p` of depth `n`.  Depth zero observes `p` now;
+depth `n + 1` additionally observes one more shifted copy of `p`. -/
+def alwaysPrefix (p : pred σ) : Nat → pred σ
+  | 0 => p
+  | n + 1 => tla_and p (later (alwaysPrefix p n))
+
+theorem alwaysPrefix_succ (p : pred σ) (n : Nat) :
+    alwaysPrefix p (n + 1) = tla_and p (later (alwaysPrefix p n)) := rfl
+
 /-- An `always` assumption can be weakened to any finite prefix. -/
-theorem always_weaken_n (n : Nat) :
+theorem always_weaken_n {p : pred σ} (n : Nat) :
     (□ p) |-tla- (alwaysPrefix p n) := by
   induction n with
   | zero => apply always_weaken
@@ -261,6 +271,8 @@ attribute [tlasimp] not_not not_always not_eventually always_idem eventually_ide
 
 section two
 
+section two_structural
+
 variable (p q : pred σ)
 
 theorem contraposition_for_pred_implies : (p) |-tla- (q) = ((¬ q) |-tla- ¬ p) := by
@@ -269,13 +281,19 @@ theorem contraposition_for_pred_implies : (p) |-tla- (q) = ((¬ q) |-tla- ¬ p) 
 theorem proof_by_contra : (p) |-tla- (q) = (¬ q ∧ p) |-tla- (⊥) := by
   rw [contraposition_for_pred_implies] ; tunfold_simp
 
-theorem modus_ponens : (p ∧ (p → q)) |-tla- (q) := by
+end two_structural
+
+theorem modus_ponens {p q : pred σ} : (p ∧ (p → q)) |-tla- (q) := by
   tunfold_simp ; aesop
 
-theorem modus_ponens_with_premise : (p ∧ (p → q)) |-tla- (p ∧ q) := by
+theorem modus_ponens_with_premise {p q : pred σ} : (p ∧ (p → q)) |-tla- (p ∧ q) := by
   tunfold_simp ; aesop
 
 -- the following: about modal operators
+
+section two_modal_rewrites
+
+variable (p q : pred σ)
 
 theorem always_pred_implies : ((□ p) |-tla- (q)) = ((□ p) |-tla- (□ q)) := by
   tunfold_simp ; constructor
@@ -286,10 +304,12 @@ theorem always_pred_implies : ((□ p) |-tla- (q)) = ((□ p) |-tla- (□ q)) :=
   · intro h e i hp
     simpa using h e i hp 0
 
-theorem always_and_eventually : (◇ p ∧ □ q) |-tla- (◇ (p ∧ q)) := by
+end two_modal_rewrites
+
+theorem always_and_eventually {p q : pred σ} : (◇ p ∧ □ q) |-tla- (◇ (p ∧ q)) := by
   tunfold_simp ; aesop
 
-theorem always_and_eventually' : (◇ p ∧ □ q) |-tla- (◇ (p ∧ □ q)) := by
+theorem always_and_eventually' {p q : pred σ} : (◇ p ∧ □ q) |-tla- (◇ (p ∧ □ q)) := by
   tunfold_simp
   intro e i k hp hq
   exists k
@@ -297,31 +317,31 @@ theorem always_and_eventually' : (◇ p ∧ □ q) |-tla- (◇ (p ∧ □ q)) :=
   intro l
   simpa [Nat.add_assoc] using hq (k + l)
 
-theorem later_monotone : (p) |-tla- (q) → ◯ p |-tla- ◯ q := by
+theorem later_monotone {p q : pred σ} : (p) |-tla- (q) → ◯ p |-tla- ◯ q := by
   tunfold_simp ; aesop
 
-theorem later_monotone' : |-tla- ((p ⇒ q) → (◯ p → ◯ q)) := by
+theorem later_monotone' {p q : pred σ} : |-tla- ((p ⇒ q) → (◯ p → ◯ q)) := by
   tunfold_simp ; aesop
 
-theorem always_monotone : (p) |-tla- (q) → □ p |-tla- □ q := by
+theorem always_monotone {p q : pred σ} : (p) |-tla- (q) → □ p |-tla- □ q := by
   tunfold_simp ; aesop
 
-theorem always_monotone' : |-tla- ((p ⇒ q) → (□ p → □ q)) := by
+theorem always_monotone' {p q : pred σ} : |-tla- ((p ⇒ q) → (□ p → □ q)) := by
   tunfold_simp ; aesop
 
-theorem eventually_monotone : (p) |-tla- (q) → ◇ p |-tla- ◇ q := by
+theorem eventually_monotone {p q : pred σ} : (p) |-tla- (q) → ◇ p |-tla- ◇ q := by
   tunfold_simp ; aesop
 
-theorem eventually_monotone' : |-tla- ((p ⇒ q) → (◇ p → ◇ q)) := by
+theorem eventually_monotone' {p q : pred σ} : |-tla- ((p ⇒ q) → (◇ p → ◇ q)) := by
   tunfold_simp ; aesop
 
-theorem always_eventually_monotone : (p) |-tla- (q) → (□ ◇ p) |-tla- (□ ◇ q) := by
+theorem always_eventually_monotone {p q : pred σ} : (p) |-tla- (q) → (□ ◇ p) |-tla- (□ ◇ q) := by
   intro h ; apply always_monotone ; apply eventually_monotone ; assumption
 
-theorem eventually_always_monotone : (p) |-tla- (q) → (◇ □ p) |-tla- (◇ □ q) := by
+theorem eventually_always_monotone {p q : pred σ} : (p) |-tla- (q) → (◇ □ p) |-tla- (◇ □ q) := by
   intro h ; apply eventually_monotone ; apply always_monotone ; assumption
 
-theorem until_induction : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
+theorem until_induction {p q : pred σ} : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tla- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
   tunfold_simp ; intro e i hp h
   by_cases h' : ∃ n, q e (i + n)
   · rcases h' with ⟨n', h'⟩
@@ -367,7 +387,11 @@ end two
 
 section two_with_quantifiers
 
-variable {α : Sort v} (p : α → pred σ)
+variable {α : Sort v}
+
+section quantifier_rewrites
+
+variable (p : α → pred σ)
 
 theorem later_forall : (◯ ∀ x, (p x)) =tla= (∀ x, ◯ (p x)) := by
   funext e i ; tunfold_simp
@@ -381,18 +405,22 @@ theorem always_forall : (□ ∀ x, (p x)) =tla= (∀ x, □ (p x)) := by
 theorem eventually_exists : (◇ ∃ x, (p x)) =tla= (∃ x, ◇ (p x)) := by
   funext e i ; tunfold_simp ; aesop
 
+end quantifier_rewrites
+
 /-- uni-direction, moving `∃` into `□` -/
-theorem exists_into_always : (∃ x, □ (p x)) |-tla- □ (∃ x, (p x)) := by
+theorem exists_into_always {p : α → pred σ} : (∃ x, □ (p x)) |-tla- □ (∃ x, (p x)) := by
   tunfold_simp ; aesop
 
 /-- uni-direction, moving `◇` into `∀` -/
 @[tladual]
-theorem eventually_into_forall : (◇ ∀ x, (p x)) |-tla- (∀ x, ◇ (p x)) := by
+theorem eventually_into_forall {p : α → pred σ} : (◇ ∀ x, (p x)) |-tla- (∀ x, ◇ (p x)) := by
   tunfold_simp ; aesop
 
 end two_with_quantifiers
 
 section two'
+
+section binary_rewrites
 
 variable (p q : pred σ)
 
@@ -414,14 +442,20 @@ theorem always_and : (□ (p ∧ q)) =tla= (□ p ∧ □ q) := by
 theorem eventually_or : (◇ (p ∨ q)) =tla= (◇ p ∨ ◇ q) := by
   funext e i ; tunfold_simp ; aesop
 
+end binary_rewrites
+
 /-- uni-direction, merging the `∨` outside `◇` in -/
-theorem always_or_merge : (□ p ∨ □ q) |-tla- □ (p ∨ q) := by
+theorem always_or_merge {p q : pred σ} : (□ p ∨ □ q) |-tla- □ (p ∨ q) := by
   tunfold_simp ; aesop
 
 /-- uni-direction, splitting the `∧` inside `◇` -/
 @[tladual]
-theorem eventually_and_split : (◇ (p ∧ q)) |-tla- (◇ p ∧ ◇ q) := by
+theorem eventually_and_split {p q : pred σ} : (◇ (p ∧ q)) |-tla- (◇ p ∧ ◇ q) := by
   tunfold_simp ; aesop
+
+section binary_distrib_rewrites
+
+variable (p q : pred σ)
 
 -- NOTE: this __DOES NOT__ apply if we change `∧` into `∀`, unless, e.g. `α` is finite!
 theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧ ◇ □ q) := by
@@ -437,6 +471,8 @@ theorem eventually_always_and_distrib : (◇ □ (p ∧ q)) =tla= (◇ □ p ∧
 @[tladual]
 theorem always_eventually_or_distrib : (□ ◇ (p ∨ q)) =tla= (□ ◇ p ∨ □ ◇ q) := by
   apply dual_lemma ; simp [tlasimp, not_or, eventually_always_and_distrib]
+
+end binary_distrib_rewrites
 
 end two'
 

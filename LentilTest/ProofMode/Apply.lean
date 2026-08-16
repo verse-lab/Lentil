@@ -113,6 +113,13 @@ example (lem1 : |-tla- (a ∨ b)) (lem2 : |-tla- (a → c)) :
   · tapply lem2
   · tassumption
 
+-- Predicate parameters of inference rules are inferred from the target and
+-- the temporal premises created by backward application.
+example : (a ∧ (a → b)) |-tla- (b) := by
+  tstart ha hab
+  tapply TLA.modus_ponens
+  tsplit_ands <;> tassumption
+
 -- Applying `wf1` with its action arguments supplied should still infer the
 -- state predicates from the current goal.
 example (next act : action σ) : (⊥) |-tla- (p ↝ q) := by
@@ -122,23 +129,13 @@ example (next act : action σ) : (⊥) |-tla- (p ↝ q) := by
 
 example : (⊥) |-tla- (a ↝ b) := by
   tstart h
-  tapply (wf1 _ _ _ _)
+  tapply (wf1 _ _)
   on_goal 2=> exact fun _ _ => False
   on_goal 2=> exact fun _ _ => False
   tcontradiction
 
--- Regression for applying `wf1` with formula arguments written without
--- explicit `[tlafml| ... ]` wrappers, while omitting the remaining action
--- arguments that would otherwise be written as `_`.
-example : (⊥) |-tla- (a ↝ b) := by
-  tstart h
-  tapply' wf1 a b
-  on_goal 2=> exact fun _ _ => False
-  on_goal 2=> exact fun _ _ => False
-  tcontradiction
-
--- The prime form may also omit all theorem arguments when unification from the
--- target can determine the formula parameters.
+-- The prime form infers the formula parameters from the target and may omit
+-- the explicit action arguments by inserting ordinary Lean holes.
 example : (⊥) |-tla- (a ↝ b) := by
   tstart h
   tapply' wf1

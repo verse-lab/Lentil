@@ -34,7 +34,7 @@ the paper "The Temporal Logic of Actions", the following version contains
 some changes to make it hopefully more practical.
 -/
 @[tla_derive]
-theorem wf1 (p q : pred σ) (next a : action σ) :
+theorem wf1 {p q : pred σ} (next a : action σ) :
   ((p ∧ ⟨next⟩ ⇒ ◯ p ∨ ◯ q) ∧
    (p ∧ ⟨next⟩ ∧ ⟨a⟩ ⇒ ◯ q) ∧
    (p ⇒ Enabled a ∨ q) ∧
@@ -68,7 +68,7 @@ theorem wf1 (p q : pred σ) (next a : action σ) :
       simpa [Nat.add_assoc] using haq (hnext (k + k1)) (by simpa [Nat.add_assoc] using hq2)
 
 /-- A (relatively) original presentation of the `wf1` rule. -/
-theorem wf1_original (p q : pred σ) (next a : action σ) :
+theorem wf1_original {p q : pred σ} (next a : action σ) :
   ((p ∧ ⟨next⟩ ⇒ ◯ (p ∨ q)) ∧
    ((p ∧ ⟨next⟩ ∧ ⟨a⟩ ⇒ ◯ q)) ∧
    ((p ⇒ Enabled a))) |-tla- (□ ⟨next⟩ ∧ 𝒲ℱ a → p ↝ q) := by

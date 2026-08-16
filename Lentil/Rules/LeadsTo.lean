@@ -22,14 +22,14 @@ theorem leads_to_pure_pred_and (Γ p q : pred σ) (φ : Prop) :
   tunfold_simp ; aesop
 
 @[tla_derive]
-theorem leads_to_conseq (p p' q q': pred σ) :
+theorem leads_to_conseq {p p' q q' : pred σ} :
   |-tla- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) → (p' ↝ q')) := by
   tunfold_simp ; intro e i h1 h2 h k hp'
   specialize h _ (h1 _ hp') ; rcases h with ⟨k1, h⟩
   specialize h2 (k + k1) ; exists k1 ; grind
 
 @[tla_derive]
-theorem leads_to_trans (p q r : pred σ) :
+theorem leads_to_trans {p q r : pred σ} :
   |-tla- ((p ↝ q) → (q ↝ r) → (p ↝ r)) := by
   tunfold_simp ; intro e i h1 h2 k hp
   rcases h1 k hp with ⟨k1, hq⟩
@@ -37,7 +37,7 @@ theorem leads_to_trans (p q r : pred σ) :
   exists k1 + k2
   simpa [Nat.add_assoc] using hr
 
-theorem leads_to_combine (Γ Γ' p1 q1 p2 q2 : pred σ)
+theorem leads_to_combine {Γ Γ' p1 q1 p2 q2 : pred σ}
   (h1 : (□ Γ ∧ Γ') |-tla- (p1 ↝ q1))
   (h2 : (□ Γ ∧ Γ') |-tla- (p2 ↝ q2))
   (h1' : (q1 ∧ □ Γ) |-tla- □ q1) (h2' : (q2 ∧ □ Γ) |-tla- □ q2) :
@@ -57,7 +57,7 @@ theorem leads_to_combine (Γ Γ' p1 q1 p2 q2 : pred σ)
     simpa [heq] using hq2'
 
 @[tla_derive]
-theorem leads_to_strengthen_lhs (p q inv : pred σ) :
+theorem leads_to_strengthen_lhs {p q inv : pred σ} :
   |-tla- (□ inv → (p ∧ inv ↝ q) → (p ↝ q)) := by
   tunfold_simp ; aesop
 
