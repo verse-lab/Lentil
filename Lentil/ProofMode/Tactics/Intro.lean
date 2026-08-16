@@ -43,9 +43,9 @@ def tlaIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
         refine $(mkIdent ``Entails_pure_fact_intro).$(mkIdent `mp) ?_ ; $tac)
       return false
     else
-      let nameStr := match ← ident? name with
-        | some nm => toString nm.getId
-        | none => "h"
+      let nameStr ← match ← ident? name with
+        | some nm => pure <| toString nm.getId
+        | none => mkFreshInternalTemporalHypName
       evalTactic <| ← `(tactic|
         refine ($(mkIdent ``Entails_intro_temporal) ($(quote nameStr))).$(mkIdent `mp) ?_)
       postDSimpAfterApplyingReflectionTheorem introTacDSimps

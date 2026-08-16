@@ -102,10 +102,7 @@ private def rcasesTacDSimps : Array Name :=
 private def nameStrForPat (pat : TSyntax `rcasesPat) : TacticM String := do
   match pat with
   | `(rcasesPat| $name:ident) => return toString name.getId
-  | _ =>
-    let freshName ← mkFreshUserName `h
-    -- Use something that cannot be a valid identifier to avoid accidental collision
-    return "-" ++ toString freshName
+  | _ => mkFreshInternalTemporalHypName
 
 /-- Unwrap a `rcasesPatLo` to a single `rcasesPat`, rejecting `: ty` ascriptions.
     A genuine `|` alternation is re-wrapped as a parenthesized `rcasesPat`, so it
@@ -179,7 +176,7 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
   -- FIXME: This handling also appears in the implementation of `tspecialize`,
   -- so maybe reuse it?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "trcases: failed to read the hypotheses from the goal"
-  let (currentHypStr, pred) ← findByTemporalHypLoc hyps currentHyp "trcases" "the goal's Entails list"
+  let (currentHypIdx, currentHypStr, pred) ← findIdxByTemporalHypLoc hyps currentHyp "trcases" "the goal's Entails list"
   match pat with
   | `(rcasesPat| $name:ident) =>
     let nameStr := toString name.getId
@@ -192,9 +189,9 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
     -- A better design should be to only support `-` at the tail positions.
     pure ()
   | `(rcasesPat| -) =>
-    -- Clear the targeted hypothesis. Works at any nesting depth because the
-    -- name was already resolved to `currentHypStr` above.
-    tlaClearByName [currentHypStr]
+    -- Clear the exact occurrence resolved above, even if multiple hypotheses
+    -- share the same user-facing name.
+    tlaClearByIdx currentHypIdx
   | `(rcasesPat| ⟨ $pats,* ⟩) =>
     let (pat1, pat2) ← splitBinaryRightAssoc pats.getElems
     match_expr pred with
@@ -319,7 +316,8 @@ elab_rules : tactic
     match ← temporalHypLocOfBareTerm? hyps tm with
     | some loc => tlaRcasesCore loc pat
     | none =>
-      let idx ← tlaHaveTerm default tm
+      let internalName ← mkFreshInternalTemporalHypName
+      let idx ← tlaHaveTerm internalName tm
       tlaRcasesCore (.byIdx idx) pat
 
 /--

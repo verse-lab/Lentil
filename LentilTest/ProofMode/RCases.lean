@@ -320,4 +320,29 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tclear ha0
   trcases noSuchHyp with ⟨_, _⟩
 
+-- Clearing a numeric location removes only that occurrence when names collide.
+example (lem : (a) |-tla- (b)) : (a) |-tla- (a) := by
+  tstart h
+  thave h := lem h
+  trcases 1 with -
+  guard_target =ₛ Entails [⟨"h", a⟩] a
+  tassumption
+
+-- A name location also resolves to one exact occurrence rather than clearing
+-- every hypothesis with that name.
+example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
+  tstart h
+  thave h := lem h
+  trcases h with -
+  guard_target =ₛ Entails [⟨"h", b⟩] b
+  tassumption
+
+-- Anonymous `tobtain` hypotheses receive distinct internal names, so clearing
+-- the newer one does not discard an older wildcard hypothesis.
+example (lemA : |-tla- (a)) (lemB : |-tla- (b)) : (⊤) |-tla- (a) := by
+  tstart
+  tobtain _ := lemA
+  tobtain - := lemB
+  tassumption
+
 end TLA.ProofMode.Test.RCases

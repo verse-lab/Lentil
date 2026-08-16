@@ -347,10 +347,11 @@ elab_rules : tactic
     let nameStr := toString h.getId
     let some (_, hyps) ← recognizeEntailsHypsFromGoal
       | throwError "treplace: failed to read the hypotheses from the goal"
-    unless hyps.any (fun ⟨name, _⟩ => name == nameStr) do
-      throwError "treplace: hypothesis '{nameStr}' not found in the goal's Entails list"
-    let idx ← tlaHaveTerm "" t
-    evalTactic <| ← `(tactic| tclear $h:ident)
+    let some targetIdx := hyps.findIdx? fun ⟨name, _⟩ => name == nameStr
+      | throwError "treplace: hypothesis '{nameStr}' not found in the goal's Entails list"
+    let internalName ← mkFreshInternalTemporalHypName
+    let idx ← tlaHaveTerm internalName t
+    tlaClearByIdx targetIdx
     tlaRename (.byIdx <| idx - 1) nameStr
 
 end TLA.ProofMode

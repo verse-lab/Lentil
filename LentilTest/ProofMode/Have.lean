@@ -253,4 +253,12 @@ example (q : (i : Nat) → i < n → pred σ) :
   intro _ _
   trivial
 
+-- Replacing one of two identically named hypotheses preserves the other one.
+example (lemB : (a) |-tla- (b)) (lemC : (a) |-tla- (c)) : (a) |-tla- (b) := by
+  tstart h
+  thave h := lemB h
+  treplace h := lemC h
+  guard_target =ₛ Entails [⟨"h", b⟩, ⟨"h", c⟩] b
+  tassumption
+
 end TLA.ProofMode.Test.Have

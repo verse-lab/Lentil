@@ -90,9 +90,10 @@ example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
 
 -- `trintro -` introduces a temporal antecedent and immediately clears it.
 example : (p) |-tla- (q → p) := by
-  tstart hp
+  -- The discarded antecedent's internal name must not collide with this `h`.
+  tstart h
   trintro -
-  guard_target =ₛ Entails [⟨"hp", p⟩] p
+  guard_target =ₛ Entails [⟨"h", p⟩] p
   intro _ hp ; exact hp
 
 end TLA.ProofMode.Test.RIntro

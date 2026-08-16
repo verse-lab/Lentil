@@ -16,6 +16,13 @@ theorem Entails_clear {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ
   letI hyps' := hyps.filter fun h => !toClear.contains h.name
   Entails hyps' goal → Entails hyps goal := Entails_drop_hyps _ (by grind)
 
+-- NOTE: For now, this one is only for internal use by other tactics like `trcases`
+theorem Entails_clear_by_idx {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
+  (idx : Nat) :
+  letI hyps' := hyps.eraseIdx idx
+  Entails hyps' goal → Entails hyps goal :=
+    Entails_drop_hyps _ <| List.map_subset _ (List.eraseIdx_sublist hyps idx).subset
+
 theorem Entails_clear_except {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
   (toKeep : List String) :
   letI hyps' := hyps.filter fun h => toKeep.contains h.name
@@ -45,10 +52,14 @@ leaves only `hq : q` in the proof-mode context.
 syntax (name := tlaClearTac) "tclear" (ppSpace colGt ident)+ : tactic
 
 private def clearTacDSimps := #[``List.filter, ``List.contains, ``List.elem, ``or, ``and, ``not,
-  ``String.reduceBEq, ``String.reduceBNe, ``Bool.false_or, ``Bool.or_false]
+  ``List.eraseIdx, ``String.reduceBEq, ``String.reduceBNe, ``Bool.false_or, ``Bool.or_false]
 
 def tlaClearByName (name : List String) : TacticM Unit := do
   evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear) ($(quote name)) ?_)
+  postDSimpAfterApplyingReflectionTheorem clearTacDSimps
+
+def tlaClearByIdx (idx : Nat) : TacticM Unit := do
+  evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear_by_idx) ($(quote idx)) ?_)
   postDSimpAfterApplyingReflectionTheorem clearTacDSimps
 
 elab_rules : tactic

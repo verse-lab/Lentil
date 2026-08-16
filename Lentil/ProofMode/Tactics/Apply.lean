@@ -129,10 +129,12 @@ elab_rules : tactic
       pruneSolvedGoals)
     <|>
     (do
-      let idx ← tlaHaveTerm default /- the name does not matter here -/ tm
+      let internalName ← mkFreshInternalTemporalHypName
+      let idx ← tlaHaveTerm internalName tm
       applyIntroducedHypByIdx idx)
   | `(tactic| tapply' $[@%$explicit?]? $head:ident $[$args:tlaMixedArg]*) => withMainContext do
-    let idx ← tlaHavePrimeTerm default /- the name does not matter here -/ head explicit?.isSome args
+    let internalName ← mkFreshInternalTemporalHypName
+    let idx ← tlaHavePrimeTerm internalName head explicit?.isSome args
     applyIntroducedHypByIdx idx
 
 end TLA.ProofMode

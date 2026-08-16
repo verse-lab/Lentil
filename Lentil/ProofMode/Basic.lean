@@ -131,6 +131,11 @@ theorem modifyHypByName_spec {σ : Type u} (hyps : List (NamedPred σ)) (name : 
 
 open Lean Meta Elab Tactic
 
+/-- Generate a fresh name (*empirically, not guaranteed*) for a proof-mode
+hypothesis that is only used internally by tactics. -/
+def mkFreshInternalTemporalHypName (base : Name := `h) : TacticM String := do
+  return "-" ++ toString (← mkFreshUserName base)
+
 /-- Like `Expr.isStringLit`, but returns the string. -/
 def parseStringLit? : Expr → Option String
   | .lit (.strVal s) => some s
