@@ -81,9 +81,14 @@ theorem.
 
 private def haveTacDSimps : Array Name := #[``List.cons_append, ``List.nil_append]
 
-private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := do
+abbrev TheoremExprTransform := Expr → TacticM Expr
+
+private def elabTheoremTerm (tm : Term) : TacticM Expr := do
   let e ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize tm none
   Term.synthesizeSyntheticMVarsNoPostponing
+  instantiateMVars e
+
+private def addValidExprHyp (newHypName : String) (e : Expr) : TacticM Unit := do
   let ty ← inferType e >>= instantiateMVars
   -- To be safe, instantiate the theorem better
   let g ← getMainGoal
@@ -128,15 +133,25 @@ private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := 
   replaceMainGoal goals
   postDSimpAfterApplyingReflectionTheorem haveTacDSimps
 
-private def addTheoremPrefix (newHypName : String) (head : Term) (usedArgs : Array Term) (restArgs : List Term) : TacticM (List Term) := do
+private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := do
+  addValidExprHyp newHypName (← elabTheoremTerm tm)
+
+private def addValidTermHypWithTransform (newHypName : String) (tm : Term)
+    (transform? : Option TheoremExprTransform) : TacticM Unit := do
+  let e ← elabTheoremTerm tm
+  let e ← transform?.elim (pure e) (· e)
+  addValidExprHyp newHypName e
+
+private def addTheoremPrefix (newHypName : String) (head : Term) (usedArgs : Array Term)
+    (restArgs : List Term) (transform? : Option TheoremExprTransform := none) : TacticM (List Term) := do
   let candidate := Syntax.mkApp head usedArgs
   (do
-    addValidTermHyp newHypName candidate
+    addValidTermHypWithTransform newHypName candidate transform?
     return restArgs)
   <|>
   (do
     let arg :: args := restArgs | throwError "thave: failed to elaborate a TLA theorem head from {head}"
-    addTheoremPrefix newHypName head (usedArgs.push arg) args)
+    addTheoremPrefix newHypName head (usedArgs.push arg) args transform?)
 
 private def theoremArgCount (allBinders : Bool) (head : Ident) : TacticM Nat := do
   -- `head` is restricted to an identifier, so inspect its type directly.
@@ -159,10 +174,11 @@ where
       return args.countP fun arg =>
         lctx.findFVar? arg |>.elim false fun decl => allBinders || decl.binderInfo.isExplicit
 
-def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat := withMainContext do
+private def tlaHaveTermCore (newHypName : String) (tm : Term)
+    (transform? : Option TheoremExprTransform := none) : TacticM Nat := withMainContext do
   (do
     let some hypsLen ← goalHypsLength | throwError "thave: goal is not an Entails sequent"
-    addValidTermHyp newHypName tm
+    addValidTermHypWithTransform newHypName tm transform?
     return hypsLen)
   <|>
   (do
@@ -173,19 +189,47 @@ def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat := withMainConte
       | `(term| $f:term $args:term* ) => pure (f, args)
       | _ => pure (tm, #[])
     if let some oldHypName ← temporalHypNameOfBareTerm? hyps head then
+      if transform?.isSome then
+        throwError "thave: theorem transform cannot be used when the head is a proof-mode hypothesis"
       evalTactic <| ← `(tactic|
         refine $(mkIdent ``Entails_duplicate_one_hyp_by_name) ($(quote newHypName)) ($(quote oldHypName)) (by rfl) ?_)
       postDSimpAfterApplyingReflectionTheorem haveTacDSimps
       specializeByIdx idx args
       return idx
     else
-      let rest ← addTheoremPrefix newHypName head #[] args.toList
+      let rest ← addTheoremPrefix newHypName head #[] args.toList transform?
       specializeByIdx idx rest.toArray
       return idx)
 where
   specializeByIdx (idx : Nat) (args : Array (Term)) : TacticM Unit := do
     for arg in args do
       tlaSpecializeStep (.byIdx idx) arg
+
+def tlaHaveTerm (newHypName : String) (tm : Term) : TacticM Nat :=
+  tlaHaveTermCore newHypName tm
+
+def tlaHaveTermWithTransform (newHypName : String) (tm : Term)
+    (transform : TheoremExprTransform) : TacticM Nat :=
+  tlaHaveTermCore newHypName tm (some transform)
+
+def tlaReplaceTermCore (h : Ident) (tm : Term)
+    (transform? : Option TheoremExprTransform := none) : TacticM Unit := withMainContext do
+  let nameStr := toString h.getId
+  let some (_, hyps) ← recognizeEntailsHypsFromGoal
+    | throwError "treplace: failed to read the hypotheses from the goal"
+  let some targetIdx := hyps.findIdx? fun ⟨name, _⟩ => name == nameStr
+      | throwError "treplace: hypothesis '{nameStr}' not found in the goal's Entails list"
+  let internalName ← mkFreshInternalTemporalHypName
+  let idx ← tlaHaveTermCore internalName tm transform?
+  tlaClearByIdx targetIdx
+  tlaRename (.byIdx <| idx - 1) nameStr
+
+def tlaReplaceTerm (h : Ident) (tm : Term) : TacticM Unit :=
+  tlaReplaceTermCore h tm
+
+def tlaReplaceTermWithTransform (h : Ident) (tm : Term)
+    (transform : TheoremExprTransform) : TacticM Unit :=
+  tlaReplaceTermCore h tm (some transform)
 
 declare_syntax_cat tlaHaveClause
 syntax " : " tlafml " by " tacticSeq : tlaHaveClause
@@ -222,18 +266,27 @@ where
       return none
     arg.raw.getArgs.findSomeM? fun alt => parse? ⟨alt⟩
 
-def tlaHavePrimeTerm (newHypName : String) (head : Ident) (allBinders : Bool)
-    (args : Array (TSyntax `tlaMixedArg)) : TacticM Nat := withMainContext do
+private def tlaHavePrimeTermCore (newHypName : String) (head : Ident) (allBinders : Bool)
+    (args : Array (TSyntax `tlaMixedArg)) (transform? : Option TheoremExprTransform := none) :
+    TacticM Nat := withMainContext do
   let some hypsLen ← goalHypsLength | throwError "thave': goal is not an Entails sequent"
   let termArgs ← args.toList.mapM mixedArgToTerm
   let argCount ← theoremArgCount allBinders head
   let (theoremArgs, rest) := termArgs.splitAt argCount
   let holes := List.replicate (argCount - theoremArgs.length) <| ← `(_)
   let headTerm : Term ← if allBinders then `(term| @$head:ident) else pure head
-  addValidTermHyp newHypName (Syntax.mkApp headTerm (theoremArgs ++ holes).toArray)
+  addValidTermHypWithTransform newHypName (Syntax.mkApp headTerm (theoremArgs ++ holes).toArray) transform?
   for arg in rest do
     tlaSpecializeStep (.byIdx hypsLen) arg
   return hypsLen
+
+def tlaHavePrimeTerm (newHypName : String) (head : Ident) (allBinders : Bool)
+    (args : Array (TSyntax `tlaMixedArg)) : TacticM Nat :=
+  tlaHavePrimeTermCore newHypName head allBinders args
+
+def tlaHavePrimeTermWithTransform (newHypName : String) (head : Ident) (allBinders : Bool)
+    (args : Array (TSyntax `tlaMixedArg)) (transform : TheoremExprTransform) : TacticM Nat :=
+  tlaHavePrimeTermCore newHypName head allBinders args (some transform)
 
 /--
 `thave h : p by tac` adds a new temporal hypothesis `h : p` to the
@@ -343,15 +396,6 @@ elab_rules : tactic
     discard <| tlaHavePrimeTerm nameStr head explicit?.isSome args
   | `(tactic| thave := $t:term) => do
     discard <| tlaHaveTerm "this" t
-  | `(tactic| treplace $h:ident := $t:term) => withMainContext do
-    let nameStr := toString h.getId
-    let some (_, hyps) ← recognizeEntailsHypsFromGoal
-      | throwError "treplace: failed to read the hypotheses from the goal"
-    let some targetIdx := hyps.findIdx? fun ⟨name, _⟩ => name == nameStr
-      | throwError "treplace: hypothesis '{nameStr}' not found in the goal's Entails list"
-    let internalName ← mkFreshInternalTemporalHypName
-    let idx ← tlaHaveTerm internalName t
-    tlaClearByIdx targetIdx
-    tlaRename (.byIdx <| idx - 1) nameStr
+  | `(tactic| treplace $h:ident := $t:term) => tlaReplaceTerm h t
 
 end TLA.ProofMode

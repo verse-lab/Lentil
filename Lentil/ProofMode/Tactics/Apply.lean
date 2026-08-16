@@ -53,7 +53,7 @@ private def goalDirectedPremisesCut (remainingPremises : List Expr) (goal conclu
       let newConclusion ← mkAppM ``tla_implies #[prem, conclusion]
       goalDirectedPremisesCut rest goal newConclusion
 
-private def applyIntroducedHypByIdx (idx : Nat) : TacticM Unit := withMainContext do
+def applyIntroducedHypByIdx (idx : Nat) : TacticM Unit := withMainContext do
   let g ← getMainTarget
   let g := g.headBeta.cleanupAnnotations    -- Since `getMainTarget` does `instantiateMVars`
   let_expr TLA.ProofMode.Entails _ hyps goal := g
