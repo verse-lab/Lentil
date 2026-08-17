@@ -203,6 +203,44 @@ example (lem : |-tla- (b)) : (a ∧ c) |-tla- (b) := by
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hc", c⟩, ⟨"hb", b⟩] b
   tassumption
 
+section UnificationTest
+
+private def inferenceMarker {α : Type v} {β : Type u} (x : α) : pred (α × β) :=
+  fun e i => (e i).1 = x
+
+private def inferenceSample {α : Type v} {β : Type u}
+    (family : α → pred (α × β)) : pred (α × β) :=
+  fun e i => family (e i).1 e i
+
+private opaque inferenceWrap {γ : Type w} : pred γ → pred γ := fun formula => formula
+
+-- Reflected arguments constrain implicit theorem parameters before the
+-- resulting temporal fact is added to the proof-mode context.
+example {α : Type v} {β : Type u} (x : α)
+    (rule : ∀ {family : α → pred (α × β)} {y : α},
+      (inferenceMarker y ∧ inferenceSample family) |-tla- (family y)) :
+    letI formula : pred (α × β) :=
+      [tlafml|
+        inferenceMarker x →
+        inferenceSample (fun y => inferenceWrap (inferenceMarker y)) →
+        inferenceWrap (inferenceMarker x)
+      ]
+    |-tla- (formula) := by
+  tnormalize
+  tstart hx hp
+  thave result := (rule) ⟨hx, hp⟩
+  tassumption
+
+-- Ordinary Lean arguments can precede the reflected argument, while a
+-- conclusion-only parameter remains available to later proof-mode tactics.
+example (rule : ∀ _ : Nat, ∀ {result : pred σ}, (a) |-tla- (result)) :
+    (a) |-tla- (b) := by
+  tstart ha
+  thave result := rule 0 ha
+  tassumption
+
+end UnificationTest
+
 /-! ## `tsuffices` -/
 
 -- Basic: reduce the goal `a` to a stronger `a` (trivially via `pred_implies_refl`),

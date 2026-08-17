@@ -151,4 +151,59 @@ example : (⊥) |-tla- (a ↝ b) := by
   on_goal 2=> exact fun _ _ => False
   tcontradiction
 
+section UnificationTest
+
+private def inferenceMarker {α : Type v} {β : Type u} (x : α) : pred (α × β) :=
+  fun e i => (e i).1 = x
+
+private def inferenceSample {α : Type v} {β : Type u}
+    (family : α → pred (α × β)) : pred (α × β) :=
+  fun e i => family (e i).1 e i
+
+private opaque inferenceWrap {γ : Type w} : pred γ → pred γ := fun formula => formula
+
+-- The predicate family and point are constrained by reflected temporal
+-- arguments. They must remain assignable until those arguments are inspected.
+example {α : Type v} {β : Type u} (x : α)
+    (rule : ∀ {family : α → pred (α × β)} {y : α},
+      (inferenceMarker y ∧ inferenceSample family) |-tla- (family y)) :
+    letI formula : pred (α × β) :=
+      [tlafml|
+        inferenceMarker x →
+        inferenceSample (fun y => inferenceWrap (inferenceMarker y)) →
+        inferenceWrap (inferenceMarker x)
+      ]
+    |-tla- (formula) := by
+  tnormalize
+  tstart hx hp
+  tapply (rule) ⟨hx, hp⟩
+
+-- Parameters are still inferred when some temporal premises remain as
+-- backward-application goals.
+example {α : Type v} {β : Type u} (x : α) (r : pred (α × β))
+    (rule : ∀ {family : α → pred (α × β)} {y : α} {premise : pred (α × β)},
+      (inferenceMarker y ∧ inferenceSample family) |-tla- (premise → family y)) :
+    letI formula : pred (α × β) :=
+      [tlafml|
+        inferenceMarker x →
+        inferenceSample (fun y => inferenceWrap (inferenceMarker y)) →
+        r →
+        inferenceWrap (inferenceMarker x)
+      ]
+    |-tla- (formula) := by
+  tnormalize
+  tstart hx hp hr
+  tapply (rule (premise := r)) ⟨hx, hp⟩
+  tassumption
+
+-- An implicit parameter appearing only in the conclusion remains assignable
+-- until backward application compares it with the current target. An ordinary
+-- Lean argument may precede the reflected temporal argument.
+example (rule : ∀ _ : Nat, ∀ {result : pred σ}, (p) |-tla- (result)) :
+    (p) |-tla- (q) := by
+  tstart hp
+  tapply rule 0 hp
+
+end UnificationTest
+
 end TLA.ProofMode.Test.Apply

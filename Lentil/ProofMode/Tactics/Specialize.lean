@@ -198,6 +198,21 @@ private def specializeTacDSimps := #[``replaceChosenPred, ``modifyHypByName, ``L
   ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx, ``List.modifyTailIdx.go,
   ``List.modifyHead]
 
+/-- Resolve one temporal argument (`h` or `⟨h₁, ..., hₙ⟩`) against the
+reflected proof-mode context. -/
+def resolveTemporalHypArg (hyps : List (String × Expr)) (arg : TSyntax `term)
+    (tacticName : String := "tspecialize") : TacticM (List (String × Expr)) := do
+  let args ← match arg with
+    | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
+    | _ => pure [arg]
+  args.mapM fun arg => do
+    let some id ← termIdent? arg
+      | throwError "{tacticName}: implication arguments must be a tuple or a single identifier; got {arg}"
+    let name := toString id.getId
+    let some hyp := hyps.find? fun (hypName, _) => hypName == name
+      | throwError "{tacticName}: temporal hypothesis '{name}' not found in the goal's Entails list"
+    return hyp
+
 /-- Specialize one temporal hypothesis once, then simplify the reflected
 hypothesis list back to the literal proof-mode context. Callers build repeated
 specialization by invoking this after each argument, so each step sees the
@@ -222,16 +237,7 @@ def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Uni
         evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_))
       <|>
       (do
-        let premises ← match arg with
-          | `(term| ⟨ $args:term,* ⟩) => pure args.getElems.toList
-          | _ => pure [arg]
-        let premises ← premises.mapM fun arg => do
-          match (← termIdent? arg) with
-          | some id => pure <| toString id.getId
-          | _ => throwError "tspecialize: implication arguments must be a tuple or a single identifier; got {arg}"
-        for premise in premises do
-          unless hyps.any (fun ⟨name, _⟩ => name == premise) do
-            throwError "tspecialize: temporal hypothesis '{premise}' not found in the goal's Entails list"
+        let premises := (← resolveTemporalHypArg hyps arg).map Prod.fst
         let thm := if pos matches .byName .. then ``Entails_specialize_temporal_by_name else ``Entails_specialize_temporal_by_idx
         evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote premises)) (by rfl) ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_))
   | _ => throwError (specializeTargetBadShapeMsg pred pos)

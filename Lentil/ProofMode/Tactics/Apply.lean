@@ -10,14 +10,14 @@ theorem Entails_trans {σ : Type u} {hyps : List (NamedPred σ)} {mid goal : pre
   intro h1 h2 ; revert h1 ; revert h2 ; apply pred_implies_trans
 
 /-
-`tapply t` is implemented through `thave := t`.
-
-First, `tlaHaveTerm` introduces the theorem to apply as the newest temporal
-hypothesis and delegates all supplied arguments to `tspecialize`. Then this
-file inspects that newest hypothesis, splits its remaining implication chain
-with `TLA.Expr.splitImplicationsIntoParts`, and applies `Entails_apply_hyp` with
-an explicit list of premise metavariables of the same length. This avoids the
-old residual-premise guessing loop.
+`tapply t` first tries Lean's ordinary `apply`. If that cannot consume reflected
+proof-mode hypotheses, `tlaHaveTerm` introduces the theorem as the newest
+temporal hypothesis and delegates its temporal arguments to `tspecialize`.
+`tlaHaveTerm` keeps the theorem conclusion assignable, so the current target can
+still constrain it here. Then this file inspects the introduced hypothesis,
+splits its remaining implication chain with
+`TLA.Expr.splitImplicationsIntoParts`, and applies `Entails_apply_hyp` with an
+explicit list of premise metavariables of the same length.
 -/
 
 section

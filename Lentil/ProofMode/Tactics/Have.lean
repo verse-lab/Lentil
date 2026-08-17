@@ -58,34 +58,46 @@ Target design for `thave h := t`:
 1. First try elaborating the whole term directly. If its type is already a TLA
    theorem, either `|-tla- p` or `p |-tla- q`, add the corresponding temporal
    hypothesis with `Entails_have_valid`.
-2. If direct elaboration does not produce a TLA theorem, analyze the term as an
-   application. Move this fallback application-analysis logic here from
-   `Apply.lean`.
-3. In the fallback path, if the head is a Lean term, elaborate/infer the head and
-   consume just enough ordinary Lean arguments for the expression to become a
-   TLA theorem. This handles examples such as `lem n hp`, where
-   `lem : forall n, p |-tla- q` and `n` is not a temporal hypothesis.
-4. If the head is a proof-mode hypothesis, duplicate it as the newest temporal
-   hypothesis with `Entails_duplicate_one_hyp`.
-5. After the theorem head has been added as the newest temporal hypothesis,
-   specialize that newest hypothesis by index using the remaining arguments.
+2. Otherwise, split the application into its head and arguments. If the head is
+   a proof-mode hypothesis, duplicate it as the newest temporal hypothesis with
+   `Entails_duplicate_one_hyp`.
+3. For a Lean head, try successively longer argument prefixes as part of the
+   theorem term. For example, one split of `rule 0 ⟨hx, hp⟩` has theorem
+   candidate `rule 0` and remaining argument `⟨hx, hp⟩`. The remaining
+   arguments form a *reflected temporal suffix* when every one is a proof-mode
+   hypothesis name or a tuple of such names.
+4. To elaborate a candidate with such a suffix, resolve the names to the
+   predicates stored in the current `Entails` context and create a new
+   assignable metavariable `?result : pred σ`. Each suffix argument contributes
+   one premise; a tuple contributes the conjunction of its named predicates.
+   Elaborate the candidate against `|-tla- premise₁ → ... → ?result`. Here
+   `?result` is the "fresh conclusion"; it is not the current proof-mode goal.
+   The premises can determine implicit theorem parameters now, while a later
+   `tapply` can still assign `?result`.
+5. If the remaining arguments are not all reflected hypotheses, try the
+   candidate as an ordinary theorem. If it is not one yet, consume another
+   ordinary Lean argument into the prefix and retry. This handles `lem n hp`,
+   where `lem : forall n, p |-tla- q` and `n` is not a temporal hypothesis.
+6. After the theorem candidate has been added as the newest temporal
+   hypothesis, specialize it by index using the remaining arguments.
    Temporal reasoning over arguments belongs to `tspecialize`, not to this
    analysis step.
-6. The anonymous form `thave := t` follows the same pipeline, but uses only
+7. The anonymous form `thave := t` follows the same pipeline, but uses only
    the newest-hypothesis index instead of a user-facing name.
 
-The implementation below follows this shape: the only argument-level analysis
-outside `tspecialize` is finding the first prefix that elaborates as a TLA
-theorem.
+The implementation below only inspects arguments to distinguish an ordinary
+Lean prefix from a reflected temporal suffix. `tspecialize` remains responsible
+for changing the introduced temporal hypothesis.
 -/
 
 private def haveTacDSimps : Array Name := #[``List.cons_append, ``List.nil_append]
 
 abbrev TheoremExprTransform := Expr → TacticM Expr
 
-private def elabTheoremTerm (tm : Term) : TacticM Expr := do
-  let e ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize tm none
-  Term.synthesizeSyntheticMVarsNoPostponing
+private def elabTheoremTerm (tm : Term) (expectedType? : Option Expr := none) : TacticM Expr := do
+  let e ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize tm expectedType?
+  if expectedType?.isNone then
+    Term.synthesizeSyntheticMVarsNoPostponing
   instantiateMVars e
 
 private def addValidExprHyp (newHypName : String) (e : Expr) : TacticM Unit := do
@@ -137,21 +149,57 @@ private def addValidTermHyp (newHypName : String) (tm : Term) : TacticM Unit := 
   addValidExprHyp newHypName (← elabTheoremTerm tm)
 
 private def addValidTermHypWithTransform (newHypName : String) (tm : Term)
-    (transform? : Option TheoremExprTransform) : TacticM Unit := do
-  let e ← elabTheoremTerm tm
+    (transform? : Option TheoremExprTransform) (expectedType? : Option Expr := none) : TacticM Unit := do
+  let e ← elabTheoremTerm tm expectedType?
   let e ← transform?.elim (pure e) (· e)
   addValidExprHyp newHypName e
 
-private def addTheoremPrefix (newHypName : String) (head : Term) (usedArgs : Array Term)
-    (restArgs : List Term) (transform? : Option TheoremExprTransform := none) : TacticM (List Term) := do
-  let candidate := Syntax.mkApp head usedArgs
-  (do
-    addValidTermHypWithTransform newHypName candidate transform?
-    return restArgs)
-  <|>
-  (do
-    let arg :: args := restArgs | throwError "thave: failed to elaborate a TLA theorem head from {head}"
-    addTheoremPrefix newHypName head (usedArgs.push arg) args transform?)
+/-- Elaborate a theorem candidate against an already resolved, nonempty suffix
+of temporal premises. Their implication chain ends in a new assignable
+`?result : pred σ`. -/
+private def addValidTermHypWithTemporalPremises (newHypName : String) (tm : Term) (predType : Expr)
+    (premises : List Expr) (transform? : Option TheoremExprTransform := none) : TacticM Unit := do
+  if premises.isEmpty then
+    throwError "thave: expected at least one temporal argument"
+  let conclusion ← mkFreshExprMVar (some predType)
+  let expectedPred ← premises.foldrM (fun premise rest =>
+    mkAppM ``TLA.tla_implies #[premise, rest]) conclusion
+  let expectedType ← mkAppM ``TLA.valid #[expectedPred]
+  addValidTermHypWithTransform newHypName tm transform? (some expectedType)
+
+/-- Find a theorem prefix of an application. Resolve the longest reflected
+temporal suffix once, then reuse its predicates while successively moving
+arguments into the ordinary Lean prefix. -/
+private def addTheoremPrefix (newHypName : String) (head : Term) (args : Array Term)
+    (predType : Expr) (hyps : List (String × Expr))
+    (transform? : Option TheoremExprTransform := none) : TacticM (List Term) := do
+  let (_, temporalPremises) ← args.toList.foldrM
+      (init := (true, ([] : List Expr))) fun arg (suffixIsTemporal, premises) => do
+    if !suffixIsTemporal then
+      return (false, premises)
+    (do
+      let preds := (← resolveTemporalHypArg hyps arg "thave").map Prod.snd
+      let premise ← mkAppM ``repeatedAnd #[← mkListLit predType preds]
+      return (true, premise :: premises))
+    <|> pure (false, premises)
+  let temporalStart := args.size - temporalPremises.length
+  let rec loop (usedArgs : Array Term) (restArgs : List Term) : TacticM (List Term) := do
+    let candidate := Syntax.mkApp head usedArgs
+    (do
+      unless temporalStart ≤ usedArgs.size do
+        throwError "thave: theorem candidate still has ordinary Lean arguments"
+      let premises := temporalPremises.drop (usedArgs.size - temporalStart)
+      addValidTermHypWithTemporalPremises newHypName candidate predType premises transform?
+      return restArgs)
+    <|>
+    (do
+      addValidTermHypWithTransform newHypName candidate transform?
+      return restArgs)
+    <|>
+    (do
+      let arg :: args := restArgs | throwError "thave: failed to elaborate a TLA theorem head from {head}"
+      loop (usedArgs.push arg) args)
+  loop #[] args.toList
 
 private def theoremArgCount (allBinders : Bool) (head : Ident) : TacticM Nat := do
   -- `head` is restricted to an identifier, so inspect its type directly.
@@ -176,15 +224,14 @@ where
 
 private def tlaHaveTermCore (newHypName : String) (tm : Term)
     (transform? : Option TheoremExprTransform := none) : TacticM Nat := withMainContext do
+  let (stateType, _, _, hyps, _) ← parseCanonicalEntails (← getMainTarget)
+    "thave: goal is not a canonical Entails sequent"
+  let idx := hyps.length
   (do
-    let some hypsLen ← goalHypsLength | throwError "thave: goal is not an Entails sequent"
     addValidTermHypWithTransform newHypName tm transform?
-    return hypsLen)
+    return idx)
   <|>
   (do
-    let some (_, hyps) ← recognizeEntailsHypsFromGoal
-      | throwError "thave: failed to read the hypotheses from the goal"
-    let idx := hyps.length
     let (head, args) ← match tm with
       | `(term| $f:term $args:term* ) => pure (f, args)
       | _ => pure (tm, #[])
@@ -197,7 +244,8 @@ private def tlaHaveTermCore (newHypName : String) (tm : Term)
       specializeByIdx idx args
       return idx
     else
-      let rest ← addTheoremPrefix newHypName head #[] args.toList transform?
+      let predType ← mkAppM ``TLA.pred #[stateType]
+      let rest ← addTheoremPrefix newHypName head args predType hyps transform?
       specializeByIdx idx rest.toArray
       return idx)
 where
