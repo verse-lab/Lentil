@@ -10,6 +10,7 @@ open Classical LentilLib
 
 -- `And`
 #tla_lift and_self_iff and_not_self_iff not_and_self_iff and_comm and_assoc
+#tla_lift And.intro => TLA.and_intro
 #tla_lift And.left => TLA.and_left
 #tla_lift And.right => TLA.and_right
 #tla_lift And.imp_left => TLA.and_imp_left
@@ -26,6 +27,8 @@ open Classical LentilLib
 #tla_lift Or.inr => TLA.or_inr
 #tla_lift Or.elim => TLA.or_elim
 #tla_lift Or.imp => TLA.or_imp
+#tla_lift Or.imp_left => TLA.or_imp_left
+#tla_lift Or.imp_right => TLA.or_imp_right
 
 -- distributive laws
 #tla_lift and_or_left or_and_right or_and_left and_or_right
