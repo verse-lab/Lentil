@@ -131,6 +131,15 @@ theorem modifyHypByName_spec {σ : Type u} (hyps : List (NamedPred σ)) (name : 
 
 open Lean Meta Elab Tactic
 
+/-- Construct the reduced expression represented by `repeatedAnd preds`.
+
+Unlike an object-level application of `repeatedAnd`, this keeps the `tla_and`
+structure (and singleton predicate head) visible to elaborator unification. -/
+def mkRepeatedAndExpr (stateType : Expr) (preds : List Expr) : MetaM Expr := do
+  let op ← mkAppOptM ``TLA.tla_and #[stateType]
+  let base ← mkAppOptM ``TLA.tla_true #[stateType]
+  return List.foldrD (mkApp2 op) base preds
+
 /-- Generate a fresh name (*empirically, not guaranteed*) for a proof-mode
 hypothesis that is only used internally by tactics. -/
 def mkFreshInternalTemporalHypName (base : Name := `h) : TacticM String := do

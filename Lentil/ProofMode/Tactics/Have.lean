@@ -131,8 +131,7 @@ private def addValidExprHyp (newHypName : String) (e : Expr) : TacticM Unit := d
         mkAppOptM ``Entails_have_true_pred_implies
           #[some σ, some hypsExpr, some goal, some newHypNameExpr, some rhs, some e]
       else
-        let op ← mkAppOptM ``tla_and #[σ]
-        let lhs := List.foldrD (mkApp2 op) default <| hypsExprList.map Prod.snd
+        let lhs ← mkRepeatedAndExpr σ <| hypsExprList.map Prod.snd
         mkAppOptM ``Entails_have_pred_implies
           #[some σ, some hypsExpr, some goal, some newHypNameExpr, some lhs, some rhs, some e]
     | TLA.valid σ' p =>
@@ -171,7 +170,7 @@ private def addValidTermHypWithTemporalPremises (newHypName : String) (tm : Term
 temporal suffix once, then reuse its predicates while successively moving
 arguments into the ordinary Lean prefix. -/
 private def addTheoremPrefix (newHypName : String) (head : Term) (args : Array Term)
-    (predType : Expr) (hyps : List (String × Expr))
+    (stateType predType : Expr) (hyps : List (String × Expr))
     (transform? : Option TheoremExprTransform := none) : TacticM (List Term) := do
   let (_, temporalPremises) ← args.toList.foldrM
       (init := (true, ([] : List Expr))) fun arg (suffixIsTemporal, premises) => do
@@ -179,7 +178,9 @@ private def addTheoremPrefix (newHypName : String) (head : Term) (args : Array T
       return (false, premises)
     (do
       let preds := (← resolveTemporalHypArg hyps arg "thave").map Prod.snd
-      let premise ← mkAppM ``repeatedAnd #[← mkListLit predType preds]
+      -- Keep conjunction heads visible so unification does not unfold premise predicates
+      -- while reducing an object-level `repeatedAnd` application.
+      let premise ← mkRepeatedAndExpr stateType preds
       return (true, premise :: premises))
     <|> pure (false, premises)
   let temporalStart := args.size - temporalPremises.length
@@ -245,7 +246,7 @@ private def tlaHaveTermCore (newHypName : String) (tm : Term)
       return idx
     else
       let predType ← mkAppM ``TLA.pred #[stateType]
-      let rest ← addTheoremPrefix newHypName head args predType hyps transform?
+      let rest ← addTheoremPrefix newHypName head args stateType predType hyps transform?
       specializeByIdx idx rest.toArray
       return idx)
 where

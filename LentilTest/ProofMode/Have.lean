@@ -231,6 +231,17 @@ example {α : Type v} {β : Type u} (x : α)
   thave result := (rule) ⟨hx, hp⟩
   tassumption
 
+-- Keep a single reflected premise in its original syntactic form. Wrapping it
+-- in `repeatedAnd [p]` makes unification unfold `inferenceSample` first, after
+-- which `family` occurs at a non-pattern argument and can no longer be inferred.
+example {α : Type v} {β : Type u}
+    (rule : ∀ {family : α → pred (α × β)}, (inferenceSample family) |-tla- (⊤)) :
+    (inferenceSample (α := α) (β := β)
+      (fun y => inferenceWrap (inferenceMarker (β := β) y))) |-tla- (⊤) := by
+  tstart hp
+  thave result := rule hp
+  tassumption
+
 -- Ordinary Lean arguments can precede the reflected argument, while a
 -- conclusion-only parameter remains available to later proof-mode tactics.
 example (rule : ∀ _ : Nat, ∀ {result : pred σ}, (a) |-tla- (result)) :
