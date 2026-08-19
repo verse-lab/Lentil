@@ -261,17 +261,27 @@ def tlaHaveTermWithTransform (newHypName : String) (tm : Term)
     (transform : TheoremExprTransform) : TacticM Nat :=
   tlaHaveTermCore newHypName tm (some transform)
 
-def tlaReplaceTermCore (h : Ident) (tm : Term)
-    (transform? : Option TheoremExprTransform := none) : TacticM Unit := withMainContext do
-  let nameStr := toString h.getId
+/-- Replace a temporal hypothesis by appending a new hypothesis under a fresh
+internal name, clearing the selected entry, and renaming the appended entry.
+The callback returns the index at which it appended the replacement. -/
+def replaceTemporalHypByAppending (tacticName : String) (targetLoc : TemporalHypLoc)
+    (appendReplacement : String → TacticM Nat) : TacticM Unit := withMainContext do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal
-    | throwError "treplace: failed to read the hypotheses from the goal"
-  let some targetIdx := hyps.findIdx? fun ⟨name, _⟩ => name == nameStr
-      | throwError "treplace: hypothesis '{nameStr}' not found in the goal's Entails list"
+    | throwError "{tacticName}: failed to read the hypotheses from the goal"
+  let (targetIdx, targetName, _) ← findIdxByTemporalHypLoc hyps targetLoc
+    tacticName "the goal's Entails list"
   let internalName ← mkFreshInternalTemporalHypName
-  let idx ← tlaHaveTermCore internalName tm transform?
+  let replacementIdx ← appendReplacement internalName
+  unless targetIdx < replacementIdx do
+    throwError "{tacticName}: internal replacement was not appended after the selected hypothesis"
   tlaClearByIdx targetIdx
-  tlaRename (.byIdx <| idx - 1) nameStr
+  tlaRename (.byIdx <| replacementIdx - 1) targetName
+
+def tlaReplaceTermCore (h : Ident) (tm : Term)
+    (transform? : Option TheoremExprTransform := none) : TacticM Unit := do
+  let nameStr := toString h.getId
+  replaceTemporalHypByAppending "treplace" (.byName nameStr) fun internalName =>
+    tlaHaveTermCore internalName tm transform?
 
 def tlaReplaceTerm (h : Ident) (tm : Term) : TacticM Unit :=
   tlaReplaceTermCore h tm

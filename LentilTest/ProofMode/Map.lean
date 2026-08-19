@@ -31,6 +31,17 @@ example (hpq : (p) |-tla- (q)) :
     [tlafml| □ ◇ ◯ q]
   tassumption
 
+-- The replacement form preserves the source name and moves the mapped result
+-- to the end of the temporal context, like `treplace`.
+example (hpq : (p) |-tla- (q)) :
+    ((□ p) ∧ r) |-tla- (□ q) := by
+  tstart hp hr
+  tmap hp using hpq
+  guard_target =ₛ Entails
+    [⟨"hr", r⟩, ⟨"hp", [tlafml| □ q]⟩]
+    [tlafml| □ q]
+  tassumption
+
 -- `tmap` infers leading theorem parameters from the source predicate instead
 -- of requiring the implication to be the outermost type constructor.
 example : (□ (p ∧ q)) |-tla- (□ p) := by
@@ -68,6 +79,15 @@ example :
     ((p ⇒ q) ∧ □ ◇ p) |-tla- (□ ◇ q) := by
   tstart hpq hp
   tmap hq := hp using hpq
+  tassumption
+
+example :
+    ((p ⇒ q) ∧ □ ◇ p) |-tla- (□ ◇ q) := by
+  tstart hpq hp
+  tmap hp using hpq
+  guard_target =ₛ Entails
+    [⟨"hpq", [tlafml| p ⇒ q]⟩, ⟨"hp", [tlafml| □ ◇ q]⟩]
+    [tlafml| □ ◇ q]
   tassumption
 
 -- Pointwise state theorems require a source-driven `apply at` adapter and are

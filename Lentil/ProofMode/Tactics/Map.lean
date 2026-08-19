@@ -190,7 +190,7 @@ private def applyMappedHypTheorem (thm proof : Expr) : TacticM Unit := withMainC
 ordinary Lean theorem term. Lean local variables intentionally take precedence;
 that convention is implemented by `temporalHypLocOfBareTerm?`. -/
 private def proofModeMap (newName : String) (sourceLoc : TemporalHypLoc)
-    (ruleTerm : Term) : TacticM Unit := withMainContext do
+    (ruleTerm : Term) : TacticM Nat := withMainContext do
   let (stateType, hypsExpr, _, hyps, goal) ← parseCanonicalEntails (← getMainTarget)
     "tmap: goal is not a canonical Entails sequent"
   let (sourceIdx, _, source) ← findIdxByTemporalHypLoc hyps sourceLoc
@@ -213,6 +213,7 @@ private def proofModeMap (newName : String) (sourceLoc : TemporalHypLoc)
     let rule ← normalizeGlobalRule stateType ruleTerm
     let (dst, liftedProof) ← liftRule source rule liftGlobalStep
     addGlobalMappedHyp stateType hypsExpr goal source dst liftedProof sourceIdx newName
+  return hyps.length
 where
   /-- Append the result of a global rule. -/
   addGlobalMappedHyp (stateType hypsExpr goal source dst proof : Expr)
@@ -233,6 +234,13 @@ where
       some (toExpr ruleIdx), some (toExpr sourceIdx), some hrule, some hsource,
       some (toExpr newName), some dst]
   applyMappedHypTheorem thm proof
+
+/-- Replace the selected source using the append-clear-rename pipeline shared
+with `treplace`. -/
+private def proofModeMapReplace (sourceLoc : TemporalHypLoc)
+    (ruleTerm : Term) : TacticM Unit :=
+  replaceTemporalHypByAppending "tmap" sourceLoc fun internalName =>
+    proofModeMap internalName sourceLoc ruleTerm
 
 /--
 `tmap hnew := hsrc using rule` applies an implication `rule` underneath
@@ -258,9 +266,17 @@ adds `hq : □ ◇ q` while preserving the rest of the context.
 -/
 syntax (name := tlaMapTac) "tmap " ident " := " temporalHypLoc " using " term : tactic
 
+/-- `tmap hsrc using rule` is like `tmap`, but replaces `hsrc` with the result of applying `rule`
+underneath its supported modality context. The replacement keeps the original
+name and moves to the end of the temporal context. -/
+syntax (name := tlaMapReplaceTac) "tmap " temporalHypLoc " using " term : tactic
+
 elab_rules : tactic
   | `(tactic| tmap $newName:ident := $source:temporalHypLoc using $rule:term) => do
     let sourceLoc ← parseTemporalHypLoc source "tmap: invalid source hypothesis"
-    proofModeMap (toString newName.getId) sourceLoc rule
+    discard <| proofModeMap (toString newName.getId) sourceLoc rule
+  | `(tactic| tmap $source:temporalHypLoc using $rule:term) => do
+    let sourceLoc ← parseTemporalHypLoc source "tmap: invalid source hypothesis"
+    proofModeMapReplace sourceLoc rule
 
 end TLA.ProofMode
