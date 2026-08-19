@@ -94,7 +94,7 @@ private def haveTacDSimps : Array Name := #[``List.cons_append, ``List.nil_appen
 
 abbrev TheoremExprTransform := Expr → TacticM Expr
 
-private def elabTheoremTerm (tm : Term) (expectedType? : Option Expr := none) : TacticM Expr := do
+def elabTheoremTerm (tm : Term) (expectedType? : Option Expr := none) : TacticM Expr := do
   let e ← Term.withoutErrToSorry <| Term.elabTermAndSynthesize tm expectedType?
   if expectedType?.isNone then
     Term.synthesizeSyntheticMVarsNoPostponing

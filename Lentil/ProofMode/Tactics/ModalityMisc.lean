@@ -137,30 +137,10 @@ theorem Entails_step
 
 end
 
--- FIXME: The following logic is very similar in `Lentil.ProofMode.Tactics.Monotone`,
--- consider unifying them
-private def peelModalDirect? (modal : Name) (p : Expr) : Option Expr :=
-  if p.getAppFn'.isConstOf modal then
-    if h : p.isApp = true then some (p.appArg h) else none
-  else
-    none
-
-private def peelModal? (modal : Name) (p : Expr) : MetaM (Option Expr) :=
-  recognizeWithTlaModalityHeadUnfold? (peelModalDirect? modal) p
-
-private def peelAlways? (p : Expr) : MetaM (Option Expr) :=
-  peelModal? ``TLA.always p
-
-private def peelEventually? (p : Expr) : MetaM (Option Expr) :=
-  peelModal? ``TLA.eventually p
-
-private def peelLater? (p : Expr) : MetaM (Option Expr) :=
-  peelModal? ``TLA.later p
-
 private def peelAlwaysHyps? (hyps : List (String × Expr)) : MetaM (Option (List (String × Expr))) := do
   let mut peeledHyps := []
   for (name, pred) in hyps do
-    let some pred ← peelAlways? pred
+    let some pred ← peelTlaModality? ``TLA.always pred
       | return none
     peeledHyps := (name, pred) :: peeledHyps
   return some peeledHyps.reverse
@@ -175,7 +155,7 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   let some peeledHypsList ← peelAlwaysHyps? hyps
     | throwError "ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHypsList
-  let peeledGoal? ← peelAlways? goal
+  let peeledGoal? ← peelTlaModality? ``TLA.always goal
   let (leftToRight?, toggledGoal) :=
     match peeledGoal? with
     | some goal => (true, goal)
@@ -198,7 +178,7 @@ private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := 
   let (idx, chosenName, chosenPred) ← findIdxByTemporalHypLoc hyps loc "tadvance" "the goal's Entails list"
   let (preHyps, postHyps) := hyps.splitAt idx
   let postHyps := postHyps.tail
-  let some chosenP ← peelEventually? chosenPred
+  let some chosenP ← peelTlaModality? ``TLA.eventually chosenPred
     | throwError "tadvance: selected hypothesis must have a leading eventually (`◇`) prefix"
   let some peeledPreHyps ← peelAlwaysHyps? preHyps
     | throwError "tadvance: every hypothesis before the selected one must have a leading always (`□`) prefix"
@@ -227,7 +207,7 @@ private def proofModeStep : TacticM Unit := withMainContext do
   let target ← cleanupAnnotAndMore (← g.getType)
   let some (σExpr, hypsExpr, hypTy, hyps, goal) ← recognizeCanonicalEntails target
     | throwError "tstep: expected a proof-mode Entails goal"
-  let some goalBody ← peelLater? goal
+  let some goalBody ← peelTlaModality? ``TLA.later goal
     | throwError "tstep: expected the proof-mode goal to have a leading next (`◯`) prefix"
 
   let (stableIdxs, steppedIdxs, stableHyps, steppedHyps) ← splitHyps hyps
@@ -263,10 +243,10 @@ where
     let mut stableHyps : List (String × Expr) := []
     let mut steppedHyps : List (String × Expr) := []
     for ((name, pred), idx) in hyps.zipIdx do
-      if let some body ← peelAlways? pred then
+      if let some body ← peelTlaModality? ``TLA.always pred then
         stableIdxs := idx :: stableIdxs
         stableHyps := (name, body) :: stableHyps
-      else if let some body ← peelLater? pred then
+      else if let some body ← peelTlaModality? ``TLA.later pred then
         steppedIdxs := idx :: steppedIdxs
         steppedHyps := (name, body) :: steppedHyps
       else

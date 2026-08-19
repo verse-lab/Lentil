@@ -1,4 +1,3 @@
-import Lentil.Rules.WF
 import Lentil.Rules.BigOp
 import Lentil.Tactics.FiniteWindow
 
@@ -14,6 +13,9 @@ namespace TLA
 section state_pred_specialized
 
 variable {σ : Type u}
+
+-- NOTE: The following several theorems can also be derived from the
+-- finite window stuff, but keeping them explicit might be good
 
 theorem state_preds_and (p q : σ → Prop) : (⌜ p ⌝ ∧ ⌜ q ⌝) =tla= ⌜ fun s => p s ∧ q s ⌝ := by
   funext e i ; tnontemporal_simp
@@ -32,6 +34,9 @@ theorem state_preds_forall {α : Sort v} (p : α → σ → Prop) : (∀ x, ⌜ 
 
 theorem state_preds_exists {α : Sort v} (p : α → σ → Prop) : (∃ x, ⌜ p x ⌝) =tla= ⌜ fun s => ∃ x, p x s ⌝ := by
   funext e i ; tnontemporal_simp
+
+-- NOTE: The following several theorems can also be derived from the
+-- finite window stuff, but is keeping them explicit good?
 
 theorem state_pred_valid_iff (p : σ → Prop) : (|-tla- ⌜ p ⌝) ↔ ∀ s, p s := by
   constructor

@@ -9,6 +9,7 @@ import Lentil.ProofMode.Tactics.Exit
 import Lentil.ProofMode.Tactics.Have
 import Lentil.ProofMode.Tactics.Intro
 import Lentil.ProofMode.Tactics.LeftRight
+import Lentil.ProofMode.Tactics.Map
 import Lentil.ProofMode.Tactics.ModalityMisc
 import Lentil.ProofMode.Tactics.Monotone
 import Lentil.ProofMode.Tactics.Normalize
@@ -38,6 +39,7 @@ NOTE: On the soundness theorems corresponding to these tactics:
 - `specialize`: general logic of filling in the LHS of an implication
 - `have`/`suffices`: reducing to `specialize`
 - `apply`: reducing to `have` then `specialize`
+- `map`: lifting an implication through a supported modality nesting
 - `monotone`: distributing a supported modality over the proof-mode context,
   then using the corresponding `_monotone` rule
 - `toggle_goal_under_always`: toggling the goal with `always_pred_implies`

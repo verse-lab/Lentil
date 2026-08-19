@@ -73,18 +73,33 @@ theorem Entails_always_eventually_monotone_single {name : String} {p : pred σ}
 
 end
 
+/-- Remove one application of `modality`. This direct variant does not unfold
+the expression head; it is useful when recognizing several alternatives at once. -/
+def peelTlaModalityDirect? (modality : Name) (e : Expr) : Option Expr :=
+  if e.getAppFn'.isConstOf modality then
+    if h : e.isApp = true then some (e.appArg h) else none
+  else
+    none
+
+/-- As `peelTlaModalityDirect?`, but allowing a definition tagged with `[tla_modality_unfold]` at the
+expression head. This is shared with the other modality tactics. -/
+def peelTlaModality? (modality : Name) (e : Expr) : MetaM (Option Expr) :=
+  recognizeWithTlaModalityHeadUnfold? (peelTlaModalityDirect? modality) e
+
+/- The order is significant: `tmonotone` peels `□◇` and `◇□` in one step when
+possible, before falling back to their outer modality. These composite cases
+exist because proof mode must also distribute the prefix over the conjunction of
+all hypotheses; that is separate from ordinary one-formula monotonicity. -/
 private def monotoneKinds : List ((Expr → Option Expr) × Name) := [
   (matchFirstTwo ``TLA.always ``TLA.eventually, ``Entails_always_eventually_monotone_single),
   (matchFirstTwo ``TLA.eventually ``TLA.always, ``Entails_eventually_always_monotone),
-  (matchFirst ``TLA.later, ``Entails_later_monotone),
-  (matchFirst ``TLA.always, ``Entails_always_monotone),
-  (matchFirst ``TLA.eventually, ``Entails_eventually_monotone_single),
+  (peelTlaModalityDirect? ``TLA.later, ``Entails_later_monotone),
+  (peelTlaModalityDirect? ``TLA.always, ``Entails_always_monotone),
+  (peelTlaModalityDirect? ``TLA.eventually, ``Entails_eventually_monotone_single),
 ]
 where
-  matchFirst (nm : Name) (e : Expr) : Option Expr :=
-    if e.getAppFn'.isConstOf nm then (if h : e.isApp = true then some (e.appArg h) else none) else none
-  matchFirstTwo (nm1 nm2 : Name) (e : Expr) : Option Expr :=
-    matchFirst nm1 e |>.bind (matchFirst nm2)
+  matchFirstTwo (outer inner : Name) (e : Expr) : Option Expr :=
+    peelTlaModalityDirect? outer e >>= peelTlaModalityDirect? inner
 
 private def findMonotonePeel? (hyps : List (String × Expr)) (goal : Expr) :
     MetaM (Option (Name × List (String × Expr) × Expr)) := do
@@ -123,6 +138,8 @@ private def proofModeMonotone : TacticM Unit := withMainContext do
     | throwError "tmonotone: expected every proof-mode hypothesis and the goal to have a common monotone temporal prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHyps
   let thm ← do
+    -- `◇` does not distribute over a conjunction. The two theorems below are
+    -- therefore deliberately restricted to a singleton proof-mode context.
     if nm ∈ [``Entails_eventually_monotone_single, ``Entails_always_eventually_monotone_single] then
       unless peeledHyps.length == 1 do
         throwError "tmonotone: this modality can only be peeled from a single proof-mode hypothesis"

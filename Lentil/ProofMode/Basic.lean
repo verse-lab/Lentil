@@ -1,4 +1,5 @@
 import Lentil.Rules.BigOp
+import Lentil.ProofMode.Attrs
 
 namespace TLA.ProofMode
 
@@ -171,6 +172,10 @@ partial def recognizeWithTlaModalityHeadUnfold? {α : Type} (recognize : Expr �
   let some unfolded ← unfoldDefinition? e true
     | return none
   recognizeWithTlaModalityHeadUnfold? recognize unfolded.headBeta.cleanupAnnotations
+
+attribute [tla_modality_unfold] TLA.leads_to
+attribute [tla_modality_unfold] TLA.always_implies
+attribute [tla_modality_unfold] TLA.weak_fairness
 
 def postDSimpAfterApplyingReflectionTheorem (l : Array Name) : TacticM Unit := do
   let gs ← getGoals
