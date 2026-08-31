@@ -1,17 +1,42 @@
-# TLA in Lean
+# Lentil
 
-> TLA+ is considered to be exhaustively-testable pseudocode, and its use likened to drawing blueprints for software systems; _TLA_ is an acronym for Temporal Logic of Actions. 
->
-> (from [TLA+ - Wikipedia](https://en.wikipedia.org/wiki/TLA%2B))
+Lentil is a proof infrastructure for linear temporal logic in Lean 4. It formalizes the semantics of LTL, provides rules and a dedicated proof mode to conduct proofs in LTL as an object logic. 
 
-Yet another formalization of TLA in Lean 4. The definitions are ported from the [`coq-tla`](https://github.com/tchajed/coq-tla) library, while the proofs are written using Lean's tactic language. 
+## Getting Started
 
-Given the unprecedented enthusiasm with which people have been using Lean to formalize various concepts and port formalizations from other proof assistants (a trend that began with the release of Lean 3 and has only intensified since), we do not expect this project to become the most comprehensive or practical TLA formalization in Lean. Its current development principle is to ensure a minimum level of user-friendliness while including enough content to enable our development of other projects. 
+Add Lentil as a dependency. In `lakefile.lean`:
 
-## Usage
+```lean
+require lentil from git "https://github.com/verse-lab/Lentil" @ "main"
+```
 
-Add this project into your `lakefile.lean` (just like how you would do for other Lean4 projects), and then
+or in `lakefile.toml`:
+
+```toml
+[[require]]
+name = "lentil"
+git = "https://github.com/verse-lab/Lentil"
+rev = "main"
+```
+
+and then
 
 ```lean
 import Lentil
 ```
+
+Lentil is built against the Lean version pinned in [`lean-toolchain`](lean-toolchain).
+
+Refer to [this cheat sheet](docs/Lentil-cheatsheet.md) for a quick start, and the
+[reference manual](docs/Lentil-reference.md) for the full notation and tactic
+documentation. 
+
+## Acknowledgments
+
+The definitions of the embedding are initially ported from
+[`coq-tla`](https://github.com/tchajed/coq-tla). 
+The design of the proof mode is partly inspired by [Iris Proof Mode](https://iris-project.org/).
+
+## License
+
+See [LICENSE](LICENSE).
