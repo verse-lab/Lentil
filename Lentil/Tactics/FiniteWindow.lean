@@ -4,12 +4,12 @@ import Lentil.Tactics.Basic
 
 open Lean
 
-namespace TLA
+namespace Lentil
 
 /-!
-This file implements a finite-window reduction for local TLA obligations.
+This file implements a finite-window reduction for local LTL obligations.
 
-The older `simp_finite_exec_goal` tactic unfolds a TLA formula on an explicit
+The older `simp_finite_exec_goal` tactic unfolds a LTL formula on an explicit
 trace, then tries to discover and generalize the finitely many trace cells that
 remain. That is fragile: the tactic has to rediscover finite dependence from
 the unfolded goal shape.
@@ -23,8 +23,8 @@ introduces the `n` state variables, and simplifies the resulting `core`. Exact
 `HasFiniteWindow` certificates lift to both approximation directions, while
 temporal hypotheses such as `□p` can provide only a necessary approximation.
 
-For sequents, `tfinite_window` first changes `p |-tla- q` by definitional
-equality into `|-tla- p → q`. For predicate equalities `p =tla= q`, it combines
+For sequents, `tfinite_window` first changes `p |-tl- q` by definitional
+equality into `|-tl- p → q`. For predicate equalities `p =tl= q`, it combines
 the certificates for both sides into one common-window pointwise `Iff` core.
 -/
 
@@ -311,10 +311,10 @@ def finiteWindowPure {σ : Type u} (P : Prop) : FiniteWindow (pure_pred (α := �
 instance hasFiniteWindowPure {σ : Type u} (P : Prop) : HasFiniteWindow (pure_pred (α := σ) P) 0 where
   build _ h := (finiteWindowPure P).weaken h
 
-instance hasFiniteWindowTrue {σ : Type u} : HasFiniteWindow (tla_true (α := σ)) 0 :=
+instance hasFiniteWindowTrue {σ : Type u} : HasFiniteWindow (tl_true (α := σ)) 0 :=
   hasFiniteWindowPure True
 
-instance hasFiniteWindowFalse {σ : Type u} : HasFiniteWindow (tla_false (α := σ)) 0 :=
+instance hasFiniteWindowFalse {σ : Type u} : HasFiniteWindow (tl_false (α := σ)) 0 :=
   hasFiniteWindowPure False
 
 def finiteWindowState {σ : Type u} (p : σ → Prop) : FiniteWindow (state_pred p) 1 where
@@ -331,10 +331,10 @@ def finiteWindowAction {σ : Type u} (a : action σ) : FiniteWindow (action_pred
 instance hasFiniteWindowAction {σ : Type u} (a : action σ) : HasFiniteWindow (action_pred a) 2 where
   build _ h := (finiteWindowAction a).weaken h
 
-def finiteWindowEnabled {σ : Type u} (a : action σ) : FiniteWindow (tla_enabled a) 1 :=
+def finiteWindowEnabled {σ : Type u} (a : action σ) : FiniteWindow (tl_enabled a) 1 :=
   finiteWindowState (enabled a)
 
-instance hasFiniteWindowEnabled {σ : Type u} (a : action σ) : HasFiniteWindow (tla_enabled a) 1 where
+instance hasFiniteWindowEnabled {σ : Type u} (a : action σ) : HasFiniteWindow (tl_enabled a) 1 where
   build _ h := (finiteWindowEnabled a).weaken h
 
 def FiniteWindow.binary {σ : Type u} {p q : pred σ} {w : Nat}
@@ -403,12 +403,12 @@ def WindowApprox.binary {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat
 
 def WindowApprox.and {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat}
     (hp : WindowApprox dir p w) (hq : WindowApprox dir q w) :
-    WindowApprox dir (tla_and p q) w :=
+    WindowApprox dir (tl_and p q) w :=
   WindowApprox.binary (fun p q => p ∧ q) (by grind) hp hq
 
 def WindowApprox.or {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat}
     (hp : WindowApprox dir p w) (hq : WindowApprox dir q w) :
-    WindowApprox dir (tla_or p q) w :=
+    WindowApprox dir (tl_or p q) w :=
   WindowApprox.binary (fun p q => p ∨ q) (by grind) hp hq
 
 /-- Combine a uniformly sized family of approximations of the same direction
@@ -426,18 +426,18 @@ def WindowApprox.binder {σ : Type u} {α : Sort v} {dir : ApproxDir}
     cases dir <;> simp only [ApproxDir.Sound] at hps ⊢ <;> grind
 
 def WindowApprox.not {σ : Type u} {dir : ApproxDir} {p : pred σ} {w : Nat}
-    (hp : WindowApprox dir.flip p w) : WindowApprox dir (tla_not p) w where
+    (hp : WindowApprox dir.flip p w) : WindowApprox dir (tl_not p) w where
   core := IteratedHomPred.mkNot hp.core
   sound := by
     intro e i
     rw [IteratedHomPred.evalExec_mkNot]
     have hps := hp.sound e i
     cases dir <;>
-      simp only [ApproxDir.flip, ApproxDir.Sound, tla_not] at hps ⊢ <;> grind
+      simp only [ApproxDir.flip, ApproxDir.Sound, tl_not] at hps ⊢ <;> grind
 
 def WindowApprox.implies {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Nat}
     (hp : WindowApprox dir.flip p w) (hq : WindowApprox dir q w) :
-    WindowApprox dir (tla_implies p q) w where
+    WindowApprox dir (tl_implies p q) w where
   core := IteratedHomPred.mkImplies hp.core hq.core
   sound := by
     intro e i
@@ -445,50 +445,50 @@ def WindowApprox.implies {σ : Type u} {dir : ApproxDir} {p q : pred σ} {w : Na
     have hps := hp.sound e i
     have hqs := hq.sound e i
     cases dir <;>
-      simp only [ApproxDir.flip, ApproxDir.Sound, tla_implies] at hps hqs ⊢ <;> grind
+      simp only [ApproxDir.flip, ApproxDir.Sound, tl_implies] at hps hqs ⊢ <;> grind
 
 def WindowApprox.later {σ : Type u} {dir : ApproxDir} {p : pred σ} {w : Nat}
-    (hp : WindowApprox dir p w) : WindowApprox dir (TLA.later p) (w + 1) where
+    (hp : WindowApprox dir p w) : WindowApprox dir (Lentil.later p) (w + 1) where
   core := fun _ => hp.core
   sound := by
     intro e i
     cases dir <;>
-      simpa [ApproxDir.Sound, TLA.later, IteratedHomPred.evalExec] using hp.sound e (i + 1)
+      simpa [ApproxDir.Sound, Lentil.later, IteratedHomPred.evalExec] using hp.sound e (i + 1)
 
 instance hasWindowApproxAnd {σ : Type u} {dir : ApproxDir} (p q : pred σ) (n m : Nat)
     [hp : HasWindowApprox dir p n] [hq : HasWindowApprox dir q m] :
-    HasWindowApprox dir (tla_and p q) (max n m) where
+    HasWindowApprox dir (tl_and p q) (max n m) where
   build w h := WindowApprox.and
     (hp.build w (Nat.le_trans (Nat.le_max_left n m) h))
     (hq.build w (Nat.le_trans (Nat.le_max_right n m) h))
 
 instance hasWindowApproxOr {σ : Type u} {dir : ApproxDir} (p q : pred σ) (n m : Nat)
     [hp : HasWindowApprox dir p n] [hq : HasWindowApprox dir q m] :
-    HasWindowApprox dir (tla_or p q) (max n m) where
+    HasWindowApprox dir (tl_or p q) (max n m) where
   build w h := WindowApprox.or
     (hp.build w (Nat.le_trans (Nat.le_max_left n m) h))
     (hq.build w (Nat.le_trans (Nat.le_max_right n m) h))
 
 instance hasWindowApproxForall {σ : Type u} {α : Sort v} {dir : ApproxDir}
     (p : α → pred σ) (n : Nat) [hp : ∀ x, HasWindowApprox dir (p x) n] :
-    HasWindowApprox dir (tla_forall p) n where
+    HasWindowApprox dir (tl_forall p) n where
   build w h := WindowApprox.binder (fun r => ∀ x, r x)
     (by grind) (fun x => (hp x).build w h)
 
 instance hasWindowApproxExists {σ : Type u} {α : Sort v} {dir : ApproxDir}
     (p : α → pred σ) (n : Nat) [hp : ∀ x, HasWindowApprox dir (p x) n] :
-    HasWindowApprox dir (tla_exists p) n where
+    HasWindowApprox dir (tl_exists p) n where
   build w h := WindowApprox.binder (fun r => ∃ x, r x)
     (by grind) (fun x => (hp x).build w h)
 
 instance hasWindowApproxNot {σ : Type u} {dir : ApproxDir} (p : pred σ) (n : Nat)
-    [hp : HasWindowApprox dir.flip p n] : HasWindowApprox dir (tla_not p) n where
+    [hp : HasWindowApprox dir.flip p n] : HasWindowApprox dir (tl_not p) n where
   build w h := WindowApprox.not (hp.build w h)
 
 instance hasWindowApproxImplies {σ : Type u} {dir : ApproxDir}
     (p q : pred σ) (n m : Nat)
     [hp : HasWindowApprox dir.flip p n] [hq : HasWindowApprox dir q m] :
-    HasWindowApprox dir (tla_implies p q) (max n m) where
+    HasWindowApprox dir (tl_implies p q) (max n m) where
   build w h := WindowApprox.implies
     (hp.build w (Nat.le_trans (Nat.le_max_left n m) h))
     (hq.build w (Nat.le_trans (Nat.le_max_right n m) h))
@@ -526,7 +526,7 @@ theorem evalExec_tile {σ : Type u} {p : pred σ} {n : Nat}
       simpa [alwaysPrefix, tile] using (FiniteWindow.iff_of_eval hp e i).symm
   | k + 1, e, i => by
       rw [alwaysPrefix]
-      simp only [tla_and, later]
+      simp only [tl_and, later]
       rw [tile, evalExec_mkAnd, evalExec_weaken]
       rw [FiniteWindow.iff_of_eval hp e]
       exact and_congr Iff.rfl (evalExec_tile hp k e (i + 1))
@@ -605,7 +605,7 @@ instance hasWindowApproxNecessaryAlwaysOfApprox {σ : Type u} (p : pred σ) (n :
 /-- Interpret a sufficient approximation of `¬□¬p` as one of `◇p`.  The core
 is unchanged; only its semantic guarantee is transported across the duality. -/
 def WindowApprox.eventuallyOfDual {σ : Type u} {p : pred σ} {w : Nat}
-    (hp : WindowApprox .sufficient (tla_not (always (tla_not p))) w) :
+    (hp : WindowApprox .sufficient (tl_not (always (tl_not p))) w) :
     WindowApprox .sufficient (eventually p) w where
   core := hp.core
   sound := by
@@ -623,20 +623,20 @@ instance hasWindowApproxSufficientEventually {σ : Type u} (p : pred σ) (n : Na
     [hp : HasWindowApprox .sufficient p n] :
     HasWindowApprox .sufficient (eventually p) n where
   build w h :=
-    let hnot : HasWindowApprox .necessary (tla_not p) n :=
+    let hnot : HasWindowApprox .necessary (tl_not p) n :=
       { build := fun w h => WindowApprox.not (dir := .necessary) (hp.build w h) }
     (WindowApprox.not (dir := .sufficient) (hnot.tile w h)).eventuallyOfDual
 
 -- Typeclass search does not unfold the `⇒` wrapper while matching instance
 -- heads, so expose its underlying `□(p → q)` necessary approximation explicitly.
 instance hasWindowApproxNecessaryAlwaysImplies {σ : Type u} (p q : pred σ) (n : Nat)
-    [hpq : HasWindowApprox .necessary (tla_implies p q) n] :
+    [hpq : HasWindowApprox .necessary (tl_implies p q) n] :
     HasWindowApprox .necessary (always_implies p q) n where
   build w h := hpq.tile w h
 
 end WindowApproxInstances
 
-attribute [tla_finite_window_def]
+attribute [tl_finite_window_def]
   Nat.max_def Nat.reduceAdd Nat.reduceSub Nat.reduceEqDiff Nat.reduceLeDiff
   IteratedForall
   finiteWindowOfHasFiniteWindow
@@ -666,7 +666,7 @@ attribute [tla_finite_window_def]
   IteratedHomPred.mkBinder
   FiniteWindow.binary
 
-attribute [tla_finite_window_def ↓] dreduceIte dreduceDIte reduceIte reduceDIte
+attribute [tl_finite_window_def ↓] dreduceIte dreduceDIte reduceIte reduceDIte
 
 open Elab Tactic Meta
 
@@ -698,33 +698,33 @@ private def changeProofModeEntailsToValidRepeatedImplies : TacticM (List Name) :
   let target ← ProofMode.cleanupAnnotAndMore (← g.getType)
   let some (_, hypsExpr, _, hyps, goal) ← ProofMode.recognizeCanonicalEntails target
     | return []
-  let thm ← mkAppOptM ``TLA.ProofMode.Entails_of_valid_repeatedImplies
+  let thm ← mkAppOptM ``Lentil.ProofMode.Entails_of_valid_repeatedImplies
     #[none, some hypsExpr, some goal]
   let gs ← g.apply thm
   let [g] := gs
     | throwError "tfinite_window: unexpected number of goals after converting proof-mode Entails goal (got {gs.length}, expected 1)"
   replaceMainGoal [g]
   let implicationChain ← hyps.foldrM (init := goal) fun (_, hyp) acc =>
-    mkAppM ``TLA.tla_implies #[hyp, acc]
-  let newTarget ← mkAppM ``TLA.valid #[implicationChain]
+    mkAppM ``Lentil.tl_implies #[hyp, acc]
+  let newTarget ← mkAppM ``Lentil.valid #[implicationChain]
   let g ← getMainGoal
   replaceMainGoal [← g.change newTarget]
   return hyps.map fun (name, _) => Name.mkSimple name
 
 /--
-`tfinite_window` reduces a TLA validity, sequent, or predicate equality
+`tfinite_window` reduces a LTL validity, sequent, or predicate equality
 whose proof only needs a bounded execution prefix to an ordinary Lean goal
 over finitely many states.
 
-The tactic accepts validity goals (`|-tla- p`), sequents (`p |-tla- q`),
-proof-mode `Entails` goals and equality goals (`p =tla= q`).
+The tactic accepts validity goals (`|-tl- p`), sequents (`p |-tl- q`),
+proof-mode `Entails` goals and equality goals (`p =tl= q`).
 It computes one finite window for the whole
 obligation, introduces its states as `s`, `s'`, `s''`, and so on, and leaves the
 resulting non-temporal proposition for subsequent tactics to prove.  For
 example, it turns
 
 ```lean
-(⌜ inv ⌝ ∧ ⟨next⟩) |-tla- (◯ ⌜ inv ⌝)
+(⌜ inv ⌝ ∧ ⟨next⟩) |-tl- (◯ ⌜ inv ⌝)
 ```
 
 into a goal of the following shape:
@@ -734,7 +734,7 @@ s s' : σ
 ⊢ inv s ∧ next s s' → inv s'
 ```
 
-An equality `p =tla= q` becomes one pointwise `Iff` goal; it is not split into two sequents.
+An equality `p =tl= q` becomes one pointwise `Iff` goal; it is not split into two sequents.
 
 “Needs a bounded execution prefix” refers to the obligation as a whole, not to
 every temporal formula appearing in it.  State predicates observe one state,
@@ -760,7 +760,7 @@ elab "tfinite_window" : tactic => withMainContext do
   let target ← getMainTarget
   let target := target.headBeta.cleanupAnnotations
   let n ← match_expr target with
-    | TLA.valid _ p =>
+    | Lentil.valid _ p =>
       let (inst, n) ← windowApproxOf .sufficient p
       -- Apply at the meta level to avoid synthesizing the instance twice.
       let thm ← mkAppOptM ``HasWindowApprox.valid_of_forall_sufficient #[none, none, none, some inst]
@@ -780,15 +780,15 @@ elab "tfinite_window" : tactic => withMainContext do
       replaceMainGoal [g]
       pure (max n m)
     | _ =>
-      throwError "tfinite_window: goal is not a TLA validity goal or TLA predicate equality, but {target}"
+      throwError "tfinite_window: goal is not a LTL validity goal or LTL predicate equality, but {target}"
   -- Expose the finite core as ordinary state variables.
   introFiniteStates n
   -- The core still contains the instance constructors and computed `max` widths;
   -- reducing them produces the expected first-order state predicate goal.
-  withMainContext do evalTactic <| ← `(tactic| dsimp +$(mkIdent `instances) -$(mkIdent `failIfUnchanged) only [$(mkIdent `tla_finite_window_def):ident])
+  withMainContext do evalTactic <| ← `(tactic| dsimp +$(mkIdent `instances) -$(mkIdent `failIfUnchanged) only [$(mkIdent `tl_finite_window_def):ident])
   unless proofModeHypNames.isEmpty do
     let g ← getMainGoal
     let (_, g') ← liftMetaM <| g.introN proofModeHypNames.length proofModeHypNames
     replaceMainGoal [g']
 
-end TLA
+end Lentil

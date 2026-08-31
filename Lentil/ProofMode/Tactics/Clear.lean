@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -37,7 +37,7 @@ tclear * - hq
 ```
 leaves only `hq : q`.
 -/
-syntax (name := tlaClearExceptTac) "tclear" "*" " -" (ppSpace colGt ident)* : tactic
+syntax (name := tlClearExceptTac) "tclear" "*" " -" (ppSpace colGt ident)* : tactic
 /--
 `tclear h₁ h₂ ...` removes temporal hypotheses from the proof-mode context.
 The target predicate is unchanged, but the remaining proof must not use the
@@ -49,16 +49,16 @@ tclear hp
 ```
 leaves only `hq : q` in the proof-mode context.
 -/
-syntax (name := tlaClearTac) "tclear" (ppSpace colGt ident)+ : tactic
+syntax (name := tlClearTac) "tclear" (ppSpace colGt ident)+ : tactic
 
 private def clearTacDSimps := #[``List.filter, ``List.contains, ``List.elem, ``or, ``and, ``not,
   ``List.eraseIdx, ``String.reduceBEq, ``String.reduceBNe, ``Bool.false_or, ``Bool.or_false]
 
-def tlaClearByName (name : List String) : TacticM Unit := do
+def tlClearByName (name : List String) : TacticM Unit := do
   evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear) ($(quote name)) ?_)
   postDSimpAfterApplyingReflectionTheorem clearTacDSimps
 
-def tlaClearByIdx (idx : Nat) : TacticM Unit := do
+def tlClearByIdx (idx : Nat) : TacticM Unit := do
   evalTactic <| ← `(tactic| refine $(mkIdent ``Entails_clear_by_idx) ($(quote idx)) ?_)
   postDSimpAfterApplyingReflectionTheorem clearTacDSimps
 
@@ -69,6 +69,6 @@ elab_rules : tactic
     postDSimpAfterApplyingReflectionTheorem clearTacDSimps
   | `(tactic| tclear $[$names:ident]*) => withMainContext do
     let toClear := names.toList.map fun name => toString name.getId
-    tlaClearByName toClear
+    tlClearByName toClear
 
-end TLA.ProofMode
+end Lentil.ProofMode

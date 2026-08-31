@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Elab Tactic
 
@@ -18,4 +18,4 @@ elab "tcheck_goal_form" : tactic => do
   unless (← recognizeEntailsHypsFromGoal).isSome do
     throwError "tcheck_goal_form: goal is not in canonical Entails form"
 
-end TLA.ProofMode
+end Lentil.ProofMode

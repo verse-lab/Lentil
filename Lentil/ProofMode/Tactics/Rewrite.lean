@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Location
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
 open Lean.Parser.Tactic
@@ -193,11 +193,11 @@ With `at *`, each proof-mode hypothesis and the goal are considered separately;
 locations that do not contain a matching occurrence are skipped as in Lean's
 `rewrite`.
 -/
-syntax (name := tlaRewrite) "trewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
+syntax (name := tlRewrite) "trewrite" optConfig rwRuleSeq (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic
   | `(tactic| trewrite $cfg:optConfig $rules:rwRuleSeq $[$loc]?) => do
     rewriteAtProofModeLocations loc do
       evalTactic <| ← `(tactic| rewrite $cfg:optConfig $rules:rwRuleSeq)
 
-end TLA.ProofMode
+end Lentil.ProofMode

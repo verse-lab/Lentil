@@ -2,34 +2,34 @@ import Lentil.Basic
 
 /-! Attributes and their registries used by proof-mode tactics. -/
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta
 
 section ModalityUnfold
 
-/-- Declarations tagged with `[tla_modality_unfold]`. -/
-initialize tlaModalityUnfoldExt : SimplePersistentEnvExtension Name NameSet ←
+/-- Declarations tagged with `[tl_modality_unfold]`. -/
+initialize tlModalityUnfoldExt : SimplePersistentEnvExtension Name NameSet ←
   registerSimplePersistentEnvExtension {
-    name := `tlaModalityUnfoldExt
+    name := `tlModalityUnfoldExt
     addImportedFn := fun entries =>
       entries.foldl (init := {}) fun s ns =>
         ns.foldl (init := s) fun s n => s.insert n
     addEntryFn := fun s n => s.insert n
   }
 
-def hasTlaModalityUnfoldAttr (env : Environment) (decl : Name) : Bool :=
-  (tlaModalityUnfoldExt.getState env).contains decl
+def hasTlModalityUnfoldAttr (env : Environment) (decl : Name) : Bool :=
+  (tlModalityUnfoldExt.getState env).contains decl
 
 /-- Marking definitions whose head may hide a leading modality operator. -/
 initialize registerBuiltinAttribute {
-  name := `tla_modality_unfold
+  name := `tl_modality_unfold
   descr := "definitions whose head may be unfolded by proof-mode modality tactics"
   add := fun decl stx kind => do
     Attribute.Builtin.ensureNoArgs stx
     unless kind == AttributeKind.global do
-      throwAttrMustBeGlobal `tla_modality_unfold kind
-    modifyEnv fun env => tlaModalityUnfoldExt.addEntry env decl
+      throwAttrMustBeGlobal `tl_modality_unfold kind
+    modifyEnv fun env => tlModalityUnfoldExt.addEntry env decl
 }
 
 end ModalityUnfold
@@ -37,17 +37,17 @@ end ModalityUnfold
 section TMapMono
 
 /-! `@[tmap_mono]` registers a unary predicate operator through a theorem of either
-form `|-tla- ((p ⇒ q) → (op p → op q))` or
-`(p ⇒ q) |-tla- (op p → op q)`. The registered theorem is strong enough for
+form `|-tl- ((p ⇒ q) → (op p → op q))` or
+`(p ⇒ q) |-tl- (op p → op q)`. The registered theorem is strong enough for
 `tmap` to transport both global implications and proof-mode `always_implies`
 hypotheses through `op`. -/
 
 def recognizeAlwaysImplies? (e : Expr) : MetaM (Option (Expr × Expr)) := do
   match_expr e with
-  | TLA.always_implies _ lhs rhs => return (lhs, rhs)
-  | TLA.always _ a =>
+  | Lentil.always_implies _ lhs rhs => return (lhs, rhs)
+  | Lentil.always _ a =>
     match_expr a with
-    | TLA.tla_implies _ lhs rhs => return (lhs, rhs)
+    | Lentil.tl_implies _ lhs rhs => return (lhs, rhs)
     | _ => return none
   | _ => return none
 
@@ -55,12 +55,12 @@ def recognizeAlwaysImplies? (e : Expr) : MetaM (Option (Expr × Expr)) := do
 private def tmapMonotoneOperator? (type : Expr) : MetaM (Option Name) :=
   forallTelescope type fun _ body => do
     match_expr body with
-    | TLA.valid _ formula =>
+    | Lentil.valid _ formula =>
         match_expr formula with
-        | TLA.tla_implies _ stableImplication mappedImplication =>
+        | Lentil.tl_implies _ stableImplication mappedImplication =>
             tmapMonotoneOperatorFrom? stableImplication mappedImplication
         | _ => return none
-    | TLA.pred_implies _ stableImplication mappedImplication =>
+    | Lentil.pred_implies _ stableImplication mappedImplication =>
         tmapMonotoneOperatorFrom? stableImplication mappedImplication
     | _ => return none
 where
@@ -71,7 +71,7 @@ where
   let some (p, q) ← recognizeAlwaysImplies? stableImplication
     | return none
   match_expr mappedImplication with
-  | TLA.tla_implies _ opP opQ =>
+  | Lentil.tl_implies _ opP opQ =>
       let .app opForP p' := opP | return none
       let .app opForQ q' := opQ | return none
       unless ← isDefEq p' p do return none
@@ -110,8 +110,8 @@ initialize registerBuiltinAttribute {
       tmapMonotoneOperator? (← getConstInfo theoremName).type
     let some operator := operator?
       | throwError "@[tmap_mono] expects one of the forms\n  \
-          |-tla- ((p ⇒ q) → (op p → op q))\n  \
-          (p ⇒ q) |-tla- (op p → op q)\nbut '{theoremName}' has a different shape"
+          |-tl- ((p ⇒ q) → (op p → op q))\n  \
+          (p ⇒ q) |-tl- (op p → op q)\nbut '{theoremName}' has a different shape"
     let env ← getEnv
     if let some existing := findTmapMonotonicity? env operator then
       throwError "operator '{operator}' already has @[tmap_mono] theorem '{existing}'"
@@ -120,4 +120,4 @@ initialize registerBuiltinAttribute {
 
 end TMapMono
 
-end TLA.ProofMode
+end Lentil.ProofMode

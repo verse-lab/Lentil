@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Location
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
@@ -51,7 +51,7 @@ tsimp [heq] at hp hq
 ```
 simplifies only the temporal hypotheses `hp` and `hq`.
 -/
-syntax (name := tlaSimp) "tsimp" optConfig (discharger)? (&" only")?
+syntax (name := tlSimp) "tsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
@@ -66,11 +66,11 @@ tdsimp [wrap] at hp
 ```
 changes `hp` to have predicate `p`.
 -/
-syntax (name := tlaDsimp) "tdsimp" optConfig (discharger)? (&" only")?
+syntax (name := tlDsimp) "tdsimp" optConfig (discharger)? (&" only")?
   (" [" withoutPosition((simpErase <|> simpLemma),*,?) "]")?
   (Lean.Parser.Tactic.location)? : tactic
 
-syntax (name := tlaUnfold) "tunfold" (ppSpace colGt ident)+ (Lean.Parser.Tactic.location)? : tactic
+syntax (name := tlUnfold) "tunfold" (ppSpace colGt ident)+ (Lean.Parser.Tactic.location)? : tactic
 
 elab_rules : tactic
   | `(tactic| tsimp $cfg:optConfig $(discharger)? $[only%$o]? $[[$args,*]]? $[$loc]?) => do
@@ -83,4 +83,4 @@ elab_rules : tactic
     runConvAtProofModeLocations "tunfold" loc do
       `(conv| unfold $defs:ident*)
 
-end TLA.ProofMode
+end Lentil.ProofMode

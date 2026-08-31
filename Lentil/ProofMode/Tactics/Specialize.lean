@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Tactics.Rename
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
 
@@ -28,7 +28,7 @@ name.
 theorem Entails_add_new {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
   (subHyps : List (pred σ)) (hinc : subHyps ⊆ hyps.map NamedPred.pred)
   (newHypName : String) (newHyp : pred σ) :
-  ((repeatedAnd subHyps)) |-tla- (newHyp) →
+  ((repeatedAnd subHyps)) |-tl- (newHyp) →
   Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
   Entails hyps goal := by
   intro h1 h2
@@ -48,7 +48,7 @@ variable {σ : Type u} {hyps hyps' : List (NamedPred σ)} {goal : pred σ} {newH
 include h in
 private theorem Entails_specializeHyp_aux
   (subHyps : List (pred σ)) (hinc : subHyps ⊆ hyps.map NamedPred.pred) :
-  ((repeatedAnd subHyps)) |-tla- (newHyp) → Entails hyps' goal → Entails hyps goal := by
+  ((repeatedAnd subHyps)) |-tl- (newHyp) → Entails hyps' goal → Entails hyps goal := by
   intro h1 h2
   rcases h with rfl | ⟨hidx, rfl⟩
   on_goal 1=> exact h2
@@ -63,35 +63,35 @@ variable (hidx : idx < hyps.length) (hhyps' : hyps' = hyps.modify idx replaceFun
 include hidx hhyps'
 
 private theorem Entails_specialize_forall_aux {α : Sort v} {p : α → pred σ} (witness : α)
-  (heq : newHyp = p witness) (hpred : (hyps[idx]'hidx).pred = tla_forall p) :
+  (heq : newHyp = p witness) (hpred : (hyps[idx]'hidx).pred = tl_forall p) :
   Entails hyps' goal → Entails hyps goal := by
   refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
-    [TLA.tla_forall p] ?_ ?_
+    [Lentil.tl_forall p] ?_ ?_
   · grind
   · simp [repeatedAnd_singleton] ; tunfold_simp ; subst newHyp ; grind
 
 private theorem Entails_specialize_pure_aux {rhs : pred σ} {q : Prop} (hq : q)
-  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| ⌞ q ⌟ → rhs]) :
+  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlfml| ⌞ q ⌟ → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
   refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
-    [[tlafml| ⌞ q ⌟ → rhs]] ?_ ?_
+    [[tlfml| ⌞ q ⌟ → rhs]] ?_ ?_
   · grind
   · simp [repeatedAnd_singleton] ; tunfold_simp ; grind
 
-private theorem Entails_specialize_valid_aux {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
-  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| lhs → rhs]) :
+private theorem Entails_specialize_valid_aux {lhs rhs : pred σ} (hlhs : Lentil.valid lhs)
+  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlfml| lhs → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
   refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
-    [[tlafml| lhs → rhs]] ?_ ?_
+    [[tlfml| lhs → rhs]] ?_ ?_
   · grind
   · subst newHyp ; simp [repeatedAnd_singleton] ; revert hlhs ; tunfold_simp ; grind
 
 private theorem Entails_specialize_temporal_aux {rhs : pred σ} (lhss : List (pred σ))
   (hin : lhss ⊆ hyps.map NamedPred.pred)
-  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlafml| (repeatedAnd lhss) → rhs]) :
+  (heq : newHyp = rhs) (hpred : (hyps[idx]'hidx).pred = [tlfml| (repeatedAnd lhss) → rhs]) :
   Entails hyps' goal → Entails hyps goal := by
   refine Entails_specializeHyp_aux idx (by right ; constructor <;> assumption)
-    ([tlafml| (repeatedAnd lhss) → rhs] :: lhss) ?_ ?_
+    ([tlfml| (repeatedAnd lhss) → rhs] :: lhss) ?_ ?_
   · grind
   · rw [repeatedAnd_cons] ; tunfold_simp ; grind
 
@@ -109,14 +109,14 @@ section
 variable {α : Sort v} {p : α → pred σ} (witness : α)
 
 theorem Entails_specialize_forall_by_name (chosen : String)
-  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, TLA.tla_forall p⟩) :
+  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, Lentil.tl_forall p⟩) :
   Entails (replaceChosenPred hyps chosen (p witness)) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
   exact Entails_specialize_forall_aux _ hidx rfl _ rfl (by grind)
 
 theorem Entails_specialize_forall_by_idx (idx : Nat)
-  (hpred : hyps[idx]?.map NamedPred.pred = some (TLA.tla_forall p)) :
+  (hpred : hyps[idx]?.map NamedPred.pred = some (Lentil.tl_forall p)) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, p witness⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
@@ -130,14 +130,14 @@ variable {rhs : pred σ} {q : Prop} (hq : q)
 include hq
 
 theorem Entails_specialize_pure_by_name (chosen : String)
-  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlafml| ⌞ q ⌟ → rhs]⟩) :
+  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlfml| ⌞ q ⌟ → rhs]⟩) :
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
   exact Entails_specialize_pure_aux _ hidx rfl hq rfl (by grind)
 
 theorem Entails_specialize_pure_by_idx (idx : Nat)
-  (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| ⌞ q ⌟ → rhs]) :
+  (hpred : hyps[idx]?.map NamedPred.pred = some [tlfml| ⌞ q ⌟ → rhs]) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
@@ -147,18 +147,18 @@ end
 
 section
 
-variable {lhs rhs : pred σ} (hlhs : TLA.valid lhs)
+variable {lhs rhs : pred σ} (hlhs : Lentil.valid lhs)
 include hlhs
 
 theorem Entails_specialize_valid_by_name (chosen : String)
-  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlafml| lhs → rhs]⟩) :
+  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlfml| lhs → rhs]⟩) :
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
   exact Entails_specialize_valid_aux _ hidx rfl hlhs rfl (by grind)
 
 theorem Entails_specialize_valid_by_idx (idx : Nat)
-  (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| lhs → rhs]) :
+  (hpred : hyps[idx]?.map NamedPred.pred = some [tlfml| lhs → rhs]) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
@@ -174,7 +174,7 @@ variable {rhs : pred σ} {lhss : List (pred σ)} (premises : List String)
 include hprem
 
 theorem Entails_specialize_temporal_by_name (chosen : String)
-  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlafml| (repeatedAnd lhss) → rhs]⟩) :
+  (hpred : hyps.find? (fun h => h.name == chosen) = some ⟨chosen, [tlfml| (repeatedAnd lhss) → rhs]⟩) :
   Entails (replaceChosenPred hyps chosen rhs) goal → Entails hyps goal := by
   obtain ⟨ht, ⟨idx, hidx, heq1, heq2⟩⟩ := List.find?_findIdx? hpred
   unfold replaceChosenPred modifyHypByName ; rw [heq2] ; dsimp
@@ -182,7 +182,7 @@ theorem Entails_specialize_temporal_by_name (chosen : String)
   subst lhss ; rw [← List.map_filterMap] ; clear hpred ht heq1 heq2 ; grind
 
 theorem Entails_specialize_temporal_by_idx (idx : Nat)
-  (hpred : hyps[idx]?.map NamedPred.pred = some [tlafml| (repeatedAnd lhss) → rhs]) :
+  (hpred : hyps[idx]?.map NamedPred.pred = some [tlfml| (repeatedAnd lhss) → rhs]) :
   Entails (hyps.modify idx (fun ⟨name, _⟩ => ⟨name, rhs⟩)) goal → Entails hyps goal := by
   simp only [Option.map_eq_some_iff, List.getElem?_eq_some_iff] at hpred
   rcases hpred with ⟨_, ⟨hidx, rfl⟩, heq⟩
@@ -217,17 +217,17 @@ def resolveTemporalHypArg (hyps : List (String × Expr)) (arg : TSyntax `term)
 hypothesis list back to the literal proof-mode context. Callers build repeated
 specialization by invoking this after each argument, so each step sees the
 predicate produced by the previous step. -/
-def tlaSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Unit := withMainContext do
+def tlSpecializeStep (pos : TemporalHypLoc) (arg : TSyntax `term) : TacticM Unit := withMainContext do
   -- FIXME: Repetitively running `recognizeEntailsHypsFromGoal` and `find?` on it
   -- might be slow in some extreme cases?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "tspecialize: failed to read the hypotheses from the goal"
   let (_, pred) ← findByTemporalHypLoc hyps pos "tspecialize" "the goal's Entails list"
   match_expr pred with
-  | TLA.tla_forall _ _ _ =>
+  | Lentil.tl_forall _ _ _ =>
     let thm := if pos matches .byName .. then ``Entails_specialize_forall_by_name else ``Entails_specialize_forall_by_idx
     evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
-  | TLA.tla_implies _ lhs _ =>
-    if lhs.isAppOfArity' ``TLA.pure_pred 2 then
+  | Lentil.tl_implies _ lhs _ =>
+    if lhs.isAppOfArity' ``Lentil.pure_pred 2 then
       -- Treat `arg` as a Lean term
       let thm := if pos matches .byName .. then ``Entails_specialize_pure_by_name else ``Entails_specialize_pure_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) $arg ($(quoteTemporalHypLocToTerm pos)) (by rfl) ?_)
@@ -263,12 +263,12 @@ tspecialize h hp
 changes `h` to `q` and keeps `hp` in the context. Numeric hypothesis indices
 may be used in place of names.
 -/
-syntax (name := tlaSpecializeTac) "tspecialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
+syntax (name := tlSpecializeTac) "tspecialize" (ppSpace colGt temporalHypLoc) (ppSpace colGt term:arg)+ : tactic
 
 elab_rules : tactic
   | `(tactic| tspecialize $h:temporalHypLoc $[$args:term]*) => do
     let pos ← parseTemporalHypLoc h "tspecialize: invalid syntax for specialization position"
     for arg in args do
-      tlaSpecializeStep pos arg
+      tlSpecializeStep pos arg
 
-end TLA.ProofMode
+end Lentil.ProofMode

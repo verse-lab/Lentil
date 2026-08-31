@@ -2,7 +2,7 @@ import Lentil.ProofMode.Basic
 import Lentil.ProofMode.Tactics.Intro
 import Lentil.ProofMode.Tactics.Revert
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -18,7 +18,7 @@ theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pre
   (toPull : String) {q : Prop} :
   letI idx := hyps.findIdx fun h => h.name == toPull
   letI hyps' := hyps.eraseIdx idx
-  hyps[idx]?.map NamedPred.pred = some [tlafml| ⌞ q ⌟] →
+  hyps[idx]?.map NamedPred.pred = some [tlfml| ⌞ q ⌟] →
   (q → Entails hyps' goal) → Entails hyps goal := by
   intro heq hh
   refine Entails_revert_by_name (toRevert := toPull) ?_
@@ -38,7 +38,7 @@ tpull_pure hP
 removes `hP` from the temporal context and introduces a Lean local
 `hP : P`.
 -/
-syntax (name := tlaPullPureTac) "tpull_pure" (ppSpace colGt ident)+ : tactic
+syntax (name := tlPullPureTac) "tpull_pure" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic
   | `(tactic| tpull_pure $[$hs:ident]*) => do
@@ -51,7 +51,7 @@ elab_rules : tactic
       let some idx := hyps.findIdx? fun hyp => hyp.1 == nameStr
         | throwError "tpull_pure: hypothesis '{nameStr}' not found in the goal's Entails list"
       let (_, pred) := hyps[idx]!
-      let_expr TLA.pure_pred _ q := pred
+      let_expr Lentil.pure_pred _ q := pred
         | throwError "tpull_pure: hypothesis '{nameStr}' is not a pure predicate; got {pred}"
       -- Pass the original `q` explicitly: inferring it from the lookup equality can
       -- unfold reducible typeclass projections such as `LE.le` to `Nat.le`.
@@ -70,7 +70,7 @@ elab_rules : tactic
       evalTactic <| ← `(tactic| intro $h:ident)
 
 /--
-`tprove_pure` proves a pure TLA entailment by reducing it to an ordinary Lean
+`tprove_pure` proves a pure LTL entailment by reducing it to an ordinary Lean
 proposition.
 
 For example, on a goal whose temporal conclusion is `⌞P⌟`,
@@ -81,4 +81,4 @@ changes the remaining obligation to the Lean proposition `P`.
 -/
 macro "tprove_pure" : tactic => `(tactic| refine $(mkIdent ``pred_implies_pure) ?_)
 
-end TLA.ProofMode
+end Lentil.ProofMode

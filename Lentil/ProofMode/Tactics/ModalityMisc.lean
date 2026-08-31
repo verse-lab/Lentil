@@ -3,7 +3,7 @@ import Lentil.ProofMode.Tactics.Monotone
 import Lentil.ProofMode.Tactics.Apply
 import Lentil.ProofMode.Tactics.Revert
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -12,11 +12,11 @@ section
 variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
 
 theorem Entails_toggle_goal_under_always :
-    Entails (mapHypPreds TLA.always hyps) goal =
-      Entails (mapHypPreds TLA.always hyps) (TLA.always goal) := by
+    Entails (mapHypPreds Lentil.always hyps) goal =
+      Entails (mapHypPreds Lentil.always hyps) (Lentil.always goal) := by
   unfold Entails
   rw [mapHypPreds_preds, repeatedAnd_map_always]
-  apply TLA.always_pred_implies
+  apply Lentil.always_pred_implies
 
 end
 
@@ -24,35 +24,35 @@ section
 
 variable {σ : Type u}
 
-/-- Carrying a proof of `◇p |-tla- p`. -/
+/-- Carrying a proof of `◇p |-tl- p`. -/
 class PrefixClosed (p : pred σ) : Prop where
-  prefix_closed : ◇p |-tla- (p)
+  prefix_closed : ◇p |-tl- (p)
 
-instance prefixClosedEventually (p : pred σ) : PrefixClosed (TLA.eventually p) where
+instance prefixClosedEventually (p : pred σ) : PrefixClosed (Lentil.eventually p) where
   prefix_closed := by rw [eventually_idem]
 
 instance prefixClosedAlwaysEventually (p : pred σ) :
-    PrefixClosed (TLA.always (TLA.eventually p)) where
+    PrefixClosed (Lentil.always (Lentil.eventually p)) where
   prefix_closed := by rw [eventually_always_eventually]
 
-instance prefixClosedPure (p : Prop) : @PrefixClosed σ (TLA.pure_pred p) where
+instance prefixClosedPure (p : Prop) : @PrefixClosed σ (Lentil.pure_pred p) where
   prefix_closed := by tunfold_simp
 
-instance prefixClosedTrue : @PrefixClosed σ TLA.tla_true := prefixClosedPure _
+instance prefixClosedTrue : @PrefixClosed σ Lentil.tl_true := prefixClosedPure _
 
-instance prefixClosedFalse : @PrefixClosed σ TLA.tla_false := prefixClosedPure _
+instance prefixClosedFalse : @PrefixClosed σ Lentil.tl_false := prefixClosedPure _
 
 -- These are good, but let's have them later ...
 /-
 instance prefixClosedAnd (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
-    PrefixClosed (TLA.tla_and p q) where
+    PrefixClosed (Lentil.tl_and p q) where
   prefix_closed := by
     intro e k h
     exact ⟨PrefixClosed.prefix_closed (p := p) e k h.1,
       PrefixClosed.prefix_closed (p := q) e k h.2⟩
 
 instance prefixClosedOr (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
-    PrefixClosed (TLA.tla_or p q) where
+    PrefixClosed (Lentil.tl_or p q) where
   prefix_closed := by
     intro e k h
     rcases h with h | h
@@ -61,14 +61,14 @@ instance prefixClosedOr (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
 
 instance prefixClosedForall {α : Sort v} (p : α → pred σ)
     [∀ x, PrefixClosed (p x)] :
-    PrefixClosed (TLA.tla_forall p) where
+    PrefixClosed (Lentil.tl_forall p) where
   prefix_closed := by
     intro e k h x
     exact PrefixClosed.prefix_closed (p := p x) e k (h x)
 
 instance prefixClosedExists {α : Sort v} (p : α → pred σ)
     [∀ x, PrefixClosed (p x)] :
-    PrefixClosed (TLA.tla_exists p) where
+    PrefixClosed (Lentil.tl_exists p) where
   prefix_closed := by
     intro e k h
     rcases h with ⟨x, hx⟩
@@ -80,18 +80,18 @@ instance prefixClosedExists {α : Sort v} (p : α → pred σ)
 theorem Entails_advance_eventually_under_always
     (pre post : List (NamedPred σ)) {name : String} {p goal : pred σ}
     [inst : PrefixClosed goal] :
-    Entails (mapHypPreds TLA.always pre ++ ⟨name, p⟩ :: mapHypPreds TLA.always post) goal →
-    Entails (mapHypPreds TLA.always pre ++ ⟨name, TLA.eventually p⟩ :: mapHypPreds TLA.always post) goal := by
+    Entails (mapHypPreds Lentil.always pre ++ ⟨name, p⟩ :: mapHypPreds Lentil.always post) goal →
+    Entails (mapHypPreds Lentil.always pre ++ ⟨name, Lentil.eventually p⟩ :: mapHypPreds Lentil.always post) goal := by
   intro h
   apply Entails_trans ; apply inst.prefix_closed
-  refine Entails_revert_by_idx (mapHypPreds TLA.always pre).length ?_
+  refine Entails_revert_by_idx (mapHypPreds Lentil.always pre).length ?_
   simp
   rw [List.eraseIdx_append_of_length_le]
   on_goal 2=> simp
   simp
   unfold Entails
   rw [← mapHypPreds_append, mapHypPreds_preds, repeatedAnd_map_always,
-    impl_intro_add_r, TLA.and_comm]
+    impl_intro_add_r, Lentil.and_comm]
   apply pred_implies_trans ; apply always_and_eventually'
   apply eventually_monotone
   apply pred_implies_trans
@@ -108,10 +108,10 @@ variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
 
 private theorem Entails_step_aux
     (stable stepped : List (NamedPred σ))
-    (h : Entails (mapHypPreds TLA.always stable ++ stepped) goal) :
+    (h : Entails (mapHypPreds Lentil.always stable ++ stepped) goal) :
     Entails
-      (mapHypPreds TLA.always stable ++ mapHypPreds TLA.later stepped)
-      (TLA.later goal) := by
+      (mapHypPreds Lentil.always stable ++ mapHypPreds Lentil.later stepped)
+      (Lentil.later goal) := by
   unfold Entails at h ⊢
   simp only [List.map_append, mapHypPreds_preds,
     repeatedAnd_append, repeatedAnd_map_always] at h ⊢
@@ -125,13 +125,13 @@ theorem Entails_step
     (stable stepped : List (NamedPred σ))
     (stableIdxs steppedIdxs : List Nat)
     (heqStable :
-      stableIdxs.filterMap (hyps[·]?) = mapHypPreds TLA.always stable)
+      stableIdxs.filterMap (hyps[·]?) = mapHypPreds Lentil.always stable)
     (heqStepped :
-      steppedIdxs.filterMap (hyps[·]?) = mapHypPreds TLA.later stepped)
-    (h : Entails (mapHypPreds TLA.always stable ++ stepped) goal) :
-    Entails hyps (TLA.later goal) := by
+      steppedIdxs.filterMap (hyps[·]?) = mapHypPreds Lentil.later stepped)
+    (h : Entails (mapHypPreds Lentil.always stable ++ stepped) goal) :
+    Entails hyps (Lentil.later goal) := by
   refine Entails_drop_hyps
-    (mapHypPreds TLA.always stable ++ mapHypPreds TLA.later stepped) ?_ ?_
+    (mapHypPreds Lentil.always stable ++ mapHypPreds Lentil.later stepped) ?_ ?_
   · grind
   · exact Entails_step_aux stable stepped h
 
@@ -140,7 +140,7 @@ end
 private def peelAlwaysHyps? (hyps : List (String × Expr)) : MetaM (Option (List (String × Expr))) := do
   let mut peeledHyps := []
   for (name, pred) in hyps do
-    let some pred ← peelTlaModality? ``TLA.always pred
+    let some pred ← peelTlModality? ``Lentil.always pred
       | return none
     peeledHyps := (name, pred) :: peeledHyps
   return some peeledHyps.reverse
@@ -155,7 +155,7 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   let some peeledHypsList ← peelAlwaysHyps? hyps
     | throwError "ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix"
   let peeledHypsExpr ← toHypsList hypTy peeledHypsList
-  let peeledGoal? ← peelTlaModality? ``TLA.always goal
+  let peeledGoal? ← peelTlModality? ``Lentil.always goal
   let (leftToRight?, toggledGoal) :=
     match peeledGoal? with
     | some goal => (true, goal)
@@ -164,7 +164,7 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   let thm ← mkAppM (if leftToRight? then ``Eq.mp else ``Eq.mpr) #[thm]
   let [g'] ← g.apply thm
     | throwError "ttoggle_goal_under_always: unexpected number of goals after applying the reflection theorem"
-  let newGoal ← if leftToRight? then pure toggledGoal else mkAppM ``TLA.always #[toggledGoal]
+  let newGoal ← if leftToRight? then pure toggledGoal else mkAppM ``Lentil.always #[toggledGoal]
   let newTarget ← mkAppM ``Entails #[hypsExpr, newGoal]
   replaceMainGoal [← g'.change newTarget]
 
@@ -178,7 +178,7 @@ private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := 
   let (idx, chosenName, chosenPred) ← findIdxByTemporalHypLoc hyps loc "tadvance" "the goal's Entails list"
   let (preHyps, postHyps) := hyps.splitAt idx
   let postHyps := postHyps.tail
-  let some chosenP ← peelTlaModality? ``TLA.eventually chosenPred
+  let some chosenP ← peelTlModality? ``Lentil.eventually chosenPred
     | throwError "tadvance: selected hypothesis must have a leading eventually (`◇`) prefix"
   let some peeledPreHyps ← peelAlwaysHyps? preHyps
     | throwError "tadvance: every hypothesis before the selected one must have a leading always (`□`) prefix"
@@ -207,7 +207,7 @@ private def proofModeStep : TacticM Unit := withMainContext do
   let target ← cleanupAnnotAndMore (← g.getType)
   let some (σExpr, hypsExpr, hypTy, hyps, goal) ← recognizeCanonicalEntails target
     | throwError "tstep: expected a proof-mode Entails goal"
-  let some goalBody ← peelTlaModality? ``TLA.later goal
+  let some goalBody ← peelTlModality? ``Lentil.later goal
     | throwError "tstep: expected the proof-mode goal to have a leading next (`◯`) prefix"
 
   let (stableIdxs, steppedIdxs, stableHyps, steppedHyps) ← splitHyps hyps
@@ -230,7 +230,7 @@ private def proofModeStep : TacticM Unit := withMainContext do
     | throwError "tstep: expected exactly one temporal subgoal after applying the soundness theorem"
 
   let displayedStableHyps ← stableHyps.mapM fun (name, pred) => do
-    let pred ← mkAppM ``TLA.always #[pred]
+    let pred ← mkAppM ``Lentil.always #[pred]
     pure (name, pred)
   let advancedHypsExpr ← toHypsList hypTy (displayedStableHyps ++ steppedHyps)
   let advancedTarget ← mkAppM ``Entails #[advancedHypsExpr, goalBody]
@@ -243,10 +243,10 @@ where
     let mut stableHyps : List (String × Expr) := []
     let mut steppedHyps : List (String × Expr) := []
     for ((name, pred), idx) in hyps.zipIdx do
-      if let some body ← peelTlaModality? ``TLA.always pred then
+      if let some body ← peelTlModality? ``Lentil.always pred then
         stableIdxs := idx :: stableIdxs
         stableHyps := (name, body) :: stableHyps
-      else if let some body ← peelTlaModality? ``TLA.later pred then
+      else if let some body ← peelTlModality? ``Lentil.later pred then
         steppedIdxs := idx :: steppedIdxs
         steppedHyps := (name, body) :: steppedHyps
       else
@@ -264,36 +264,36 @@ where
 proof-mode goal when every temporal hypothesis has a leading `□`.
 
 When the leading `□` is hidden behind a definition tagged with
-`[tla_modality_unfold]`, this tactic unfolds only that expression head while
+`[tl_modality_unfold]`, this tactic unfolds only that expression head while
 checking for the prefix. This includes the built-in wrappers
-`TLA.always_implies` (`⇒`), `TLA.leads_to` (`↝`), and `TLA.weak_fairness`
+`Lentil.always_implies` (`⇒`), `Lentil.leads_to` (`↝`), and `Lentil.weak_fairness`
 (`𝒲ℱ`).
 
 For example, with `hp : □ p`, it changes a proof-mode goal `□ q` to `q`:
 ```lean
-guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+guard_target =ₛ Entails [⟨"hp", [tlfml| □ p]⟩] [tlfml| □ q]
 ttoggle_goal_under_always
-guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] q
+guard_target =ₛ Entails [⟨"hp", [tlfml| □ p]⟩] q
 ```
 If the current goal has no leading `□`, the same tactic changes `q` to `□ q`:
 ```lean
-guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] q
+guard_target =ₛ Entails [⟨"hp", [tlfml| □ p]⟩] q
 ttoggle_goal_under_always
-guard_target =ₛ Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| □ q]
+guard_target =ₛ Entails [⟨"hp", [tlfml| □ p]⟩] [tlfml| □ q]
 ```
 -/
-syntax (name := tlaToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic
+syntax (name := tlToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic
 
 /--
 `tadvance h` advances the current proof point to a selected eventuality.
 
 If `h : ◇ p`, the tactic replaces `h` by `p`, provided every other proof-mode
 hypothesis has a leading `□` (possibly hidden behind a definition tagged with
-`[tla_modality_unfold]`) and typeclass search can synthesize
+`[tl_modality_unfold]`) and typeclass search can synthesize
 `PrefixClosed goal`. Built-in instances cover `◇ q`, `□◇ q`, and pure facts.
 For other prefix-closed goals, add a `PrefixClosed` instance.
 -/
-syntax (name := tlaAdvanceTac) "tadvance" (ppSpace colGt temporalHypLoc) : tactic
+syntax (name := tlAdvanceTac) "tadvance" (ppSpace colGt temporalHypLoc) : tactic
 
 /--
 `tstep` advances a proof-mode sequent by one deterministic temporal step.
@@ -302,7 +302,7 @@ The goal must have a leading `◯`. Each temporal hypothesis must have either a
 leading `□` or `◯`; `□ p` remains `□ p`, while `◯ q` becomes `q`. The resulting
 context groups the always hypotheses before the peeled next hypotheses.
 -/
-syntax (name := tlaStepTac) "tstep" : tactic
+syntax (name := tlStepTac) "tstep" : tactic
 
 elab_rules : tactic
   | `(tactic| ttoggle_goal_under_always) => proofModeToggleGoalUnderAlways
@@ -311,4 +311,4 @@ elab_rules : tactic
     proofModeAdvanceEventually loc
   | `(tactic| tstep) => proofModeStep
 
-end TLA.ProofMode
+end Lentil.ProofMode

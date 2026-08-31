@@ -13,9 +13,9 @@ import Lentil
        antecedent of the goal pred.
 -/
 
-namespace TLA.ProofMode.Test.Revert
+namespace Lentil.ProofMode.Test.Revert
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (p q r : pred σ)
 
@@ -23,41 +23,41 @@ variable {σ : Type u} (p q r : pred σ)
 
 -- Revert a single temporal hypothesis: `hp : p` goes from the temporal
 -- context to a `p → ..` antecedent of the goal pred.
-example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
+example : (p ∧ q) |-tl- (q) → (p ∧ q) |-tl- (q) := by
   intro h
   tstart hp hq
   trevert hp
-  guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
+  guard_target =ₛ Entails [⟨"hq", q⟩] [tlfml| p → q]
   tintro hp
   tassumption
 
 -- Reverting then re-introducing should round-trip back to the same shape.
-example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
+example : (p ∧ q) |-tl- (q) → (p ∧ q) |-tl- (q) := by
   intro h
   tstart hp hq
   trevert hp
-  guard_target =ₛ Entails [⟨"hq", q⟩] [tlafml| p → q]
+  guard_target =ₛ Entails [⟨"hq", q⟩] [tlfml| p → q]
   tintro hp
   guard_target =ₛ Entails [⟨"hq", q⟩, ⟨"hp", p⟩] q
   tassumption
 
 -- Revert multiple temporal hypotheses; the leftmost name ends up as the
 -- outermost antecedent of the resulting `→`-chain.
-example : (p ∧ q) |-tla- (q) → (p ∧ q) |-tla- (q) := by
+example : (p ∧ q) |-tl- (q) → (p ∧ q) |-tl- (q) := by
   intro h
   tstart hp hq
   trevert hp hq
-  guard_target =ₛ Entails [] [tlafml| p → q → q]
+  guard_target =ₛ Entails [] [tlfml| p → q → q]
   tintro hp hq
   tassumption
 
 -- Reverting a temporal hyp from the *middle* of the list filters it cleanly
 -- without disturbing the order of the rest.
-example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
+example : (p ∧ q ∧ r) |-tl- (r) → (p ∧ q ∧ r) |-tl- (r) := by
   intro h
   tstart hp hq hr
   trevert hq
-  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlafml| q → r]
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hr", r⟩] [tlfml| q → r]
   tintro hq
   tassumption
 
@@ -65,19 +65,19 @@ example : (p ∧ q ∧ r) |-tla- (r) → (p ∧ q ∧ r) |-tla- (r) := by
 
 -- Revert every temporal hypothesis at once. The temporal context becomes empty
 -- and the hypotheses are rebuilt as a left-to-right implication chain.
-example : (p ∧ q) |-tla- (p) := by
+example : (p ∧ q) |-tl- (p) := by
   tstart hp hq
   trevert_all
-  guard_target =ₛ Entails [] [tlafml| p → q → p]
+  guard_target =ₛ Entails [] [tlfml| p → q → p]
   tintro hp hq
   tassumption
 
 -- On an empty temporal context, `trevert_all` is a no-op on the goal shape.
-example : (q) |-tla- (⊤) := by
+example : (q) |-tl- (⊤) := by
   tstart hq
   tclear hq
   trevert_all
-  guard_target =ₛ @Entails σ [] (@TLA.tla_true σ)
+  guard_target =ₛ @Entails σ [] (@Lentil.tl_true σ)
   tprove_pure
   trivial
 
@@ -85,17 +85,17 @@ example : (q) |-tla- (⊤) := by
 
 -- Revert a `∀`-introduced binder.
 example (P : Nat → pred σ) :
-    (⊤) |-tla- (∀ n : Nat, (P n)) → (⊤) |-tla- (∀ n : Nat, (P n)) := by
+    (⊤) |-tl- (∀ n : Nat, (P n)) → (⊤) |-tl- (∀ n : Nat, (P n)) := by
   intro h
   tstart
   tintro n
   trevert n
-  guard_target =ₛ Entails [] [tlafml| ∀ n : Nat, (P n)]
+  guard_target =ₛ Entails [] [tlfml| ∀ n : Nat, (P n)]
   exact h
 
 -- Round-trip: intro then revert should be a no-op (up to displayed shape).
 example (P : Nat → pred σ) :
-    (⊤) |-tla- (∀ n : Nat, (P n)) → (⊤) |-tla- (∀ n : Nat, (P n)) := by
+    (⊤) |-tl- (∀ n : Nat, (P n)) → (⊤) |-tl- (∀ n : Nat, (P n)) := by
   intro h
   tstart
   tintro n
@@ -106,12 +106,12 @@ example (P : Nat → pred σ) :
 
 -- Revert a pure-fact assumption.
 example (Q : Prop) :
-    (⊤) |-tla- (⌞ Q ⌟ → (p)) → (⊤) |-tla- (⌞ Q ⌟ → (p)) := by
+    (⊤) |-tl- (⌞ Q ⌟ → (p)) → (⊤) |-tl- (⌞ Q ⌟ → (p)) := by
   intro h
   tstart
   tintro hQ
   trevert hQ
-  guard_target =ₛ Entails [] [tlafml| ⌞ Q ⌟ → p]
+  guard_target =ₛ Entails [] [tlfml| ⌞ Q ⌟ → p]
   exact h
 
 /-! ## Mixed sequence -/
@@ -120,12 +120,12 @@ example (Q : Prop) :
 -- internally we revert right-to-left so that the user-written order matches
 -- the order of antecedents in the resulting goal.
 example (P : Nat → pred σ) (Q : Prop) :
-    (⊤) |-tla- (∀ n : Nat, (p → ⌞ Q ⌟ → (P n))) →
-    (⊤) |-tla- (p → (∀ n : Nat, (⌞ Q ⌟ → (P n)))) := by
+    (⊤) |-tl- (∀ n : Nat, (p → ⌞ Q ⌟ → (P n))) →
+    (⊤) |-tl- (p → (∀ n : Nat, (⌞ Q ⌟ → (P n)))) := by
   intro h
   tstart
   tintro hp n hQ
   trevert n hp hQ
   exact h
 
-end TLA.ProofMode.Test.Revert
+end Lentil.ProofMode.Test.Revert

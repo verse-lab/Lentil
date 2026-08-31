@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -22,7 +22,7 @@ abbreviations of the same predicate are accepted.
 Outside proof mode, `tassumption` falls back to Lean's ordinary
 `assumption`.
 -/
-syntax (name := tlaAssumptionTac) "tassumption" : tactic
+syntax (name := tlAssumptionTac) "tassumption" : tactic
 
 -- CHECK If in the future Lean has built-in `findIdxM?`, use it instead
 private def findIdxM? (xs : List α) (p : α → TacticM Bool) : TacticM (Option Nat) :=
@@ -55,4 +55,4 @@ elab_rules : tactic
         | throwError "tassumption: no matching temporal hypothesis for{indentExpr goal}"
       evalTactic <| ← `(tactic| exact $(mkIdent ``Entails_assumption) $(Syntax.mkNatLit idx) (by rfl))
 
-end TLA.ProofMode
+end Lentil.ProofMode

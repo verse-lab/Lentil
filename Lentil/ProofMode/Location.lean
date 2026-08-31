@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -98,4 +98,4 @@ def parseRewriteLocation
           if idx < hyps.length then pure idx else throwError "{errorMsgPrefix}: hypothesis index {idx} is out of bounds"
       return ⟨idxs, includeGoal, false⟩
 
-end TLA.ProofMode
+end Lentil.ProofMode

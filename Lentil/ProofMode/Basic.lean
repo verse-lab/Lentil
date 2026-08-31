@@ -1,73 +1,73 @@
 import Lentil.Rules.BigOp
 import Lentil.ProofMode.Attrs
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
-open TLA LentilLib
+open Lentil LentilLib
 
 structure NamedPred (σ : Type u) where
   name : String
   pred : pred σ
 
--- FIXME: How to unify this with `tla_bigwedge`?
-def repeatedAnd (ps : List (pred σ)) : pred σ := (List.foldrD tla_and tla_true ps)
+-- FIXME: How to unify this with `tl_bigwedge`?
+def repeatedAnd (ps : List (pred σ)) : pred σ := (List.foldrD tl_and tl_true ps)
 
-def repeatedImplies (ps : List (pred σ)) (q : pred σ) : pred σ := ps.foldr tla_implies q
+def repeatedImplies (ps : List (pred σ)) (q : pred σ) : pred σ := ps.foldr tl_implies q
 
 -- FIXME: This is not satisfactory ...
 theorem repeatedAnd_eq_bigwedge (ps : List (pred σ)) :
-  ((repeatedAnd ps)) =tla= (⋀ x ∈ ps, x) := by
-  dsimp [tla_bigwedge, Foldable.fold]
+  ((repeatedAnd ps)) =tl= (⋀ x ∈ ps, x) := by
+  dsimp [tl_bigwedge, Foldable.fold]
   rw [← List.foldrD_eq_foldr]
   · rfl
   · apply and_true
 
 theorem repeatedAnd_eq_in_iff (ps1 ps2 : List (pred σ)) (h : ∀ p, p ∈ ps1 ↔ p ∈ ps2) :
-  ((repeatedAnd ps1)) =tla= ((repeatedAnd ps2)) := by
+  ((repeatedAnd ps1)) =tl= ((repeatedAnd ps2)) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list, h]
 
 theorem repeatedAnd_singleton (p : pred σ) : repeatedAnd [p] = p := rfl
 
 theorem repeatedAnd_append (ps1 ps2 : List (pred σ)) :
-  ((repeatedAnd (ps1 ++ ps2))) =tla= ((repeatedAnd ps1) ∧ (repeatedAnd ps2)) := by
+  ((repeatedAnd (ps1 ++ ps2))) =tl= ((repeatedAnd ps1) ∧ (repeatedAnd ps2)) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_list_append]
 
 theorem repeatedAnd_cons (p : pred σ) (ps : List (pred σ)) :
-  ((repeatedAnd (p :: ps))) =tla= (p ∧ (repeatedAnd ps)) := by
+  ((repeatedAnd (p :: ps))) =tl= (p ∧ (repeatedAnd ps)) := by
   rw [← List.singleton_append, repeatedAnd_append] ; rfl
 
 /-
 theorem repeatedAnd_reorder (ps1 ps2 : List (pred σ)) (p : pred σ) :
-  ((repeatedAnd (ps1 ++ p :: ps2))) =tla= ((repeatedAnd (ps1 ++ ps2)) ∧ p) := by
+  ((repeatedAnd (ps1 ++ p :: ps2))) =tl= ((repeatedAnd (ps1 ++ ps2)) ∧ p) := by
   rw [repeatedAnd_eq_in_iff (ps2 := (ps1 ++ ps2) ++ [p]), repeatedAnd_append] ; rfl ; grind
 -/
 
 theorem repeatedAnd_add_duplicate {ps : List (pred σ)} {p : pred σ} (h : p ∈ ps) :
-  ((repeatedAnd ps)) =tla= ((repeatedAnd ps) ∧ p) := by
+  ((repeatedAnd ps)) =tl= ((repeatedAnd ps) ∧ p) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
   funext e i ; tunfold_simp ; grind
 
 theorem repeatedAnd_subset_implies (ps1 ps2 : List (pred σ)) :
-  ps1 ⊆ ps2 → ((repeatedAnd ps2)) |-tla- ((repeatedAnd ps1)) := by
+  ps1 ⊆ ps2 → ((repeatedAnd ps2)) |-tl- ((repeatedAnd ps1)) := by
   intro h ; rw [List.subset_def] at h
   simp only [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
   tnontemporal_simp ; aesop
 
 theorem repeatedImplies_apply {σ : Type u} {hs : List (pred σ)} {goal : pred σ} :
-  ((repeatedAnd hs) ∧ (repeatedImplies hs goal)) |-tla- (goal) := by
+  ((repeatedAnd hs) ∧ (repeatedImplies hs goal)) |-tl- (goal) := by
   induction hs with
   | nil => intro e i ⟨h1, h2⟩ ; exact h2
   | cons p ps ih => rw [repeatedAnd_cons, repeatedImplies, List.foldr_cons] ; tunfold_simp ; aesop
 
 def Entails (hyps : List (NamedPred σ)) (goal : pred σ) : Prop :=
-  TLA.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal
+  Lentil.pred_implies (repeatedAnd (hyps.map NamedPred.pred)) goal
 
 -- FIXME: Move this somewhere else; this is very similar to `revert_all`
 /-- If a proof-mode context is reified as a chain of temporal implications,
 validity of that implication chain proves the original `Entails` sequent. -/
 theorem Entails_of_valid_repeatedImplies {σ : Type u} {hyps : List (NamedPred σ)}
     {goal : pred σ} :
-    |-tla- (repeatedImplies (hyps.map NamedPred.pred) goal) →
+    |-tl- (repeatedImplies (hyps.map NamedPred.pred) goal) →
       Entails hyps goal := by
   intro h
   unfold Entails
@@ -76,7 +76,7 @@ theorem Entails_of_valid_repeatedImplies {σ : Type u} {hyps : List (NamedPred �
 
 theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   (idx : Nat) (h : idx < hyps.length) (f : NamedPred σ → NamedPred σ) :
-  ((repeatedAnd <| hyps.map NamedPred.pred) ∧ (f (hyps[idx]'h) |>.pred)) =tla=
+  ((repeatedAnd <| hyps.map NamedPred.pred) ∧ (f (hyps[idx]'h) |>.pred)) =tl=
   ((repeatedAnd <| (hyps.modify idx f).map NamedPred.pred) ∧ (hyps[idx]'h |>.pred)) := by
   rw [← repeatedAnd_singleton hyps[idx].pred, ← repeatedAnd_singleton (f (hyps[idx]'h)).pred,
     ← repeatedAnd_append, ← repeatedAnd_append]
@@ -85,8 +85,8 @@ theorem repeatedAnd_modifyHyp_reorder {σ : Type u} (hyps : List (NamedPred σ))
   simp at htmp ; intro p ; apply List.Perm.mem_iff ; exact htmp
 
 theorem repeatedAnd_map_comm {σ : Type u} (hyps : List (pred σ)) (f : pred σ → pred σ)
-  (htrue : tla_true = f tla_true)
-  (h : ∀ (p q : pred σ), tla_and (f p) (f q) = f (tla_and p q)) :
+  (htrue : tl_true = f tl_true)
+  (h : ∀ (p q : pred σ), tl_and (f p) (f q) = f (tl_and p q)) :
   ((repeatedAnd (hyps.map f))) = (f (repeatedAnd hyps)) := by
   simp [repeatedAnd_eq_bigwedge]
   induction hyps with
@@ -134,11 +134,11 @@ open Lean Meta Elab Tactic
 
 /-- Construct the reduced expression represented by `repeatedAnd preds`.
 
-Unlike an object-level application of `repeatedAnd`, this keeps the `tla_and`
+Unlike an object-level application of `repeatedAnd`, this keeps the `tl_and`
 structure (and singleton predicate head) visible to elaborator unification. -/
 def mkRepeatedAndExpr (stateType : Expr) (preds : List Expr) : MetaM Expr := do
-  let op ← mkAppOptM ``TLA.tla_and #[stateType]
-  let base ← mkAppOptM ``TLA.tla_true #[stateType]
+  let op ← mkAppOptM ``Lentil.tl_and #[stateType]
+  let base ← mkAppOptM ``Lentil.tl_true #[stateType]
   return List.foldrD (mkApp2 op) base preds
 
 /-- Generate a fresh name (*empirically, not guaranteed*) for a proof-mode
@@ -159,23 +159,23 @@ def cleanupAnnotAndMore (e : Expr) : MetaM Expr := do
 Try a recognizer on `e`, unfolding only tagged heads when direct recognition fails.
 
 The unfolding is intentionally shallow: each step unfolds the current application
-head only when it has the `[tla_modality_unfold]` attribute, and it never scans
+head only when it has the `[tl_modality_unfold]` attribute, and it never scans
 or unfolds inside arguments.
 -/
-partial def recognizeWithTlaModalityHeadUnfold? {α : Type} (recognize : Expr → Option α)
+partial def recognizeWithTlModalityHeadUnfold? {α : Type} (recognize : Expr → Option α)
     (e : Expr) : MetaM (Option α) := do
   if let some res := recognize e then
     return some res
   let head := e.getAppFn'.constName
-  unless hasTlaModalityUnfoldAttr (← getEnv) head do
+  unless hasTlModalityUnfoldAttr (← getEnv) head do
     return none
   let some unfolded ← unfoldDefinition? e true
     | return none
-  recognizeWithTlaModalityHeadUnfold? recognize unfolded.headBeta.cleanupAnnotations
+  recognizeWithTlModalityHeadUnfold? recognize unfolded.headBeta.cleanupAnnotations
 
-attribute [tla_modality_unfold] TLA.leads_to
-attribute [tla_modality_unfold] TLA.always_implies
-attribute [tla_modality_unfold] TLA.weak_fairness
+attribute [tl_modality_unfold] Lentil.leads_to
+attribute [tl_modality_unfold] Lentil.always_implies
+attribute [tl_modality_unfold] Lentil.weak_fairness
 
 def postDSimpAfterApplyingReflectionTheorem (l : Array Name) : TacticM Unit := do
   let gs ← getGoals
@@ -195,7 +195,7 @@ def recognizeHypsList (hyps : Expr) : MetaM (Option (Expr × List (String × Exp
     match acc with
     | none => pure none
     | some l =>
-      let_expr TLA.ProofMode.NamedPred.mk _ nm pred := hyp
+      let_expr Lentil.ProofMode.NamedPred.mk _ nm pred := hyp
         | return none
       let some nameStr := parseStringLit? nm | return none
       pure <| some ((nameStr, pred) :: l)
@@ -225,11 +225,11 @@ def recognizeEntailsHypsFromGoal : TacticM (Option (Expr × List (String × Expr
   recognizeEntailsHyps g
 
 def toHypsList (hypTy : Expr) (hyps : List (String × Expr)) : MetaM Expr := do
-  let elems ← hyps.mapM fun (name, pred) => mkAppM ``TLA.ProofMode.NamedPred.mk #[toExpr name, pred]
+  let elems ← hyps.mapM fun (name, pred) => mkAppM ``Lentil.ProofMode.NamedPred.mk #[toExpr name, pred]
   mkListLit hypTy elems
 
 def goalHypsLength : TacticM (Option Nat) := do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | return none
   return some hyps.length
 
-end TLA.ProofMode
+end Lentil.ProofMode

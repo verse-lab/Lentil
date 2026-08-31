@@ -2,16 +2,16 @@ import Lentil
 
 /- Tests for `trintro`. -/
 
-namespace TLA.ProofMode.Test.RIntro
+namespace Lentil.ProofMode.Test.RIntro
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (p q r s : pred σ)
 
 -- For universal quantifiers, `trintro` behaves like Lean's `rintro`.
 example (P : Nat → pred σ) :
-    (⊤) |-tla- (∀ n : Nat, (P n)) →
-    (⊤) |-tla- (∀ n : Nat, (P n)) := by
+    (⊤) |-tl- (∀ n : Nat, (P n)) →
+    (⊤) |-tl- (∀ n : Nat, (P n)) := by
   intro h
   tstart
   trintro n
@@ -23,8 +23,8 @@ example (P : Nat → pred σ) :
   tassumption
 
 -- Pure antecedents are introduced into the Lean context and may be destructured.
-example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
-    (p) |-tla- (⌞ Q ∧ R ⌟ → q) := by
+example (Q R : Prop) (h : Q → R → (p) |-tl- (q)) :
+    (p) |-tl- (⌞ Q ∧ R ⌟ → q) := by
   tstart hp
   trintro ⟨hQ, hR⟩
   guard_target =ₛ Entails [⟨"hp", p⟩] q
@@ -32,7 +32,7 @@ example (Q R : Prop) (h : Q → R → (p) |-tla- (q)) :
 
 -- Temporal antecedents are introduced as proof-mode hypotheses and then
 -- destructured with `trcases`.
-example : (p) |-tla- ((q ∧ r) → q) := by
+example : (p) |-tl- ((q ∧ r) → q) := by
   tstart hp
   trintro ⟨hq, hr⟩
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
@@ -40,16 +40,16 @@ example : (p) |-tla- ((q ∧ r) → q) := by
 
 -- Existential temporal antecedents introduce a Lean witness and a temporal hyp.
 example (P : Nat → pred σ) :
-    (⊤) |-tla- ((∃ n : Nat, (P n)) → (∃ n : Nat, (P n))) := by
+    (⊤) |-tl- ((∃ n : Nat, (P n)) → (∃ n : Nat, (P n))) := by
   tstart
   trintro ⟨n, hp⟩
-  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
+  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlfml| ∃ n : Nat, (P n)]
   texists n
   tassumption
 
 -- Mixed introductions proceed from left to right.
 example (P : Nat → pred σ) :
-    (⊤) |-tla- (∀ n : Nat, (((P n) ∧ q) → r → (P n))) := by
+    (⊤) |-tl- (∀ n : Nat, (((P n) ∧ q) → r → (P n))) := by
   tstart
   trintro n ⟨hp, hq⟩ hr
   guard_target =ₛ Entails [⟨"hp", P n⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] (P n)
@@ -57,18 +57,18 @@ example (P : Nat → pred σ) :
 
 -- Numeric `trcases` targets the chosen proof-mode hypothesis, even when
 -- names are duplicated.
-example (lem1 : (p) |-tla- (p ∧ q)) (lem2 : (p) |-tla- (q ∧ r)) :
-    (p) |-tla- (q) := by
+example (lem1 : (p) |-tl- (p ∧ q)) (lem2 : (p) |-tl- (q ∧ r)) :
+    (p) |-tl- (q) := by
   tstart hp
   thave h := lem1 hp
   thave h := lem2 hp
   trcases 2 with ⟨hq, hr⟩
-  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"h", [tlafml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"h", [tlfml| p ∧ q]⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] q
   tassumption
 
 -- A temporal antecedent `q ∨ r` is case-split with a parenthesized
 -- alternation; the later pattern `hs` is introduced into both subgoals.
-example : (p) |-tla- ((q ∨ r) → s → (q ∨ r)) := by
+example : (p) |-tl- ((q ∨ r) → s → (q ∨ r)) := by
   tstart hp
   trintro (hq | hr) hs
   · tleft
@@ -77,7 +77,7 @@ example : (p) |-tla- ((q ∨ r) → s → (q ∨ r)) := by
     tassumption
 
 -- A later tuple pattern is destructured in both case-split subgoals.
-example : (p) |-tla- ((q ∨ r) → (q ∧ r) → q) := by
+example : (p) |-tl- ((q ∨ r) → (q ∧ r) → q) := by
   tstart hp
   trintro (hq | hr) ⟨hc, hd⟩
   · tassumption
@@ -85,7 +85,7 @@ example : (p) |-tla- ((q ∨ r) → (q ∧ r) → q) := by
 
 -- Two successive case-splitting patterns: the second must fan out over both
 -- subgoals produced by the first. Four bullets pin the goal count.
-example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
+example : (p) |-tl- ((q ∨ r) → (q ∨ r) → ⊤) := by
   tstart hp
   trintro (hq1 | hr1) (hq2 | hr2)
   · tprove_pure
@@ -98,11 +98,11 @@ example : (p) |-tla- ((q ∨ r) → (q ∨ r) → ⊤) := by
     trivial
 
 -- `trintro -` introduces a temporal antecedent and immediately clears it.
-example : (p) |-tla- (q → p) := by
+example : (p) |-tl- (q → p) := by
   -- The discarded antecedent's internal name must not collide with this `h`.
   tstart h
   trintro -
   guard_target =ₛ Entails [⟨"h", p⟩] p
   tassumption
 
-end TLA.ProofMode.Test.RIntro
+end Lentil.ProofMode.Test.RIntro

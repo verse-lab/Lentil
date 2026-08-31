@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Location
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -45,7 +45,7 @@ private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
     ``List.modifyTailIdx.go, ``List.modifyHead]
 
-def tlaRename (old : TemporalHypLoc) (newStr : String) : TacticM Unit := do
+def tlRename (old : TemporalHypLoc) (newStr : String) : TacticM Unit := do
   let thm := if old matches .byName .. then ``Entails_rename_by_name else ``Entails_rename_by_idx
   evalTactic <| ← `(tactic|
     refine ($(mkIdent thm) ($(quote newStr)) ($(quoteTemporalHypLocToTerm old))).$(mkIdent `mp) ?_)
@@ -65,12 +65,12 @@ a name:
 trename 0 => hHead
 ```
 -/
-syntax (name := tlaRenameTac) "trename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
+syntax (name := tlRenameTac) "trename" (ppSpace colGt temporalHypLoc) " => " ident : tactic
 
 elab_rules : tactic
   | `(tactic| trename $old:temporalHypLoc => $new:ident) => do
     let old ← parseTemporalHypLoc old "trename: invalid syntax for renaming position"
     let newStr := toString new.getId
-    tlaRename old newStr
+    tlRename old newStr
 
-end TLA.ProofMode
+end Lentil.ProofMode

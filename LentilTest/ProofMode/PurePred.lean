@@ -8,15 +8,15 @@ import Lentil
    `Entails_revert` and `Entails_pure_fact_intro`.
 -/
 
-namespace TLA.ProofMode.Test.PurePred
+namespace Lentil.ProofMode.Test.PurePred
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (a b : pred σ)
 
 -- Basic: pull a single pure fact, use it at the Lean level.
-example (Q : Prop) (lem : Q → (a) |-tla- (a)) :
-    (a ∧ ⌞ Q ⌟) |-tla- (a) := by
+example (Q : Prop) (lem : Q → (a) |-tl- (a)) :
+    (a ∧ ⌞ Q ⌟) |-tl- (a) := by
   tstart ha hQ
   tpull_pure hQ
   -- `hQ : Q` is now in the Lean ctx; the temporal list dropped its `⟨"hQ", ⌞Q⌟⟩`.
@@ -25,15 +25,15 @@ example (Q : Prop) (lem : Q → (a) |-tla- (a)) :
 
 -- Pull from the middle of the list — the rest of the order is preserved.
 example (Q : Prop) :
-    (a ∧ ⌞ Q ⌟ ∧ b) |-tla- (a) := by
+    (a ∧ ⌞ Q ⌟ ∧ b) |-tl- (a) := by
   tstart ha hQ hb
   tpull_pure hQ
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   tassumption
 
 -- Pull and then use the pulled fact in subsequent reasoning.
-example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
-    (a ∧ ⌞ Q ⌟) |-tla- (b) := by
+example (Q : Prop) (lem : Q → (a) |-tl- (b)) :
+    (a ∧ ⌞ Q ⌟) |-tl- (b) := by
   tstart ha hQ
   tpull_pure hQ
   guard_target =ₛ Entails [⟨"ha", a⟩] b
@@ -42,30 +42,30 @@ example (Q : Prop) (lem : Q → (a) |-tla- (b)) :
   exact pred_implies_refl _
 
 -- Multiple pure facts can be pulled in sequence.
-example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
-    (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tla- (a) := by
+example (Q R : Prop) (lem : Q → R → (a) |-tl- (a)) :
+    (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tl- (a) := by
   tstart ha hQ hR
   tpull_pure hQ
-  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hR", [tlafml| ⌞ R ⌟]⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hR", [tlfml| ⌞ R ⌟]⟩] a
   tpull_pure hR
   guard_target =ₛ Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
 -- Multiple pure facts in one invocation (space-separated, like `tclear`).
-example (Q R : Prop) (lem : Q → R → (a) |-tla- (a)) :
-    (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tla- (a) := by
+example (Q R : Prop) (lem : Q → R → (a) |-tl- (a)) :
+    (a ∧ ⌞ Q ⌟ ∧ ⌞ R ⌟) |-tl- (a) := by
   tstart ha hQ hR
   tpull_pure hQ hR
   guard_target =ₛ Entails [⟨"ha", a⟩] a
   exact lem hQ hR
 
 -- Basic: pull a single pure fact, use it at the Lean level.
-example (b c : Nat) : (a ∧ ⌞ b ≤ c ⌟) |-tla- (a) := by
+example (b c : Nat) : (a ∧ ⌞ b ≤ c ⌟) |-tl- (a) := by
   tstart ha hQ
-  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hQ", [tlafml| ⌞ b ≤ c ⌟]⟩] a
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hQ", [tlfml| ⌞ b ≤ c ⌟]⟩] a
   tpull_pure hQ
   guard_hyp hQ :ₛ b ≤ c
   guard_target =ₛ Entails [⟨"ha", a⟩] a
   tapply ha
 
-end TLA.ProofMode.Test.PurePred
+end Lentil.ProofMode.Test.PurePred

@@ -8,14 +8,14 @@ import Lentil
    implications using Lean-local proof hypotheses.
 -/
 
-namespace TLA.ProofMode.Test.Specialize
+namespace Lentil.ProofMode.Test.Specialize
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (a b c : pred σ)
 
 -- Specialize a `∀` hypothesis with a Lean term.
-example (P : Nat → pred σ) : (∀ n : Nat, (P n)) |-tla- (P 0) := by
+example (P : Nat → pred σ) : (∀ n : Nat, (P n)) |-tl- (P 0) := by
   tstart h
   tspecialize h 0
   guard_target =ₛ Entails [⟨"h", P 0⟩] (P 0)
@@ -23,7 +23,7 @@ example (P : Nat → pred σ) : (∀ n : Nat, (P n)) |-tla- (P 0) := by
 
 -- Universal specialization also accepts proof-valued witnesses.
 example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
-    (∀ h : Q, (P h)) |-tla- (P hQ) := by
+    (∀ h : Q, (P h)) |-tl- (P hQ) := by
   tstart h
   tspecialize h hQ
   guard_target =ₛ Entails [⟨"h", P hQ⟩] (P hQ)
@@ -31,7 +31,7 @@ example (Q : Prop) (hQ : Q) (P : Q → pred σ) :
 
 -- Multiple arguments specialize nested `∀` binders left-to-right.
 example (P : Nat → Nat → pred σ) :
-    (∀ x : Nat, ∀ y : Nat, (P x y)) |-tla- (P 1 2) := by
+    (∀ x : Nat, ∀ y : Nat, (P x y)) |-tl- (P 1 2) := by
   tstart h
   tspecialize h 1 2
   guard_target =ₛ Entails [⟨"h", P 1 2⟩] (P 1 2)
@@ -39,21 +39,21 @@ example (P : Nat → Nat → pred σ) :
 
 -- Mixed specialization: a `∀` binder followed by a temporal implication.
 example (P Q : Nat → pred σ) :
-    ((∀ n : Nat, (P n) → (Q n)) ∧ (P 0)) |-tla- (Q 0) := by
+    ((∀ n : Nat, (P n) → (Q n)) ∧ (P 0)) |-tl- (Q 0) := by
   tstart h hp
   tspecialize h 0 hp
   guard_target =ₛ Entails [⟨"h", Q 0⟩, ⟨"hp", P 0⟩] (Q 0)
   tassumption
 
 -- Temporal implication specialization keeps the premise hypothesis.
-example : ((a → b) ∧ a) |-tla- (b) := by
+example : ((a → b) ∧ a) |-tl- (b) := by
   tstart h ha
   tspecialize h ha
   guard_target =ₛ Entails [⟨"h", b⟩, ⟨"ha", a⟩] b
   tassumption
 
 -- Pure implication specialization uses a Lean-local proof.
-example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tla- (a) := by
+example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tl- (a) := by
   tstart h
   tspecialize h hQ
   guard_target =ₛ Entails [⟨"h", a⟩] a
@@ -61,7 +61,7 @@ example (Q : Prop) (hQ : Q) : (⌞ Q ⌟ → a) |-tla- (a) := by
 
 -- The specialized hypothesis keeps its original position in the context.
 example (P : Nat → pred σ) :
-    (a ∧ (∀ n : Nat, (P n)) ∧ b) |-tla- (P 3) := by
+    (a ∧ (∀ n : Nat, (P n)) ∧ b) |-tl- (P 3) := by
   tstart ha h hb
   tspecialize h 3
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"h", P 3⟩, ⟨"hb", b⟩] (P 3)
@@ -72,7 +72,7 @@ example (P : Nat → pred σ) :
 error: tspecialize: hypothesis 'missing' not found in the goal's Entails list
 -/
 #guard_msgs in
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart ha
   tspecialize missing 0
 
@@ -81,7 +81,7 @@ example : (a) |-tla- (a) := by
 error: tspecialize: temporal hypothesis 'ha' not found in the goal's Entails list
 -/
 #guard_msgs in
-example : (a → b) |-tla- (b) := by
+example : (a → b) |-tl- (b) := by
   tstart h
   tspecialize h ha
 
@@ -90,7 +90,7 @@ example : (a → b) |-tla- (b) := by
 error: tspecialize: hypothesis 'ha' is not a ∀ or implication; got a
 -/
 #guard_msgs in
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart ha
   tspecialize ha 0
 
@@ -99,8 +99,8 @@ example : (a) |-tla- (a) := by
 error: tspecialize: temporal hypothesis 'n' not found in the goal's Entails list
 -/
 #guard_msgs in
-example (n : Nat) : (a → b) |-tla- (b) := by
+example (n : Nat) : (a → b) |-tl- (b) := by
   tstart h
   tspecialize h n
 
-end TLA.ProofMode.Test.Specialize
+end Lentil.ProofMode.Test.Specialize

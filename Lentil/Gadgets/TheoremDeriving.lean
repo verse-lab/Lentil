@@ -4,15 +4,15 @@ import Lentil.Expr
 
 /-! Gadgets for providing different variants of a proven theorem. -/
 
-namespace TLA.Deriving
+namespace Lentil.Deriving
 
-open Lean Meta Core Elab TLA.Expr LentilLib
+open Lean Meta Core Elab Lentil.Expr LentilLib
 
 -- does not assume dependency from `ps` to `q`
 def assembleUnderCommonContextShape (σ : Expr) (ps : List Expr) (q : Expr) : MetaM Expr := do
-  withLocalDeclD `Γ (← mkAppM ``TLA.pred #[σ]) fun Γ => do
-    let ps' ← ps.toArray.mapM fun p => mkAppM ``TLA.pred_implies #[Γ, p]
-    let q' ← mkAppM ``TLA.pred_implies #[Γ, q]
+  withLocalDeclD `Γ (← mkAppM ``Lentil.pred #[σ]) fun Γ => do
+    let ps' ← ps.toArray.mapM fun p => mkAppM ``Lentil.pred_implies #[Γ, p]
+    let q' ← mkAppM ``Lentil.pred_implies #[Γ, q]
     let body ← mkArrowN ps' q'
     mkForallFVars #[Γ] body
 
@@ -20,50 +20,50 @@ partial def assembleSeparatedPredImplications (ps : List Expr) (q : Expr) : Meta
   let build p := do
     let (ps, q) ← simplify [] p
     match List.getLast? ps with
-    | none => mkAppM ``TLA.valid #[q]
+    | none => mkAppM ``Lentil.valid #[q]
     | some p =>
       let ps := List.dropLast ps
-      let conj ← ps.foldrM (fun pp conj => mkAppM ``TLA.tla_and #[pp, conj]) p
-      mkAppM ``TLA.pred_implies #[conj, q]
+      let conj ← ps.foldrM (fun pp conj => mkAppM ``Lentil.tl_and #[pp, conj]) p
+      mkAppM ``Lentil.pred_implies #[conj, q]
   let ps' ← ps.mapM build
   let q' ← build q
   let res ← mkArrowN ps'.toArray q'
   pure res
 where simplify (ps : List Expr) (q : Expr) : MetaM (List Expr × Expr) := do
   -- currently only do very simple simplification:
-  -- if `p` is empty while `q` is `always_implies` then turn it into `tla_implies`
-  -- if `q` is `tla_implies` then split it into parts
+  -- if `p` is empty while `q` is `always_implies` then turn it into `tl_implies`
+  -- if `q` is `tl_implies` then split it into parts
   -- FIXME: might enhance this to allow definitionally equal pattern matching, like the one in `Qq`?
   match_expr q with
-  | TLA.always_implies _ a b =>
+  | Lentil.always_implies _ a b =>
     if ps.isEmpty then
-      simplify [] (← mkAppM ``TLA.tla_implies #[a, b])
+      simplify [] (← mkAppM ``Lentil.tl_implies #[a, b])
     else
       pure (ps, q)
-  | TLA.tla_implies _ _ _ =>
+  | Lentil.tl_implies _ _ _ =>
     let (ps', q') ← splitImplicationsIntoParts q
     pure (ps ++ ps', q')
   | _ => pure (ps, q)
 
 -- inspired by how `to_additive` is implemented in Mathlib
-/-- For a TLA theorem whose conclusion is a single `TLA.pred_implies` or
-    `TLA.valid`, this function automatically derives its several equivalent
+/-- For a LTL theorem whose conclusion is a single `Lentil.pred_implies` or
+    `Lentil.valid`, this function automatically derives its several equivalent
     or weakened versions, which might be easier to use elsewhere.
 
     For example, consider the following statement:
     ```
-    |-tla- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) ⇒ (p' ↝ q'))
+    |-tl- ((p' ⇒ p) → (q ⇒ q') → (p ↝ q) ⇒ (p' ↝ q'))
     ```
 
     One useful, but weaker version is:
     ```
-    (p') |-tla- (p) → (q) |-tla- (q') → (p ↝ q) |-tla- (p' ↝ q')
+    (p') |-tl- (p) → (q) |-tl- (q') → (p ↝ q) |-tl- (p' ↝ q')
     ```
     which is derived by repeatly applying `impl_decouple`, `impl_intro` and `always_intro`.
 
     Another useful and equivalent version is:
     ```
-    ∀ Γ, (Γ) |-tla- (p' ⇒ p) → (Γ) |-tla- (q ⇒ q') → (Γ) |-tla- ((p ↝ q) ⇒ (p' ↝ q'))
+    ∀ Γ, (Γ) |-tl- (p' ⇒ p) → (Γ) |-tl- (q ⇒ q') → (Γ) |-tl- ((p ↝ q) ⇒ (p' ↝ q'))
     ```
     which can be used in case we want to keep the context `Γ`.
 -/
@@ -104,29 +104,29 @@ def deriveForPredImpliesOrValid (nm : Name) : CoreM Unit := do
         `(term| by solve
         | tnontemporal_simp ; aesop
         | intro $introNames* ; have $htmp := @$(mkIdent nm) $introNames*
-          (try rw [← TLA.impl_intro] at $htmp:ident)
+          (try rw [← Lentil.impl_intro] at $htmp:ident)
           repeat (first
             | (solve
               | tnontemporal_simp ; aesop)
-            | have $htmp' := @$htmp ; clear $htmp ; have $htmp := @TLA.impl_decouple _ _ _ $htmp' ; clear $htmp'
-            | unfold TLA.always_implies at $htmp:ident
-            | rw [← TLA.always_intro] at $htmp:ident
+            | have $htmp' := @$htmp ; clear $htmp ; have $htmp := @Lentil.impl_decouple _ _ _ $htmp' ; clear $htmp'
+            | unfold Lentil.always_implies at $htmp:ident
+            | rw [← Lentil.always_intro] at $htmp:ident
             | intro $htmp':ident ; specialize $htmp $htmp' ; clear $htmp'
-            | rw [TLA.and_valid_split, _root_.and_imp] at $htmp:ident
+            | rw [Lentil.and_valid_split, _root_.and_imp] at $htmp:ident
           ))) noncomputable?
 
-end TLA.Deriving
+end Lentil.Deriving
 
 /--
-For a TLA theorem with this attribute in the form of a single
-`TLA.pred_implies` or `TLA.valid`, its different variants will be derived.
-See the docstring of `TLA.Deriving.deriveForPredImpliesOrValid` for more details.
+For a LTL theorem with this attribute in the form of a single
+`Lentil.pred_implies` or `Lentil.valid`, its different variants will be derived.
+See the docstring of `Lentil.Deriving.deriveForPredImpliesOrValid` for more details.
 -/
-syntax (name := tlaDerive) "tla_derive" : attr
+syntax (name := tlDerive) "tl_derive" : attr
 
-open Lean TLA.Deriving in
+open Lean Lentil.Deriving in
 initialize registerBuiltinAttribute {
-  name := `tlaDerive
+  name := `tlDerive
   descr := ""
   add := fun src _ _ => do _ ← deriveForPredImpliesOrValid src
   applicationTime := .afterTypeChecking

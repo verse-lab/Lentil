@@ -1,51 +1,51 @@
 import Lentil
 
-namespace TLA.Test.Modality
+namespace Lentil.Test.Modality
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (p q r : pred σ)
 
-example (h : (p) |-tla- (q)) : (◯ p) |-tla- (◯ q) := by
+example (h : (p) |-tl- (q)) : (◯ p) |-tl- (◯ q) := by
   tmonotone
   exact h
 
-example (h : (p ∧ q) |-tla- (r)) : (◯ p ∧ ◯ q) |-tla- (◯ r) := by
+example (h : (p ∧ q) |-tl- (r)) : (◯ p ∧ ◯ q) |-tl- (◯ r) := by
   tstart hp hq
   tmonotone
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
-example (h : (p ∧ q) |-tla- (r)) : (□ p ∧ □ q) |-tla- (□ r) := by
+example (h : (p ∧ q) |-tl- (r)) : (□ p ∧ □ q) |-tl- (□ r) := by
   tstart hp hq
   tmonotone
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
-example (h : ((p → q) ∧ (q → r)) |-tla- (p → r)) :
-    ((p ⇒ q) ∧ (q ⇒ r)) |-tla- (p ⇒ r) := by
+example (h : ((p → q) ∧ (q → r)) |-tl- (p → r)) :
+    ((p ⇒ q) ∧ (q ⇒ r)) |-tl- (p ⇒ r) := by
   tstart hp hq
   tmonotone
   guard_target =ₛ Entails
-    [⟨"hp", [tlafml| p → q]⟩, ⟨"hq", [tlafml| q → r]⟩] [tlafml| p → r]
+    [⟨"hp", [tlfml| p → q]⟩, ⟨"hq", [tlfml| q → r]⟩] [tlfml| p → r]
   exact h
 
-example (h : (p) |-tla- (q)) : (◇ p) |-tla- (◇ q) := by
+example (h : (p) |-tl- (q)) : (◇ p) |-tl- (◇ q) := by
   tstart hp
   tmonotone
   guard_target =ₛ Entails [⟨"hp", p⟩] q
   exact h
 
-example (h : (p) |-tla- (q)) : (□ ◇ p) |-tla- (□ ◇ q) := by
+example (h : (p) |-tl- (q)) : (□ ◇ p) |-tl- (□ ◇ q) := by
   tstart hp
   tmonotone
   guard_target =ₛ Entails [⟨"hp", p⟩] q
   exact h
 
-example (h : (p ∧ q) |-tla- (r)) : (◇ □ p ∧ ◇ □ q) |-tla- (◇ □ r) := by
+example (h : (p ∧ q) |-tl- (r)) : (◇ □ p ∧ ◇ □ q) |-tl- (◇ □ r) := by
   tstart hp hq
   tmonotone
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
-end TLA.Test.Modality
+end Lentil.Test.Modality

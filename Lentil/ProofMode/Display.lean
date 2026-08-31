@@ -2,10 +2,10 @@ import Lentil.ProofMode.Basic
 
 open Lean
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
-syntax tlaPmHyp := ident " : " tlafml
-syntax tlaPmEntails := ppDedent(ppLine tlaPmHyp)* ppDedent(ppLine "|-tla- " tlafml)
+syntax tlPmHyp := ident " : " tlfml
+syntax tlPmEntails := ppDedent(ppLine tlPmHyp)* ppDedent(ppLine "|-tl- " tlfml)
 
 open PrettyPrinter.Delaborator SubExpr
 
@@ -14,15 +14,15 @@ def delabNameInNamedPred : DelabM Ident := do -- whenPPOption (fun o => o.get le
   let some s := parseStringLit? e | failure
   pure <| mkIdent <| Name.mkSimple s
 
-def delabNamedPred : DelabM (TSyntax ``tlaPmHyp) := do -- whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
+def delabNamedPred : DelabM (TSyntax ``tlPmHyp) := do -- whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
   let e ← getExpr
-  unless e.isAppOfArity' ``TLA.ProofMode.NamedPred.mk 3 do
+  unless e.isAppOfArity' ``Lentil.ProofMode.NamedPred.mk 3 do
     failure
-  let fml ← withAppArg delab_tlafml_inner
+  let fml ← withAppArg delab_tlfml_inner
   let nm ← withAppFn <| withAppArg delabNameInNamedPred
-  `(tlaPmHyp| $nm:ident : $fml:tlafml)
+  `(tlPmHyp| $nm:ident : $fml:tlfml)
 
-partial def delabNamedPredList : DelabM (List (TSyntax ``tlaPmHyp)) := do
+partial def delabNamedPredList : DelabM (List (TSyntax ``tlPmHyp)) := do
   let e ← getExpr
   if e.isAppOfArity' ``List.nil 1 then
     return []
@@ -35,16 +35,16 @@ partial def delabNamedPredList : DelabM (List (TSyntax ``tlaPmHyp)) := do
 
 def delabEntails : Delab := do
   let e ← getExpr
-  unless e.isAppOfArity' ``TLA.ProofMode.Entails 3 do failure
+  unless e.isAppOfArity' ``Lentil.ProofMode.Entails 3 do failure
   -- Entails {σ} hyps goal   →  args 0,1,2
   let hyps ← withAppFn <| withAppArg delabNamedPredList
   let hyps := hyps.toArray
-  let goal ← withAppArg delab_tlafml_inner
-  let q ← `(tlaPmEntails| $hyps:tlaPmHyp* |-tla- $goal:tlafml)
-  -- NOTE: This is a hack, but making `tlaPmEntails` a `term` might again introduce some
+  let goal ← withAppArg delab_tlfml_inner
+  let q ← `(tlPmEntails| $hyps:tlPmHyp* |-tl- $goal:tlfml)
+  -- NOTE: This is a hack, but making `tlPmEntails` a `term` might again introduce some
   -- weird parsing errors, so just "pretend" the result is a `term` and display it
   pure ⟨q⟩
 
-attribute [delab app.TLA.ProofMode.Entails] delabEntails
+attribute [delab app.Lentil.ProofMode.Entails] delabEntails
 
-end TLA.ProofMode
+end Lentil.ProofMode

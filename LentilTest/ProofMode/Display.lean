@@ -11,68 +11,68 @@ import Lentil.ProofMode.Display
        h₁ : p₁
        h₂ : p₂
        ⋮
-       |-tla- goal
+       |-tl- goal
    We assert this by capturing `#check` output with `#guard_msgs`.
 -/
 
-namespace TLA.ProofMode.Test.Display
+namespace Lentil.ProofMode.Test.Display
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (p q r : pred σ)
 
--- Empty hypothesis list: just `|-tla- goal`.
-/-- info: |-tla- p : Prop -/
+-- Empty hypothesis list: just `|-tl- goal`.
+/-- info: |-tl- p : Prop -/
 #guard_msgs in
 #check (Entails [] p : Prop)
 
 -- Single hypothesis on its own line.
 /-- info: hp : p
-|-tla- q : Prop -/
+|-tl- q : Prop -/
 #guard_msgs in
 #check (Entails [⟨"hp", p⟩] q : Prop)
 
 -- Multiple hypotheses each on their own line, in list order.
 /-- info: hp : p
 hq : q
-|-tla- r : Prop -/
+|-tl- r : Prop -/
 #guard_msgs in
 #check (Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r : Prop)
 
--- Goal renders through the tlafml delaborator, so TLA conjunction notation is
+-- Goal renders through the tlfml delaborator, so LTL conjunction notation is
 -- preserved.
 /-- info: hp : p
 hq : q
 hr : r
-|-tla- p ∧ q ∧ r : Prop -/
+|-tl- p ∧ q ∧ r : Prop -/
 #guard_msgs in
-#check (Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] [tlafml| p ∧ q ∧ r] : Prop)
+#check (Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] [tlfml| p ∧ q ∧ r] : Prop)
 
 -- Unicode hypothesis label is preserved (the name string becomes an `Ident`).
 /-- info: ψ : p
-|-tla- p : Prop -/
+|-tl- p : Prop -/
 #guard_msgs in
 #check (Entails [⟨"ψ", p⟩] p : Prop)
 
--- Temporal operators in the goal render through the tlafml notation.
+-- Temporal operators in the goal render through the tlfml notation.
 /-- info: hp : p
-|-tla- □p : Prop -/
+|-tl- □p : Prop -/
 #guard_msgs in
-#check (Entails [⟨"hp", p⟩] [tlafml| □ p] : Prop)
+#check (Entails [⟨"hp", p⟩] [tlfml| □ p] : Prop)
 
 -- Hypotheses can also carry temporal predicates.
 /-- info: hp : □p
-|-tla- ◇p : Prop -/
+|-tl- ◇p : Prop -/
 #guard_msgs in
-#check (Entails [⟨"hp", [tlafml| □ p]⟩] [tlafml| ◇ p] : Prop)
+#check (Entails [⟨"hp", [tlfml| □ p]⟩] [tlfml| ◇ p] : Prop)
 
 -- Sanity-check that the same shape is produced by `tstart`: after the
 -- tactic runs, the goal is a real `Entails …` and thus rendered via the
 -- proof-mode delaborator. `guard_target =ₛ` confirms the named term shape.
-example : (p ∧ q) |-tla- (r) → (p ∧ q) |-tla- (r) := by
+example : (p ∧ q) |-tl- (r) → (p ∧ q) |-tl- (r) := by
   intro h
   tstart hp hq
   guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] r
   exact h
 
-end TLA.ProofMode.Test.Display
+end Lentil.ProofMode.Test.Display

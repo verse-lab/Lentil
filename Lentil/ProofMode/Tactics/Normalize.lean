@@ -1,25 +1,25 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
-attribute [tlanormsimp ↓] TLA.impl_intro TLA.valid_eq_true_implies TLA.impl_intro_add_r TLA.and_assoc
-  TLA.and_true TLA.true_and TLA.imp_true TLA.always_true TLA.eventually_true TLA.later_true
-  TLA.or_false TLA.false_or TLA.forall_unit TLA.exists_unit
+attribute [tlnormsimp ↓] Lentil.impl_intro Lentil.valid_eq_true_implies Lentil.impl_intro_add_r Lentil.and_assoc
+  Lentil.and_true Lentil.true_and Lentil.imp_true Lentil.always_true Lentil.eventually_true Lentil.later_true
+  Lentil.or_false Lentil.false_or Lentil.forall_unit Lentil.exists_unit
 
 /--
-`tnormalize` rewrites a raw TLA goal into a shape that proof-mode tactics can
+`tnormalize` rewrites a raw LTL goal into a shape that proof-mode tactics can
 introduce and split more predictably.
 
 For example,
 ```lean
 tnormalize
 ```
-turns a valid implication goal such as `|-tla- p → q` into the corresponding
-sequent shape `p |-tla- q`, and reassociates simple conjunction structure using
+turns a valid implication goal such as `|-tl- p → q` into the corresponding
+sequent shape `p |-tl- q`, and reassociates simple conjunction structure using
 the proof-mode normalization simp set.
 -/
-macro "tnormalize" : tactic => `(tactic| simp -$(mkIdent `failIfUnchanged) only [tlanormsimp])
+macro "tnormalize" : tactic => `(tactic| simp -$(mkIdent `failIfUnchanged) only [tlnormsimp])
 
-end TLA.ProofMode
+end Lentil.ProofMode

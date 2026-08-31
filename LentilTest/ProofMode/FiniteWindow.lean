@@ -2,55 +2,55 @@ import Lentil
 
 /- Tests for running `tfinite_window` directly on proof-mode `Entails` goals. -/
 
-namespace TLA.ProofMode.Test.FiniteWindow
+namespace Lentil.ProofMode.Test.FiniteWindow
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u}
 
 example {p : σ → Prop} :
-    (⌜ p ⌝) |-tla- (⌜ p ⌝) := by
+    (⌜ p ⌝) |-tl- (⌜ p ⌝) := by
   tstart hp
   tfinite_window
   exact hp
 
 example {p q : σ → Prop} :
-    (⌜ p ⌝ ∧ ⌜ q ⌝) |-tla- (⌜ q ⌝ ∧ ⌜ p ⌝) := by
+    (⌜ p ⌝ ∧ ⌜ q ⌝) |-tl- (⌜ q ⌝ ∧ ⌜ p ⌝) := by
   tstart hp hq
   tfinite_window
   exact ⟨hq, hp⟩
 
 example {p q : σ → Prop} :
-    Entails [⟨"hpq", [tlafml|⌜ p ⌝ ∧ ⌜ q ⌝]⟩] [tlafml|⌜ q ⌝ ∧ ⌜ p ⌝] := by
+    Entails [⟨"hpq", [tlfml|⌜ p ⌝ ∧ ⌜ q ⌝]⟩] [tlfml|⌜ q ⌝ ∧ ⌜ p ⌝] := by
   tfinite_window
   exact ⟨hpq.2, hpq.1⟩
 
 example {p q : σ → Prop} {a : action σ}
     (h : ∀ s s', p s → a s s' → q s') :
-    (⌜ p ⌝ ∧ ⟨a⟩) |-tla- (◯ ⌜ q ⌝) := by
+    (⌜ p ⌝ ∧ ⟨a⟩) |-tl- (◯ ⌜ q ⌝) := by
   tstart hp ha
   tfinite_window
   exact h _ _ hp ha
 
 example {p : σ → Prop} (h : ∀ s, p s) :
-    Entails ([] : List (NamedPred σ)) [tlafml| ⌜ p ⌝] := by
+    Entails ([] : List (NamedPred σ)) [tlfml| ⌜ p ⌝] := by
   tfinite_window
   exact h _
 
 example {p : σ → Prop} :
-    Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩] [tlafml|⌜ p ⌝] := by
+    Entails [⟨"hp", [tlfml|□⌜ p ⌝]⟩] [tlfml|⌜ p ⌝] := by
   tfinite_window
   exact hp
 
 example {p : σ → Prop} :
-    Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩] [tlafml|◯◯⌜ p ⌝] := by
+    Entails [⟨"hp", [tlfml|□⌜ p ⌝]⟩] [tlfml|◯◯⌜ p ⌝] := by
   tfinite_window
   exact hp.2.2
 
 example {p q : σ → Prop} :
-    Entails [⟨"hp", [tlafml|□⌜ p ⌝]⟩, ⟨"hq", [tlafml|□⌜ q ⌝]⟩]
-      [tlafml|◯(⌜ p ⌝ ∧ ⌜ q ⌝)] := by
+    Entails [⟨"hp", [tlfml|□⌜ p ⌝]⟩, ⟨"hq", [tlfml|□⌜ q ⌝]⟩]
+      [tlfml|◯(⌜ p ⌝ ∧ ⌜ q ⌝)] := by
   tfinite_window
   exact ⟨hp.2, hq.2⟩
 
-end TLA.ProofMode.Test.FiniteWindow
+end Lentil.ProofMode.Test.FiniteWindow

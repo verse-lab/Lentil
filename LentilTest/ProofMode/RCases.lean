@@ -3,7 +3,7 @@ import Lentil.ProofMode.Display
 
 /- Tests for the `trcases` tactic.
 
-   Initial scope: destructuring `tla_and` (via `⟨pat₁, pat₂⟩`) and `tla_exists`
+   Initial scope: destructuring `tl_and` (via `⟨pat₁, pat₂⟩`) and `tl_exists`
    (via `⟨witness, pat⟩`), mutually nested. The pattern syntax reuses Lean's
    built-in `rcasesPat` category, restricted to ident / `_` / tuple shapes.
 
@@ -13,16 +13,16 @@ import Lentil.ProofMode.Display
    one via `thave hab := <lem> h` first.
 -/
 
-namespace TLA.ProofMode.Test.RCases
+namespace Lentil.ProofMode.Test.RCases
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (a b c d e : pred σ)
 
 /-! ## And destructure -/
 
 -- Single level: `trcases hab with ⟨ha, hb⟩` on `hab : a ∧ b`.
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
+example (lem : (a) |-tl- (a ∧ b)) : (a) |-tl- (a) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
@@ -31,7 +31,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tassumption
 
 -- N-ary tuple on a right-associated chain: `⟨ha, hb, hc⟩` on `h : a ∧ b ∧ c`.
-example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
+example (lem : (a) |-tl- (a ∧ b ∧ c)) : (a) |-tl- (c) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -41,7 +41,7 @@ example (lem : (a) |-tla- (a ∧ b ∧ c)) : (a) |-tla- (c) := by
 
 -- Wildcard sub-pattern: `⟨_, hb⟩` names only the right half (the left half
 -- still lands in the temporal context, just with a hygienic name).
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
+example (lem : (a) |-tl- (a ∧ b)) : (a) |-tl- (b) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
@@ -53,28 +53,28 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
 
 -- Single level: `trcases hex with ⟨n, hp⟩` on `hex : ∃ n, P n`.
 example (P : Nat → pred σ) :
-    (∃ n : Nat, (P n)) |-tla- (∃ n : Nat, (P n)) := by
+    (∃ n : Nat, (P n)) |-tl- (∃ n : Nat, (P n)) := by
   tstart hex
   trcases hex with ⟨n, hp⟩
-  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlafml| ∃ n : Nat, (P n)]
+  guard_target =ₛ Entails [⟨"hp", P n⟩] [tlfml| ∃ n : Nat, (P n)]
   texists n
   tassumption
 
 -- Existential destructuring also introduces proof-valued witnesses.
 example (Q : Prop) (P : Q → pred σ) :
-    (∃ hQ : Q, (P hQ)) |-tla- (⊤) := by
+    (∃ hQ : Q, (P hQ)) |-tl- (⊤) := by
   tstart h
   trcases h with ⟨hQ, hp⟩
-  guard_target =ₛ Entails [⟨"hp", P hQ⟩] [tlafml| ⊤]
+  guard_target =ₛ Entails [⟨"hp", P hQ⟩] [tlfml| ⊤]
   tprove_pure
   trivial
 
 -- Chained exists with n-ary tuple: `⟨x, y, hp⟩` on `h : ∃ a, ∃ b, P a b`.
 example (P : Nat → Nat → pred σ) :
-    (∃ x : Nat, (∃ y : Nat, (P x y))) |-tla- (∃ x : Nat, (∃ y : Nat, (P x y))) := by
+    (∃ x : Nat, (∃ y : Nat, (P x y))) |-tl- (∃ x : Nat, (∃ y : Nat, (P x y))) := by
   tstart h
   trcases h with ⟨x, y, hp⟩
-  guard_target =ₛ Entails [⟨"hp", P x y⟩] [tlafml| ∃ x : Nat, (∃ y : Nat, (P x y))]
+  guard_target =ₛ Entails [⟨"hp", P x y⟩] [tlfml| ∃ x : Nat, (∃ y : Nat, (P x y))]
   texists x, y
   tassumption
 
@@ -82,10 +82,10 @@ example (P : Nat → Nat → pred σ) :
 
 -- `trcases h with ⟨n, ⟨ha, hb⟩⟩` on `h : ∃ y, A y ∧ B y`.
 example (PA PB : Nat → pred σ) :
-    (∃ n : Nat, ((PA n) ∧ (PB n))) |-tla- (∃ n : Nat, (PA n)) := by
+    (∃ n : Nat, ((PA n) ∧ (PB n))) |-tl- (∃ n : Nat, (PA n)) := by
   tstart h
   trcases h with ⟨n, ⟨ha, hb⟩⟩
-  guard_target =ₛ Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlafml| ∃ n : Nat, (PA n)]
+  guard_target =ₛ Entails [⟨"ha", PA n⟩, ⟨"hb", PB n⟩] [tlfml| ∃ n : Nat, (PA n)]
   texists n
   tassumption
 
@@ -93,37 +93,37 @@ example (PA PB : Nat → pred σ) :
 
 -- Destruct a `Fin n` witness into its underlying value + proof.
 example (P : Fin 3 → pred σ) :
-    (∃ i : Fin 3, (P i)) |-tla- (∃ i : Fin 3, (P i)) := by
+    (∃ i : Fin 3, (P i)) |-tl- (∃ i : Fin 3, (P i)) := by
   tstart h
   trcases h with ⟨⟨v, hlt⟩, hp⟩
   -- After the destructure: `v : Nat`, `hlt : v < 3` in the Lean ctx,
   -- and the temporal hyp is `hp : P ⟨v, hlt⟩`.
-  guard_target =ₛ Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlafml| ∃ i : Fin 3, (P i)]
+  guard_target =ₛ Entails [⟨"hp", P ⟨v, hlt⟩⟩] [tlfml| ∃ i : Fin 3, (P i)]
   texists ⟨v, hlt⟩
   tassumption
 
 -- Destruct a `Subtype` (e.g. `{n : Nat // n > 0}`) witness.
 example (P : {n : Nat // n > 0} → pred σ) :
-    (∃ x : {n : Nat // n > 0}, (P x)) |-tla- (∃ x : {n : Nat // n > 0}, (P x)) := by
+    (∃ x : {n : Nat // n > 0}, (P x)) |-tl- (∃ x : {n : Nat // n > 0}, (P x)) := by
   tstart h
   trcases h with ⟨⟨n, hpos⟩, hp⟩
   -- `n : Nat`, `hpos : n > 0`, hyp `hp : P ⟨n, hpos⟩`.
-  guard_target =ₛ Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlafml| ∃ x : {n : Nat // n > 0}, (P x)]
+  guard_target =ₛ Entails [⟨"hp", P ⟨n, hpos⟩⟩] [tlfml| ∃ x : {n : Nat // n > 0}, (P x)]
   texists ⟨n, hpos⟩
   tassumption
 
 -- Witness slot can be wildcard `_` — Lean's `rcases` is invoked but with
 -- nothing to destructure, so the witness lands anonymously.
 example (P : Nat → pred σ) :
-    (∃ n : Nat, (P n)) |-tla- (∃ n : Nat, (P n)) := by
+    (∃ n : Nat, (P n)) |-tl- (∃ n : Nat, (P n)) := by
   tstart h
   trcases h with ⟨_, hp⟩
   texit
-  apply TLA.exists_elim ; rfl
+  apply Lentil.exists_elim ; rfl
 
 /-! ## Top-level rename -/
 
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart h
   trcases h with h'
   guard_target =ₛ Entails [⟨"h'", a⟩] a
@@ -133,21 +133,21 @@ example : (a) |-tla- (a) := by
 
 -- Single level: `trcases hab with (ha | hb)` on `hab : a ∨ b` splits into
 -- two subgoals.
-example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (a ∨ b) := by
+example (lem : (a) |-tl- (a ∨ b)) : (a) |-tl- (a ∨ b) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
   trcases hab with (ha | hb)
-  · guard_target =ₛ Entails [⟨"ha", a⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] (Lentil.tl_or a b)
     tleft
     tassumption
-  · guard_target =ₛ Entails [⟨"hb", b⟩] (TLA.tla_or a b)
+  · guard_target =ₛ Entails [⟨"hb", b⟩] (Lentil.tl_or a b)
     tright
     tassumption
 
 -- N-ary alternation on a right-associated chain: `(ha | hb | hc)` on
 -- `h : a ∨ b ∨ c` produces three subgoals.
-example (lem : (a) |-tla- (a ∨ b ∨ c)) : (a) |-tla- (a ∨ b ∨ c) := by
+example (lem : (a) |-tl- (a ∨ b ∨ c)) : (a) |-tl- (a ∨ b ∨ c) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -163,7 +163,7 @@ example (lem : (a) |-tla- (a ∨ b ∨ c)) : (a) |-tla- (a ∨ b ∨ c) := by
 
 -- Alternation nested inside a tuple: `⟨ha, hb | hc⟩` on `h : a ∧ (b ∨ c)`.
 -- The conjunct `ha` is retained in both branches.
-example (lem : (a) |-tla- (a ∧ (b ∨ c))) : (a) |-tla- (a) := by
+example (lem : (a) |-tl- (a ∧ (b ∨ c))) : (a) |-tl- (a) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -173,7 +173,7 @@ example (lem : (a) |-tla- (a ∧ (b ∨ c))) : (a) |-tla- (a) := by
 
 -- Alternation crossing a sibling: `⟨ha | hb, hc⟩` on `h : (a ∨ b) ∧ c`. The
 -- split happens in the first slot, yet `hc` must reach both branches.
-example (lem : (a) |-tla- ((a ∨ b) ∧ c)) : (a) |-tla- (c) := by
+example (lem : (a) |-tl- ((a ∨ b) ∧ c)) : (a) |-tl- (c) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -183,7 +183,7 @@ example (lem : (a) |-tla- ((a ∨ b) ∧ c)) : (a) |-tla- (c) := by
 
 -- Deep nest: both tuple slots case-split. The explicit bullets pin the goal
 -- count at exactly four.
-example (lem : (a) |-tla- ((a ∨ b) ∧ (c ∨ d))) : (a) |-tla- (⊤) := by
+example (lem : (a) |-tl- ((a ∨ b) ∧ (c ∨ d))) : (a) |-tl- (⊤) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -199,7 +199,7 @@ example (lem : (a) |-tla- ((a ∨ b) ∧ (c ∨ d))) : (a) |-tla- (⊤) := by
 
 -- Deeper nest: an outer or-split whose first branch is the deep nest above and
 -- whose second branch is a plain hypothesis. Five bullets pin the goal count.
-example (lem : (a) |-tla- (((a ∨ b) ∧ (c ∨ d)) ∨ e)) : (a) |-tla- (⊤) := by
+example (lem : (a) |-tl- (((a ∨ b) ∧ (c ∨ d)) ∨ e)) : (a) |-tl- (⊤) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -218,8 +218,8 @@ example (lem : (a) |-tla- (((a ∨ b) ∧ (c ∨ d)) ∨ e)) : (a) |-tla- (⊤) 
 -- Mixed and/or/exists nest: an existential whose body is an `or` of an `and`.
 -- Two bullets: the `and` branch and the plain branch.
 example (A B C : Nat → pred σ)
-    (lem : (a) |-tla- (∃ n : Nat, (((A n) ∧ (B n)) ∨ (C n)))) :
-    (a) |-tla- (⊤) := by
+    (lem : (a) |-tl- (∃ n : Nat, (((A n) ∧ (B n)) ∨ (C n)))) :
+    (a) |-tl- (⊤) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
@@ -231,29 +231,29 @@ example (A B C : Nat → pred σ)
 
 /-! ## Obtain and by-cases -/
 
-example (lem : |-tla- (a ∧ b)) : (⊤) |-tla- (a) := by
+example (lem : |-tl- (a ∧ b)) : (⊤) |-tl- (a) := by
   tstart
   thave h := lem
   tobtain ⟨ha, hb⟩ := h
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   tassumption
 
-example (P : Nat → pred σ) (lem : |-tla- (∃ n : Nat, (P n))) :
-    (⊤) |-tla- (∃ n : Nat, (P n)) := by
+example (P : Nat → pred σ) (lem : |-tl- (∃ n : Nat, (P n))) :
+    (⊤) |-tl- (∃ n : Nat, (P n)) := by
   tstart
   tobtain ⟨n, hp⟩ := lem
   texists n
   tassumption
 
-example (Q : Prop) (P : Q → pred σ) (lem : |-tla- (∃ hQ : Q, (P hQ))) :
-    (a) |-tla- (⊤) := by
+example (Q : Prop) (P : Q → pred σ) (lem : |-tl- (∃ hQ : Q, (P hQ))) :
+    (a) |-tl- (⊤) := by
   tstart ha
   tobtain ⟨hQ, hp⟩ := lem
-  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hp", P hQ⟩] [tlafml| ⊤]
+  guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hp", P hQ⟩] [tlfml| ⊤]
   tprove_pure
   trivial
 
-example : (⊤) |-tla- (a ∨ ¬ a) := by
+example : (⊤) |-tl- (a ∨ ¬ a) := by
   tstart
   tby_cases ha : a
   · tleft
@@ -264,15 +264,15 @@ example : (⊤) |-tla- (a ∨ ¬ a) := by
 /-! ## Clear (`-`) -/
 
 -- Top-level `-` clears the targeted hypothesis.
-example : (a) |-tla- (⊤) := by
+example : (a) |-tl- (⊤) := by
   tstart h
   trcases h with -
-  guard_target =ₛ Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] (tl_true : pred σ)
   tprove_pure
   trivial
 
 -- `-` in a tuple slot discards that conjunct after destructuring.
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
+example (lem : (a) |-tl- (a ∧ b)) : (a) |-tl- (a) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
@@ -281,7 +281,7 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
   tassumption
 
 -- Symmetric: discard the left conjunct, keep the right.
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
+example (lem : (a) |-tl- (a ∧ b)) : (a) |-tl- (b) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
@@ -289,45 +289,45 @@ example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (b) := by
   guard_target =ₛ Entails [⟨"hb", b⟩] b
   tassumption
 
--- `tobtain - := h` routes through `tlaRcasesCore` and clears `h`.
-example : (a) |-tla- (⊤) := by
+-- `tobtain - := h` routes through `tlRcasesCore` and clears `h`.
+example : (a) |-tl- (⊤) := by
   tstart h
   tobtain - := h
-  guard_target =ₛ Entails [] (tla_true : pred σ)
+  guard_target =ₛ Entails [] (tl_true : pred σ)
   tprove_pure
   trivial
 
 -- `-` inside an alternation discards the introduced hypothesis on that branch.
-example (lem : (a) |-tla- (a ∨ b)) : (a) |-tla- (⊤) := by
+example (lem : (a) |-tl- (a ∨ b)) : (a) |-tl- (⊤) := by
   tstart ha0
   thave h := lem ha0
   tclear ha0
   trcases h with (ha | -)
-  · guard_target =ₛ Entails [⟨"ha", a⟩] (tla_true : pred σ)
+  · guard_target =ₛ Entails [⟨"ha", a⟩] (tl_true : pred σ)
     tprove_pure
     trivial
   · -- the `b`-branch hypothesis was cleared
-    guard_target =ₛ Entails [] (tla_true : pred σ)
+    guard_target =ₛ Entails [] (tl_true : pred σ)
     tprove_pure
     trivial
 
 /-! ## Errors -/
 
--- Pred head is neither `tla_and` nor `tla_exists`.
+-- Pred head is neither `tl_and` nor `tl_exists`.
 /--
 error: trcases: cannot destructure pred a with pattern ⟨ha, hb⟩
 -/
 #guard_msgs in
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart h
   trcases h with ⟨ha, hb⟩
 
--- Alternation on a pred that is not a `tla_or`.
+-- Alternation on a pred that is not a `tl_or`.
 /--
 error: trcases: cannot case-split pred a with alternation (ha | hb)
 -/
 #guard_msgs in
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart h
   trcases h with (ha | hb)
 
@@ -336,14 +336,14 @@ example : (a) |-tla- (a) := by
 error: trcases: hypothesis 'noSuchHyp' not found in the goal's Entails list
 -/
 #guard_msgs in
-example (lem : (a) |-tla- (a ∧ b)) : (a) |-tla- (a) := by
+example (lem : (a) |-tl- (a ∧ b)) : (a) |-tl- (a) := by
   tstart ha0
   thave hab := lem ha0
   tclear ha0
   trcases noSuchHyp with ⟨_, _⟩
 
 -- Clearing a numeric location removes only that occurrence when names collide.
-example (lem : (a) |-tla- (b)) : (a) |-tla- (a) := by
+example (lem : (a) |-tl- (b)) : (a) |-tl- (a) := by
   tstart h
   thave h := lem h
   trcases 1 with -
@@ -352,7 +352,7 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (a) := by
 
 -- A name location also resolves to one exact occurrence rather than clearing
 -- every hypothesis with that name.
-example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
+example (lem : (a) |-tl- (b)) : (a) |-tl- (b) := by
   tstart h
   thave h := lem h
   trcases h with -
@@ -361,10 +361,10 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
 
 -- Anonymous `tobtain` hypotheses receive distinct internal names, so clearing
 -- the newer one does not discard an older wildcard hypothesis.
-example (lemA : |-tla- (a)) (lemB : |-tla- (b)) : (⊤) |-tla- (a) := by
+example (lemA : |-tl- (a)) (lemB : |-tl- (b)) : (⊤) |-tl- (a) := by
   tstart
   tobtain _ := lemA
   tobtain - := lemB
   tassumption
 
-end TLA.ProofMode.Test.RCases
+end Lentil.ProofMode.Test.RCases

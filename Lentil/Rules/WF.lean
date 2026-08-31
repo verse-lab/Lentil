@@ -7,7 +7,7 @@ import Lentil.ProofMode.Display
 
 open Classical
 
-namespace TLA
+namespace Lentil
 
 section wf
 
@@ -17,14 +17,14 @@ section wf_def
 
 variable {a : action σ}
 
-theorem wf_as_leads_to : (𝒲ℱ a) =tla= (□ Enabled a ↝ ⟨a⟩) := rfl
+theorem wf_as_leads_to : (𝒲ℱ a) =tl= (□ Enabled a ↝ ⟨a⟩) := rfl
 
-theorem wf_alt1 : (𝒲ℱ a) =tla= □ ◇ ((¬ Enabled a) ∨ □ ◇ ⟨a⟩) := by
-  funext e ; unfold weak_fairness ; rw [implies_to_or] ; simp [tlasimp]
-  rw [← eventually_or] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlasimp]
+theorem wf_alt1 : (𝒲ℱ a) =tl= □ ◇ ((¬ Enabled a) ∨ □ ◇ ⟨a⟩) := by
+  funext e ; unfold weak_fairness ; rw [implies_to_or] ; simp [tlsimp]
+  rw [← eventually_or] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlsimp]
 
-theorem wf_alt1' : (𝒲ℱ a) =tla= □ ◇ ((¬ Enabled a) ∨ ⟨a⟩) := by
-  rw [wf_alt1] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlasimp]
+theorem wf_alt1' : (𝒲ℱ a) =tl= □ ◇ ((¬ Enabled a) ∨ ⟨a⟩) := by
+  rw [wf_alt1] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlsimp]
 
 end wf_def
 
@@ -33,12 +33,12 @@ A useful rule for proving `↝`. Compared with its original presentation in
 the paper "The Temporal Logic of Actions", the following version contains
 some changes to make it hopefully more practical.
 -/
-@[tla_derive]
+@[tl_derive]
 theorem wf1 {p q : pred σ} (next a : action σ) :
   ((p ∧ ⟨next⟩ ⇒ ◯ p ∨ ◯ q) ∧
    (p ∧ ⟨next⟩ ∧ ⟨a⟩ ⇒ ◯ q) ∧
    (p ⇒ Enabled a ∨ q) ∧
-   (□ ⟨next⟩ ∧ 𝒲ℱ a)) |-tla- (p ↝ q) := by
+   (□ ⟨next⟩ ∧ 𝒲ℱ a)) |-tl- (p ↝ q) := by
   rw [wf_alt1']
   intro e i ⟨hpuntilq, haq, henable, hnext, hwf_alt⟩ k hp
   specialize hwf_alt k ; rcases hwf_alt with ⟨k1, hwf_alt⟩
@@ -71,7 +71,7 @@ theorem wf1 {p q : pred σ} (next a : action σ) :
 theorem wf1_original {p q : pred σ} (next a : action σ) :
   ((p ∧ ⟨next⟩ ⇒ ◯ (p ∨ q)) ∧
    ((p ∧ ⟨next⟩ ∧ ⟨a⟩ ⇒ ◯ q)) ∧
-   ((p ⇒ Enabled a))) |-tla- (□ ⟨next⟩ ∧ 𝒲ℱ a → p ↝ q) := by
+   ((p ⇒ Enabled a))) |-tl- (□ ⟨next⟩ ∧ 𝒲ℱ a → p ↝ q) := by
   tstart hpuntilq haq henable
   trintro ⟨hnext, hfair⟩
   tapply wf1 (next := next) (a := a)
@@ -85,4 +85,4 @@ theorem wf1_original {p q : pred σ} (next a : action σ) :
 
 end wf
 
-end TLA
+end Lentil

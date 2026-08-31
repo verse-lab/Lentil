@@ -4,9 +4,9 @@ import Lentil.Util
 
 open Lean LentilLib
 
-/-! ## A Shallow-Embedding of TLA -/
+/-! ## A Shallow-Embedding of Linear Temporal Logic -/
 
-namespace TLA
+namespace Lentil
 
 /-! NOTE: There are multiple ways to formalize the concept of infinite sequences.
     Here, we follow the definition from `coq-tla`, while an alternative is to define
@@ -26,28 +26,28 @@ def action_pred {σ : Type u} (a : action σ) : pred σ :=
   fun e i => a (e i) (e (i + 1))
 
 def pure_pred {α : Type u} (p : Prop) : pred α := state_pred (fun _ => p)
-def tla_true {α : Type u} : pred α := pure_pred True
-def tla_false {α : Type u} : pred α := pure_pred False
+def tl_true {α : Type u} : pred α := pure_pred True
+def tl_false {α : Type u} : pred α := pure_pred False
 
-def tla_and {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∧ q e i
-def tla_or {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∨ q e i
-def tla_implies {α : Type u} (p q : pred α) : pred α := fun e i => p e i → q e i
-def tla_not {α : Type u} (p : pred α) : pred α := fun e i => ¬ p e i
-def tla_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∀ x, p x e i
-def tla_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∃ x, p x e i
+def tl_and {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∧ q e i
+def tl_or {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∨ q e i
+def tl_implies {α : Type u} (p q : pred α) : pred α := fun e i => p e i → q e i
+def tl_not {α : Type u} (p : pred α) : pred α := fun e i => ¬ p e i
+def tl_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∀ x, p x e i
+def tl_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∃ x, p x e i
 
 -- NOTE: this all could be automatically lifted, but to avoid dependency circles, we don't do that
-instance {α : Type u} : Std.Commutative (@tla_and α) := by
-  constructor ; intros ; unfold tla_and ; funext e i ; ac_rfl
+instance {α : Type u} : Std.Commutative (@tl_and α) := by
+  constructor ; intros ; unfold tl_and ; funext e i ; ac_rfl
 
-instance {α : Type u} : Std.Associative (@tla_and α) := by
-  constructor ; intros ; unfold tla_and ; funext e i ; ac_rfl
+instance {α : Type u} : Std.Associative (@tl_and α) := by
+  constructor ; intros ; unfold tl_and ; funext e i ; ac_rfl
 
-instance {α : Type u} : Std.Commutative (@tla_or α) := by
-  constructor ; intros ; unfold tla_or ; funext e i ; ac_rfl
+instance {α : Type u} : Std.Commutative (@tl_or α) := by
+  constructor ; intros ; unfold tl_or ; funext e i ; ac_rfl
 
-instance {α : Type u} : Std.Associative (@tla_or α) := by
-  constructor ; intros ; unfold tla_or ; funext e i ; ac_rfl
+instance {α : Type u} : Std.Associative (@tl_or α) := by
+  constructor ; intros ; unfold tl_or ; funext e i ; ac_rfl
 
 def exec.drop {α : Type u} (k : Nat) (σ : exec α) : exec α := λ n => σ (n + k)
 def exec.take {α : Type u} (k : Nat) (σ : exec α) : List α := List.range k |>.map σ
@@ -76,7 +76,7 @@ theorem pred_implies_trans {p q r : pred α} : pred_implies p q → pred_implies
   intros h1 h2 e i hp ; exact h2 e i (h1 e i hp)
 
 def enabled {α : Type u} (a : action α) (s : α) : Prop := ∃ s', a s s'
-def tla_enabled {α : Type u} (a : action α) : pred α := state_pred (enabled a)
+def tl_enabled {α : Type u} (a : action α) : pred α := state_pred (enabled a)
 
 -- HMM this is kind of awkward: we need `Std.Commutative` and `Std.Associative` to be able
 -- to work on finset.
@@ -99,133 +99,133 @@ theorem Foldable.list_index_form_change {α : Type u} {β : Type w} (op : β →
     rw [ih] ; apply congrArg
     rw [List.foldr_map] ; simp
 
-def tla_bigwedge {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
-  Foldable.fold tla_and tla_true f s
+def tl_bigwedge {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
+  Foldable.fold tl_and tl_true f s
 
-def tla_bigvee {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
-  Foldable.fold tla_or tla_false f s
+def tl_bigvee {α : Type u} {β : Type v} {c} [Foldable c] (f : β → pred α) (s : c β) : pred α :=
+  Foldable.fold tl_or tl_false f s
 
-def tla_until {α : Type u} (p q : pred α) : pred α :=
+def tl_until {α : Type u} (p q : pred α) : pred α :=
   fun e i => ∃ k, q e (i + k) ∧ ∀ l, l < k → p e (i + l)
 
-end TLA
+end Lentil
 
-/-! ## Syntax for TLA Notations
+/-! ## Syntax for LTL Notations
 
-    Our notations for TLA formulas intersect with those for plain Lean terms,
-    so to avoid potentially ambiguity(?), we define a new syntax category `tlafml`
-    for TLA formulas and define macro rules for expanding formulas in `tlafml` into
+    Our notations for LTL formulas intersect with those for plain Lean terms,
+    so to avoid potentially ambiguity(?), we define a new syntax category `tlfml`
+    for LTL formulas and define macro rules for expanding formulas in `tlfml` into
     Lean terms.
 -/
 
-declare_syntax_cat tlafml
-syntax (priority := low) term:lead : tlafml
-syntax "(" tlafml ")" : tlafml
-syntax "⌜ " term " ⌝" : tlafml
-syntax "⌞ " term " ⌟" : tlafml
-syntax "⟨ " term " ⟩" : tlafml
-syntax "⊤" : tlafml
-syntax "⊥" : tlafml
-syntax tlafml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
-syntax:max tlafml_heading_op tlafml:40 : tlafml
-syntax:max "Enabled" term:lead : tlafml
+declare_syntax_cat tlfml
+syntax (priority := low) term:lead : tlfml
+syntax "(" tlfml ")" : tlfml
+syntax "⌜ " term " ⌝" : tlfml
+syntax "⌞ " term " ⌟" : tlfml
+syntax "⟨ " term " ⟩" : tlfml
+syntax "⊤" : tlfml
+syntax "⊥" : tlfml
+syntax tlfml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
+syntax:max tlfml_heading_op tlfml:40 : tlfml
+syntax:max "Enabled" term:lead : tlfml
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
-syntax:25 tlafml:26 " → " tlafml:25 : tlafml
-syntax:35 tlafml:36 " ∧ " tlafml:35 : tlafml
-syntax:30 tlafml:31 " ∨ " tlafml:30 : tlafml
-syntax:29 tlafml:30 " ↝ " tlafml:29 : tlafml
-syntax:37 tlafml:38 " 𝑈 " tlafml:37 : tlafml
-syntax:27 tlafml:28 " ⇒ " tlafml:27 : tlafml
-syntax:arg "𝒲ℱ" term:lead : tlafml
+syntax:25 tlfml:26 " → " tlfml:25 : tlfml
+syntax:35 tlfml:36 " ∧ " tlfml:35 : tlfml
+syntax:30 tlfml:31 " ∨ " tlfml:30 : tlfml
+syntax:29 tlfml:30 " ↝ " tlfml:29 : tlfml
+syntax:37 tlfml:38 " 𝑈 " tlfml:37 : tlfml
+syntax:27 tlfml:28 " ⇒ " tlfml:27 : tlfml
+syntax:arg "𝒲ℱ" term:lead : tlfml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
 open Batteries.ExtendedBinder in
-syntax "∀ " extBinder ", " tlafml : tlafml
+syntax "∀ " extBinder ", " tlfml : tlfml
 open Batteries.ExtendedBinder in
-syntax "∃ " extBinder ", " tlafml : tlafml
+syntax "∃ " extBinder ", " tlfml : tlfml
 
-syntax tlafml_bigop := "⋀ " <|> "⋁ "
-syntax tlafml_bigop binderIdent " ∈ " term ", " tlafml : tlafml
+syntax tlfml_bigop := "⋀ " <|> "⋁ "
+syntax tlfml_bigop binderIdent " ∈ " term ", " tlfml : tlfml
 
-syntax "[tlafml|" tlafml "]" : term
+syntax "[tlfml|" tlfml "]" : term
 
 macro_rules
-  | `([tlafml| ( $f:tlafml ) ]) => `([tlafml| $f ])
-  | `([tlafml| ⌜ $t:term ⌝ ]) => `(TLA.state_pred $t)
-  | `([tlafml| ⌞ $t:term ⌟ ]) => `(TLA.pure_pred $t)
-  | `([tlafml| ⟨ $t:term ⟩ ]) => `(TLA.action_pred $t)
-  | `([tlafml| ⊤ ]) => `(TLA.tla_true)
-  | `([tlafml| ⊥ ]) => `(TLA.tla_false)
-  | `([tlafml| $op:tlafml_heading_op $f:tlafml ]) => do
+  | `([tlfml| ( $f:tlfml ) ]) => `([tlfml| $f ])
+  | `([tlfml| ⌜ $t:term ⌝ ]) => `(Lentil.state_pred $t)
+  | `([tlfml| ⌞ $t:term ⌟ ]) => `(Lentil.pure_pred $t)
+  | `([tlfml| ⟨ $t:term ⟩ ]) => `(Lentil.action_pred $t)
+  | `([tlfml| ⊤ ]) => `(Lentil.tl_true)
+  | `([tlfml| ⊥ ]) => `(Lentil.tl_false)
+  | `([tlfml| $op:tlfml_heading_op $f:tlfml ]) => do
     let opterm ← match op with
-      | `(tlafml_heading_op|¬) => `(TLA.tla_not)
-      | `(tlafml_heading_op|□) => `(TLA.always)
-      | `(tlafml_heading_op|◇) => `(TLA.eventually)
-      | `(tlafml_heading_op|◯) => `(TLA.later)
+      | `(tlfml_heading_op|¬) => `(Lentil.tl_not)
+      | `(tlfml_heading_op|□) => `(Lentil.always)
+      | `(tlfml_heading_op|◇) => `(Lentil.eventually)
+      | `(tlfml_heading_op|◯) => `(Lentil.later)
       | _ => Macro.throwUnsupported
-    `($opterm [tlafml| $f ])
-  | `([tlafml| Enabled $t:term ]) => `(TLA.tla_enabled $t)
-  | `([tlafml| $f1:tlafml → $f2:tlafml ]) => `(TLA.tla_implies [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| $f1:tlafml ∧ $f2:tlafml ]) => `(TLA.tla_and [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| $f1:tlafml ∨ $f2:tlafml ]) => `(TLA.tla_or [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| $f1:tlafml 𝑈 $f2:tlafml ]) => `(TLA.tla_until [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| ∀ $x:ident, $f:tlafml]) => `(TLA.tla_forall fun $x:ident => [tlafml| $f ])
-  | `([tlafml| ∀ $x:ident : $t, $f:tlafml]) => `(TLA.tla_forall fun $x:ident : $t => [tlafml| $f ])
-  | `([tlafml| ∃ $x:ident, $f:tlafml]) => `(TLA.tla_exists fun $x:ident => [tlafml| $f ])
-  | `([tlafml| ∃ $x:ident : $t, $f:tlafml]) => `(TLA.tla_exists fun $x:ident : $t => [tlafml| $f ])
-  | `([tlafml| $op:tlafml_bigop $x:binderIdent ∈ $l:term, $f:tlafml]) =>
+    `($opterm [tlfml| $f ])
+  | `([tlfml| Enabled $t:term ]) => `(Lentil.tl_enabled $t)
+  | `([tlfml| $f1:tlfml → $f2:tlfml ]) => `(Lentil.tl_implies [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| $f1:tlfml ∧ $f2:tlfml ]) => `(Lentil.tl_and [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| $f1:tlfml ∨ $f2:tlfml ]) => `(Lentil.tl_or [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| $f1:tlfml 𝑈 $f2:tlfml ]) => `(Lentil.tl_until [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| ∀ $x:ident, $f:tlfml]) => `(Lentil.tl_forall fun $x:ident => [tlfml| $f ])
+  | `([tlfml| ∀ $x:ident : $t, $f:tlfml]) => `(Lentil.tl_forall fun $x:ident : $t => [tlfml| $f ])
+  | `([tlfml| ∃ $x:ident, $f:tlfml]) => `(Lentil.tl_exists fun $x:ident => [tlfml| $f ])
+  | `([tlfml| ∃ $x:ident : $t, $f:tlfml]) => `(Lentil.tl_exists fun $x:ident : $t => [tlfml| $f ])
+  | `([tlfml| $op:tlfml_bigop $x:binderIdent ∈ $l:term, $f:tlfml]) =>
     -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
     match op with
-    | `(tlafml_bigop|⋀ ) => do `(TLA.tla_bigwedge (fun $(← binderIdentToFunBinder x) => [tlafml| $f ]) $l)
-    | `(tlafml_bigop|⋁ ) => do `(TLA.tla_bigvee (fun $(← binderIdentToFunBinder x) => [tlafml| $f ]) $l)
+    | `(tlfml_bigop|⋀ ) => do `(Lentil.tl_bigwedge (fun $(← binderIdentToFunBinder x) => [tlfml| $f ]) $l)
+    | `(tlfml_bigop|⋁ ) => do `(Lentil.tl_bigvee (fun $(← binderIdentToFunBinder x) => [tlfml| $f ]) $l)
     | _ => Macro.throwUnsupported
-  | `([tlafml| $t:term ]) => `($t)
+  | `([tlfml| $t:term ]) => `($t)
 
 -- these definitions are not necessarily required, but for delaboration purposes
-def TLA.leads_to {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → ◇ q) ]
-def TLA.always_implies {α : Type u} (p q : TLA.pred α) : TLA.pred α := [tlafml| □ (p → q) ]
-def TLA.weak_fairness {α : Type u} (a : action α) : pred α := [tlafml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
+def Lentil.leads_to {α : Type u} (p q : Lentil.pred α) : Lentil.pred α := [tlfml| □ (p → ◇ q) ]
+def Lentil.always_implies {α : Type u} (p q : Lentil.pred α) : Lentil.pred α := [tlfml| □ (p → q) ]
+def Lentil.weak_fairness {α : Type u} (a : action α) : pred α := [tlfml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
 
 macro_rules
-  | `([tlafml| $f1:tlafml ↝ $f2:tlafml ]) => `(TLA.leads_to [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| $f1:tlafml ⇒ $f2:tlafml ]) => `(TLA.always_implies [tlafml| $f1 ] [tlafml| $f2 ])
-  | `([tlafml| 𝒲ℱ $t:term ]) => `(TLA.weak_fairness $t)
+  | `([tlfml| $f1:tlfml ↝ $f2:tlfml ]) => `(Lentil.leads_to [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| $f1:tlfml ⇒ $f2:tlfml ]) => `(Lentil.always_implies [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| 𝒲ℱ $t:term ]) => `(Lentil.weak_fairness $t)
 
 /- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
    easily typed in Lean VSCode extension, so anyway -/
-syntax:max tlafml:max " |-tla- " tlafml:max : term
-syntax:55 "|-tla- " tlafml:55 : term
-syntax:max tlafml:max " |-tla[0]- " tlafml:max : term
-syntax:55 "|-tla[0]- " tlafml:55 : term
-syntax:max tlafml:max " =tla= " tlafml:max : term
-syntax term " |=tla[" term "]=" tlafml : term
-syntax term " |=tla= " tlafml : term
+syntax:max tlfml:max " |-tl- " tlfml:max : term
+syntax:55 "|-tl- " tlfml:55 : term
+syntax:max tlfml:max " |-tl[0]- " tlfml:max : term
+syntax:55 "|-tl[0]- " tlfml:55 : term
+syntax:max tlfml:max " =tl= " tlfml:max : term
+syntax term " |=tl[" term "]=" tlfml : term
+syntax term " |=tl= " tlfml : term
 
 macro_rules
-  | `($f1:tlafml |-tla- $f2:tlafml) => `(TLA.pred_implies [tlafml| $f1 ] [tlafml| $f2 ])
-  | `(|-tla- $f1:tlafml) => `(TLA.valid [tlafml| $f1 ])
-  | `($f1:tlafml |-tla[0]- $f2:tlafml) => `(TLA.pred_implies_initial [tlafml| $f1 ] [tlafml| $f2 ])
-  | `(|-tla[0]- $f1:tlafml) => `(TLA.valid_initial [tlafml| $f1 ])
-  | `($f1:tlafml =tla= $f2:tlafml) => `([tlafml| $f1 ] = [tlafml| $f2 ])
-  | `($e:term |=tla[$i:term]= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e $i)
-  | `($e:term |=tla= $f:tlafml) => `(TLA.exec.satisfies [tlafml| $f ] $e 0)
+  | `($f1:tlfml |-tl- $f2:tlfml) => `(Lentil.pred_implies [tlfml| $f1 ] [tlfml| $f2 ])
+  | `(|-tl- $f1:tlfml) => `(Lentil.valid [tlfml| $f1 ])
+  | `($f1:tlfml |-tl[0]- $f2:tlfml) => `(Lentil.pred_implies_initial [tlfml| $f1 ] [tlfml| $f2 ])
+  | `(|-tl[0]- $f1:tlfml) => `(Lentil.valid_initial [tlfml| $f1 ])
+  | `($f1:tlfml =tl= $f2:tlfml) => `([tlfml| $f1 ] = [tlfml| $f2 ])
+  | `($e:term |=tl[$i:term]= $f:tlfml) => `(Lentil.exec.satisfies [tlfml| $f ] $e $i)
+  | `($e:term |=tl= $f:tlfml) => `(Lentil.exec.satisfies [tlfml| $f ] $e 0)
 
-/-! ## Pretty-Printing for TLA Notations -/
+/-! ## Pretty-Printing for LTL Notations -/
 
-/-- Converting a syntax in `term` category into `tlafml`.
-    This is useful in the cases where we want to eliminate the redundant `[tlafml| ... ]`
-    wrapper of some sub-formula when it is inside a `tlafml`. -/
-def TLA.syntax_term_to_tlafml [Monad m] [MonadQuotation m] (stx : TSyntax `term) : m (TSyntax `tlafml) := do
+/-- Converting a syntax in `term` category into `tlfml`.
+    This is useful in the cases where we want to eliminate the redundant `[tlfml| ... ]`
+    wrapper of some sub-formula when it is inside a `tlfml`. -/
+def Lentil.syntax_term_to_tlfml [Monad m] [MonadQuotation m] (stx : TSyntax `term) : m (TSyntax `tlfml) := do
   match stx with
-  | `([tlafml| $f:tlafml ]) => pure f
-  | `(term|$t:term) => `(tlafml| $t:term )
+  | `([tlfml| $f:tlfml ]) => pure f
+  | `(term|$t:term) => `(tlfml| $t:term )
 
-/-- Converting a syntax in `term` category into `tlafml`,
-    by inserting `[tlafml| ... ]` wrapper if needed.  -/
-def TLA.syntax_tlafml_to_term [Monad m] [MonadQuotation m] (stx : TSyntax `tlafml) : m (TSyntax `term) := do
+/-- Converting a syntax in `term` category into `tlfml`,
+    by inserting `[tlfml| ... ]` wrapper if needed.  -/
+def Lentil.syntax_tlfml_to_term [Monad m] [MonadQuotation m] (stx : TSyntax `tlfml) : m (TSyntax `term) := do
   match stx with
-  | `(tlafml| $t:term ) => pure t
-  | f => `(term|[tlafml| $f:tlafml ])
+  | `(tlfml| $t:term ) => pure t
+  | f => `(term|[tlfml| $f:tlfml ])
 
 -- taken from https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
 open PrettyPrinter.Delaborator SubExpr in
@@ -233,150 +233,150 @@ def annAsTerm {any} (stx : TSyntax any) : DelabM (TSyntax any) :=
   (⟨·⟩) <$> annotateTermInfo ⟨stx.raw⟩
 
 open PrettyPrinter.Delaborator SubExpr in
-def TLA.delab_binder_body_as_tlafml (body : Term) : DelabM (Ident × TSyntax `tlafml) := do
+def Lentil.delab_binder_body_as_tlfml (body : Term) : DelabM (Ident × TSyntax `tlfml) := do
   match body with
   | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) =>
-      pure (a, (← TLA.syntax_term_to_tlafml stx))
+      pure (a, (← Lentil.syntax_term_to_tlfml stx))
   | _ =>
     -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
     -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
     let x := mkIdent <| .mkSimple "x"
     let bodyapp ← `(term| $body $x )
-    pure (x, (← `(tlafml| $bodyapp:term )))
+    pure (x, (← `(tlfml| $bodyapp:term )))
 
 open PrettyPrinter.Delaborator SubExpr in
-def TLA.delab_tlafml_app
+def Lentil.delab_tlfml_app
     (check_applicable : Expr → Nat → Bool)
-    (inner : DelabM (TSyntax `tlafml)) : Delab :=
+    (inner : DelabM (TSyntax `tlfml)) : Delab :=
   whenPPOption (fun o => o.get lentil.pp.useDelab.name true) do
     let e ← getExpr
     if check_applicable e 0
-    then inner >>= TLA.syntax_tlafml_to_term
+    then inner >>= Lentil.syntax_tlfml_to_term
     else whenPPOption (fun o => o.get lentil.pp.autoRenderSatisfies.name true) do
       if check_applicable e 1
       then
         let res ← withAppFn inner
         let e ← withAppArg delab
-        `(term| $e |=tla= $res)
+        `(term| $e |=tl= $res)
       else failure
 
 -- heavily inspired by https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Delab.lean
 open PrettyPrinter.Delaborator SubExpr in
-partial def delab_tlafml_inner : DelabM (TSyntax `tlafml) := do
+partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
   let e ← getExpr
   let stx ← do
     /- NOTE: we could get rid of the nesting of `withAppFn` and `withAppArg`
        by having something more general, but currently doing so does not
        give much benefit -/
     -- let argstxs ← withAppFnArgs (pure []) fun l => do
-    --   let x ← delab_tlafml_inner
+    --   let x ← delab_tlfml_inner
     --   pure <| x :: l
     let fn := e.getAppFn'.constName
     match fn with
-    | ``TLA.tla_true => `(tlafml| ⊤ )
-    | ``TLA.tla_false => `(tlafml| ⊥ )
-    | ``TLA.state_pred | ``TLA.pure_pred | ``TLA.action_pred | ``TLA.tla_enabled | ``TLA.weak_fairness =>
+    | ``Lentil.tl_true => `(tlfml| ⊤ )
+    | ``Lentil.tl_false => `(tlfml| ⊥ )
+    | ``Lentil.state_pred | ``Lentil.pure_pred | ``Lentil.action_pred | ``Lentil.tl_enabled | ``Lentil.weak_fairness =>
       let t ← withAppArg delab
       match fn with
-      | ``TLA.state_pred => `(tlafml| ⌜ $t:term ⌝ )
-      | ``TLA.pure_pred => `(tlafml| ⌞ $t:term ⌟ )
-      | ``TLA.action_pred => `(tlafml| ⟨ $t:term ⟩ )
-      | ``TLA.tla_enabled => `(tlafml| Enabled $t:term )
-      | ``TLA.weak_fairness => `(tlafml| 𝒲ℱ $t:term )
+      | ``Lentil.state_pred => `(tlfml| ⌜ $t:term ⌝ )
+      | ``Lentil.pure_pred => `(tlfml| ⌞ $t:term ⌟ )
+      | ``Lentil.action_pred => `(tlfml| ⟨ $t:term ⟩ )
+      | ``Lentil.tl_enabled => `(tlfml| Enabled $t:term )
+      | ``Lentil.weak_fairness => `(tlfml| 𝒲ℱ $t:term )
       | _ => unreachable!
-    | ``TLA.tla_not | ``TLA.always | ``TLA.eventually | ``TLA.later =>
-      let f ← withAppArg delab_tlafml_inner
+    | ``Lentil.tl_not | ``Lentil.always | ``Lentil.eventually | ``Lentil.later =>
+      let f ← withAppArg delab_tlfml_inner
       match fn with
-      | ``TLA.tla_not => `(tlafml| ¬ $f:tlafml )
-      | ``TLA.always => `(tlafml| □ $f:tlafml )
-      | ``TLA.eventually => `(tlafml| ◇ $f:tlafml )
-      | ``TLA.later => `(tlafml| ◯ $f:tlafml )
+      | ``Lentil.tl_not => `(tlfml| ¬ $f:tlfml )
+      | ``Lentil.always => `(tlfml| □ $f:tlfml )
+      | ``Lentil.eventually => `(tlfml| ◇ $f:tlfml )
+      | ``Lentil.later => `(tlfml| ◯ $f:tlfml )
       | _ => unreachable!
-    | ``TLA.tla_and | ``TLA.tla_or | ``TLA.tla_implies | ``TLA.leads_to | ``TLA.tla_until | ``TLA.always_implies =>
-      let f1 ← withAppFn <| withAppArg delab_tlafml_inner
-      let f2 ← withAppArg delab_tlafml_inner
+    | ``Lentil.tl_and | ``Lentil.tl_or | ``Lentil.tl_implies | ``Lentil.leads_to | ``Lentil.tl_until | ``Lentil.always_implies =>
+      let f1 ← withAppFn <| withAppArg delab_tlfml_inner
+      let f2 ← withAppArg delab_tlfml_inner
       match fn with
-      | ``TLA.tla_and => `(tlafml| $f1:tlafml ∧ $f2:tlafml)
-      | ``TLA.tla_or => `(tlafml| $f1:tlafml ∨ $f2:tlafml)
-      | ``TLA.tla_implies => `(tlafml| $f1:tlafml → $f2:tlafml)
-      | ``TLA.leads_to => `(tlafml| $f1:tlafml ↝ $f2:tlafml)
-      | ``TLA.tla_until => `(tlafml| $f1:tlafml 𝑈 $f2:tlafml)
-      | ``TLA.always_implies => `(tlafml| $f1:tlafml ⇒ $f2:tlafml)
+      | ``Lentil.tl_and => `(tlfml| $f1:tlfml ∧ $f2:tlfml)
+      | ``Lentil.tl_or => `(tlfml| $f1:tlfml ∨ $f2:tlfml)
+      | ``Lentil.tl_implies => `(tlfml| $f1:tlfml → $f2:tlfml)
+      | ``Lentil.leads_to => `(tlfml| $f1:tlfml ↝ $f2:tlfml)
+      | ``Lentil.tl_until => `(tlfml| $f1:tlfml 𝑈 $f2:tlfml)
+      | ``Lentil.always_implies => `(tlfml| $f1:tlfml ⇒ $f2:tlfml)
       | _ => unreachable!
-    | ``TLA.tla_forall | ``TLA.tla_exists =>
+    | ``Lentil.tl_forall | ``Lentil.tl_exists =>
       /- we are not sure about whether the argument is a `fun _ => _` or something else,
          so here we first `delab` the argument and then look into it;
-         this seems to work, as `delab` would also call `delab_tlafml_inner` on the argument,
-         so that we can match the inner syntax of `f` and use `TLA.syntax_term_to_tlafml`? -/
+         this seems to work, as `delab` would also call `delab_tlfml_inner` on the argument,
+         so that we can match the inner syntax of `f` and use `Lentil.syntax_term_to_tlfml`? -/
       let body ← withAppArg delab
-      let (a, stx) ← TLA.delab_binder_body_as_tlafml body
+      let (a, stx) ← Lentil.delab_binder_body_as_tlfml body
       match fn with
-      | ``TLA.tla_forall => do `(tlafml| ∀ $a:ident, $stx )
-      | ``TLA.tla_exists => do `(tlafml| ∃ $a:ident, $stx )
+      | ``Lentil.tl_forall => do `(tlfml| ∀ $a:ident, $stx )
+      | ``Lentil.tl_exists => do `(tlfml| ∃ $a:ident, $stx )
       | _ => unreachable!
-    | ``TLA.tla_bigwedge | ``TLA.tla_bigvee =>
+    | ``Lentil.tl_bigwedge | ``Lentil.tl_bigvee =>
       let body ← withAppFn <| withAppArg delab
       let l ← withAppArg delab
-      let (a, stx) ← TLA.delab_binder_body_as_tlafml body
+      let (a, stx) ← Lentil.delab_binder_body_as_tlfml body
       match fn with
-      | ``TLA.tla_bigwedge => do `(tlafml| ⋀ $a:ident ∈ $l, $stx )
-      | ``TLA.tla_bigvee => do `(tlafml| ⋁ $a:ident ∈ $l, $stx )
+      | ``Lentil.tl_bigwedge => do `(tlfml| ⋀ $a:ident ∈ $l, $stx )
+      | ``Lentil.tl_bigvee => do `(tlfml| ⋁ $a:ident ∈ $l, $stx )
       | _ => unreachable!
     | _ =>
       -- in this case, `e` may not even be an `.app`, so directly delab it
-      -- with `TLA.syntax_term_to_tlafml` might look nicer
-      TLA.syntax_term_to_tlafml (← delab)
+      -- with `Lentil.syntax_term_to_tlfml` might look nicer
+      Lentil.syntax_term_to_tlfml (← delab)
   annAsTerm stx
 
 open PrettyPrinter.Delaborator SubExpr in
-partial def delab_tlafml : Delab := TLA.delab_tlafml_app (fun e offset =>
+partial def delab_tlfml : Delab := Lentil.delab_tlfml_app (fun e offset =>
   -- need to consider implicit arguments below in comparing `e.getAppNumArgs'`
   let fn := e.getAppFn.constName;
-    (List.elem fn [``TLA.state_pred, ``TLA.pure_pred, ``TLA.action_pred, ``TLA.tla_enabled, ``TLA.weak_fairness,
-        ``TLA.tla_not, ``TLA.always, ``TLA.eventually, ``TLA.later]
+    (List.elem fn [``Lentil.state_pred, ``Lentil.pure_pred, ``Lentil.action_pred, ``Lentil.tl_enabled, ``Lentil.weak_fairness,
+        ``Lentil.tl_not, ``Lentil.always, ``Lentil.eventually, ``Lentil.later]
       && e.getAppNumArgs' == 2 + offset) ||
-    (List.elem fn [``TLA.tla_and, ``TLA.tla_or, ``TLA.tla_implies, ``TLA.leads_to, ``TLA.tla_until, ``TLA.always_implies,
-        ``TLA.tla_forall, ``TLA.tla_exists]
+    (List.elem fn [``Lentil.tl_and, ``Lentil.tl_or, ``Lentil.tl_implies, ``Lentil.leads_to, ``Lentil.tl_until, ``Lentil.always_implies,
+        ``Lentil.tl_forall, ``Lentil.tl_exists]
       && e.getAppNumArgs' == 3 + offset) ||
-    (List.elem fn [``TLA.tla_true, ``TLA.tla_false]
+    (List.elem fn [``Lentil.tl_true, ``Lentil.tl_false]
       && e.getAppNumArgs' == 1 + offset) ||
-    (List.elem fn [``TLA.tla_bigwedge, ``TLA.tla_bigvee]
+    (List.elem fn [``Lentil.tl_bigwedge, ``Lentil.tl_bigvee]
       && e.getAppNumArgs' == 6 + offset)
-  ) delab_tlafml_inner
+  ) delab_tlfml_inner
 
-attribute [delab app.TLA.state_pred, delab app.TLA.pure_pred, delab app.TLA.action_pred, delab app.TLA.tla_enabled, delab app.TLA.weak_fairness] delab_tlafml
-attribute [delab app.TLA.tla_not, delab app.TLA.always, delab app.TLA.eventually, delab app.TLA.later] delab_tlafml
-attribute [delab app.TLA.tla_and, delab app.TLA.tla_or, delab app.TLA.tla_implies, delab app.TLA.leads_to, delab app.TLA.tla_until, delab app.TLA.always_implies] delab_tlafml
-attribute [delab app.TLA.tla_true, delab app.TLA.tla_false] delab_tlafml
-attribute [delab app.TLA.tla_forall, delab app.TLA.tla_exists] delab_tlafml
-attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
+attribute [delab app.Lentil.state_pred, delab app.Lentil.pure_pred, delab app.Lentil.action_pred, delab app.Lentil.tl_enabled, delab app.Lentil.weak_fairness] delab_tlfml
+attribute [delab app.Lentil.tl_not, delab app.Lentil.always, delab app.Lentil.eventually, delab app.Lentil.later] delab_tlfml
+attribute [delab app.Lentil.tl_and, delab app.Lentil.tl_or, delab app.Lentil.tl_implies, delab app.Lentil.leads_to, delab app.Lentil.tl_until, delab app.Lentil.always_implies] delab_tlfml
+attribute [delab app.Lentil.tl_true, delab app.Lentil.tl_false] delab_tlfml
+attribute [delab app.Lentil.tl_forall, delab app.Lentil.tl_exists] delab_tlfml
+attribute [delab app.Lentil.tl_bigwedge, delab app.Lentil.tl_bigvee] delab_tlfml
 
-@[app_unexpander TLA.pred_implies] def TLA.unexpand_pred_implies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `(($(← TLA.syntax_term_to_tlafml stx1)) |-tla- ($(← TLA.syntax_term_to_tlafml stx2)))
+@[app_unexpander Lentil.pred_implies] def Lentil.unexpand_pred_implies : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx1 $stx2) => do `(($(← Lentil.syntax_term_to_tlfml stx1)) |-tl- ($(← Lentil.syntax_term_to_tlfml stx2)))
   | _ => throw ()
 
-@[app_unexpander TLA.pred_implies_initial] def TLA.unexpand_pred_implies_initial : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2) => do `(($(← TLA.syntax_term_to_tlafml stx1)) |-tla[0]- ($(← TLA.syntax_term_to_tlafml stx2)))
+@[app_unexpander Lentil.pred_implies_initial] def Lentil.unexpand_pred_implies_initial : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx1 $stx2) => do `(($(← Lentil.syntax_term_to_tlfml stx1)) |-tl[0]- ($(← Lentil.syntax_term_to_tlfml stx2)))
   | _ => throw ()
 
-@[app_unexpander TLA.valid] def TLA.unexpand_valid : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `(|-tla- ($(← TLA.syntax_term_to_tlafml stx)))
+@[app_unexpander Lentil.valid] def Lentil.unexpand_valid : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx) => do `(|-tl- ($(← Lentil.syntax_term_to_tlfml stx)))
   | _ => throw ()
 
-@[app_unexpander TLA.valid_initial] def TLA.unexpand_valid_initial : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx) => do `(|-tla[0]- ($(← TLA.syntax_term_to_tlafml stx)))
+@[app_unexpander Lentil.valid_initial] def Lentil.unexpand_valid_initial : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx) => do `(|-tl[0]- ($(← Lentil.syntax_term_to_tlfml stx)))
   | _ => throw ()
 
-@[app_unexpander TLA.exec.satisfies] def TLA.unexpand_satisfies : Lean.PrettyPrinter.Unexpander
-  | `($_ $stx1 $stx2 0) => do `($stx2 |=tla= $(← TLA.syntax_term_to_tlafml stx1))
-  | `($_ $stx1 $stx2 $i) => do `($stx2 |=tla[$i]= $(← TLA.syntax_term_to_tlafml stx1))
+@[app_unexpander Lentil.exec.satisfies] def Lentil.unexpand_satisfies : Lean.PrettyPrinter.Unexpander
+  | `($_ $stx1 $stx2 0) => do `($stx2 |=tl= $(← Lentil.syntax_term_to_tlfml stx1))
+  | `($_ $stx1 $stx2 $i) => do `($stx2 |=tl[$i]= $(← Lentil.syntax_term_to_tlfml stx1))
   | _ => throw ()
 
-@[app_unexpander Eq] def TLA.unexpand_tla_eq : Lean.PrettyPrinter.Unexpander
-  | `($_ [tlafml| $f1:tlafml ] [tlafml| $f2:tlafml ]) => `(($f1) =tla= ($f2))
-  | `($_ [tlafml| $f1:tlafml ] $t2:term) => do `(($f1) =tla= ($(← `(tlafml| $t2:term ))))
-  | `($_ $t1:term [tlafml| $f2:tlafml ]) => do `(($(← `(tlafml| $t1:term ))) =tla= ($f2))
-  | _ => throw ()       -- NOTE: we don't want all equalities to be rendered into equalities between TLA formulas!
+@[app_unexpander Eq] def Lentil.unexpand_tl_eq : Lean.PrettyPrinter.Unexpander
+  | `($_ [tlfml| $f1:tlfml ] [tlfml| $f2:tlfml ]) => `(($f1) =tl= ($f2))
+  | `($_ [tlfml| $f1:tlfml ] $t2:term) => do `(($f1) =tl= ($(← `(tlfml| $t2:term ))))
+  | `($_ $t1:term [tlfml| $f2:tlfml ]) => do `(($(← `(tlfml| $t1:term ))) =tl= ($f2))
+  | _ => throw ()       -- NOTE: we don't want all equalities to be rendered into equalities between LTL formulas!
 
 /-- info: Nat.zero.succ = Nat.zero : Prop -/
 #guard_msgs in
@@ -384,10 +384,10 @@ attribute [delab app.TLA.tla_bigwedge, delab app.TLA.tla_bigvee] delab_tlafml
 
 -- taken from https://github.com/leanprover/vstte2024/blob/main/Imp/Expr/Syntax.lean
 open PrettyPrinter Parenthesizer in
-@[category_parenthesizer tlafml]
-def tlafml.parenthesizer : CategoryParenthesizer | prec => do
-  maybeParenthesize `tlafml true wrapParens prec $
-    parenthesizeCategoryCore `tlafml prec
+@[category_parenthesizer tlfml]
+def tlfml.parenthesizer : CategoryParenthesizer | prec => do
+  maybeParenthesize `tlfml true wrapParens prec $
+    parenthesizeCategoryCore `tlfml prec
 where
   wrapParens (stx : Syntax) : Syntax := Unhygienic.run do
     let pstx ← `(($(⟨stx⟩)))

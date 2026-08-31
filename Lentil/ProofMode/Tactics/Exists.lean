@@ -1,12 +1,12 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
 theorem Entails_exists {σ : Type u} {hyps : List (NamedPred σ)}
     {α : Sort v} {p : α → pred σ} (witness : α) :
-    Entails hyps (p witness) → Entails hyps (TLA.tla_exists p) := exists_elim witness
+    Entails hyps (p witness) → Entails hyps (Lentil.tl_exists p) := exists_elim witness
 
 /--
 `texists w₁, w₂, ...` supplies witnesses for existential quantifiers in the
@@ -19,7 +19,7 @@ texists 0
 changes the goal to `P 0`. Multiple witnesses are applied from left to right,
 so `texists n, m` handles a goal such as `∃ n, ∃ m, P n m`.
 -/
-syntax (name := tlaExistsTac) "texists" (ppSpace colGt term),+ : tactic
+syntax (name := tlExistsTac) "texists" (ppSpace colGt term),+ : tactic
 
 elab_rules : tactic
   | `(tactic| texists $[$ts],*) => do
@@ -27,4 +27,4 @@ elab_rules : tactic
       evalTactic <| ← `(tactic|
         refine $(mkIdent ``Entails_exists) $t ?_)
 
-end TLA.ProofMode
+end Lentil.ProofMode

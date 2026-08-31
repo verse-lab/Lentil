@@ -9,35 +9,35 @@ import Lentil
    returns `none` in that case.
 -/
 
-namespace TLA.ProofMode.Test.Rename
+namespace Lentil.ProofMode.Test.Rename
 
-open TLA TLA.ProofMode
+open Lentil Lentil.ProofMode
 
 variable {σ : Type u} (a b c : pred σ)
 
 -- Rename a single hypothesis.
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart ha
   trename ha => h
   guard_target =ₛ Entails [⟨"h", a⟩] a
   exact pred_implies_refl _
 
 -- Rename preserves position and pred.
-example : (a ∧ b ∧ c) |-tla- (b) := by
+example : (a ∧ b ∧ c) |-tl- (b) := by
   tstart ha hb hc
   trename hb => hMid
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hMid", b⟩, ⟨"hc", c⟩] b
   tassumption
 
 -- Renaming an unknown name is a no-op.
-example : (a ∧ b) |-tla- (a) := by
+example : (a ∧ b) |-tl- (a) := by
   tstart ha hb
   trename noSuchHyp => hX
   guard_target =ₛ Entails [⟨"ha", a⟩, ⟨"hb", b⟩] a
   tassumption
 
 -- Multiple renames chain.
-example : (a ∧ b) |-tla- (a) := by
+example : (a ∧ b) |-tl- (a) := by
   tstart ha hb
   trename ha => x
   trename hb => y
@@ -45,7 +45,7 @@ example : (a ∧ b) |-tla- (a) := by
   tassumption
 
 -- Renaming after `thave`: the freshly-derived hypothesis can be renamed.
-example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
+example (lem : (a) |-tl- (b)) : (a) |-tl- (b) := by
   tstart ha
   thave hb := lem ha
   trename hb => result
@@ -53,10 +53,10 @@ example (lem : (a) |-tla- (b)) : (a) |-tla- (b) := by
   tassumption
 
 -- Rename to the same name is a no-op (just verifies it doesn't choke).
-example : (a) |-tla- (a) := by
+example : (a) |-tl- (a) := by
   tstart ha
   trename ha => ha
   guard_target =ₛ Entails [⟨"ha", a⟩] a
   exact pred_implies_refl _
 
-end TLA.ProofMode.Test.Rename
+end Lentil.ProofMode.Test.Rename

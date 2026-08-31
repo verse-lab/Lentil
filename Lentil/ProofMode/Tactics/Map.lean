@@ -5,9 +5,9 @@ import Lentil.ProofMode.Tactics.Have
 `tmap` adds the result of applying an implication underneath any nesting of
 modalities. There are two proof paths:
 
-* A Lean theorem is normalized to a raw implication `p |-tla- q`, then lifted
+* A Lean theorem is normalized to a raw implication `p |-tl- q`, then lifted
   one operator at a time with its registered monotonicity theorem.
-* A proof-mode hypothesis `p ⇒ q` is not a Lean proof of `p |-tla- q`. It stays
+* A proof-mode hypothesis `p ⇒ q` is not a Lean proof of `p |-tl- q`. It stays
   as a temporal premise while the implication is transported through each
   modality, and is applied to the source hypothesis only at the end.
 
@@ -16,35 +16,35 @@ explicit: a global rule depends only on the source, while a temporal rule
 depends on both the rule hypothesis and the source.
 -/
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 /-- Transport an `always_implies` consequence through one monotone step while
 keeping the original stable implication as the premise. -/
 private theorem always_implies_map {p q r s r' s' : pred σ}
-    (hmono : |-tla- ((r ⇒ s) → (r' → s')))
-    (h : (p ⇒ q) |-tla- (r ⇒ s)) :
-    (p ⇒ q) |-tla- (r' ⇒ s') := by
+    (hmono : |-tl- ((r ⇒ s) → (r' → s')))
+    (h : (p ⇒ q) |-tl- (r ⇒ s)) :
+    (p ⇒ q) |-tl- (r' ⇒ s') := by
   unfold always_implies at h ⊢
   rw [← always_pred_implies]
-  refine pred_implies_trans (q := always (tla_implies r s)) h ?_
+  refine pred_implies_trans (q := always (tl_implies r s)) h ?_
   rwa [← impl_intro]
 
 /-- Apply an `always_implies` conclusion obtained under another predicate. -/
 private theorem always_implies_apply {Γ p q : pred σ}
-    (h : (Γ) |-tla- (p ⇒ q)) :
-    (Γ ∧ p) |-tla- (q) := by
+    (h : (Γ) |-tl- (p ⇒ q)) :
+    (Γ ∧ p) |-tl- (q) := by
   rw [← impl_intro_add_r]
   exact pred_implies_trans h always_weaken
 
 private theorem always_impl_intro (p q : pred σ) :
-    (|-tla- (p ⇒ q)) = ((p) |-tla- (q)) := by
+    (|-tl- (p ⇒ q)) = ((p) |-tl- (q)) := by
   unfold always_implies
   rw [← always_intro, impl_intro]
 
 open Lean Meta Elab Tactic
 
 attribute [tmap_mono]
-  TLA.later_monotone' TLA.always_monotone' TLA.eventually_monotone'
+  Lentil.later_monotone' Lentil.always_monotone' Lentil.eventually_monotone'
 
 /-- The common internal form for both Lean-term and proof-mode rules. The
 meaning of `proof` is determined by the lifting step used with the rule. -/
@@ -52,15 +52,15 @@ private structure MapRule where
   lhs : Expr
   rhs : Expr
   /-- The base proof returned when the source reaches `lhs`: either
-  `lhs |-tla- rhs` for a global rule, or
-  `(lhs ⇒ rhs) |-tla- (lhs ⇒ rhs)` for a proof-mode rule. -/
+  `lhs |-tl- rhs` for a global rule, or
+  `(lhs ⇒ rhs) |-tl- (lhs ⇒ rhs)` for a proof-mode rule. -/
   proof : Expr
 
-/-- Elaborate the user rule and normalize every global form to `lhs |-tla- rhs`.
+/-- Elaborate the user rule and normalize every global form to `lhs |-tl- rhs`.
 
 Leading theorem parameters are instantiated together so that matching the
 rule lhs against the source predicate can infer them. `forallMetaTelescope`
-stops at the unexpanded TLA proposition constructors; pointwise state
+stops at the unexpanded LTL proposition constructors; pointwise state
 theorems are intentionally not adapted at this layer. -/
 private def normalizeGlobalRule (stateType : Expr) (tm : Term) : TacticM MapRule := do
   let proof ← elabTheoremTerm tm
@@ -68,19 +68,19 @@ private def normalizeGlobalRule (stateType : Expr) (tm : Term) : TacticM MapRule
   let (args, _, body) ← forallMetaTelescope ty
   let proof := mkAppN proof args
   match_expr body with
-  | TLA.pred_implies stateType' lhs rhs =>
+  | Lentil.pred_implies stateType' lhs rhs =>
       unless ← isDefEq stateType' stateType do
         throwError "tmap: rule state type{indentExpr stateType'}\ndoes not match proof-mode state type{indentExpr stateType}"
       return ⟨lhs, rhs, proof⟩
-  | TLA.valid stateType' formula =>
+  | Lentil.valid stateType' formula =>
       unless ← isDefEq stateType' stateType do
         throwError "tmap: rule state type{indentExpr stateType'}\ndoes not match proof-mode state type{indentExpr stateType}"
       let some (lhs, rhs) ← recognizeAlwaysImplies? formula
-        | throwError "tmap: valid rule must have the form `|-tla- (p ⇒ q)`; got {body}"
+        | throwError "tmap: valid rule must have the form `|-tl- (p ⇒ q)`; got {body}"
       let introEq ← mkAppM ``always_impl_intro #[lhs, rhs]
       let normalized ← mkAppM ``Eq.mp #[introEq, proof]
       return ⟨lhs, rhs, normalized⟩
-  | _ => throwError "tmap: expected a rule whose body is `p |-tla- q` or `|-tla- (p ⇒ q)`; got {ty}"
+  | _ => throwError "tmap: expected a rule whose body is `p |-tl- q` or `|-tl- (p ⇒ q)`; got {ty}"
 
 /-- Peel one registered monotone operator, returning the partially applied
 operator, its registered theorem, and the inner predicate. Keeping the partial
@@ -88,7 +88,7 @@ application allows registered operators to have parameters before the predicate.
 private def recognizeMonotoneStep? (e : Expr) :
     MetaM (Option (Expr × Name × Expr)) := do
   let env ← getEnv
-  recognizeWithTlaModalityHeadUnfold? (recognizeDirect env) e
+  recognizeWithTlModalityHeadUnfold? (recognizeDirect env) e
 where
   recognizeDirect (env : Environment) (e : Expr) : Option (Expr × Name × Expr) := do
     let .app op inner := e | none
@@ -101,11 +101,11 @@ and predicates encountered during recursive lifting. Applying against an
 expected type also infers any parameters captured by the partial application. -/
 private def instantiateMonotonicity
     (theoremName : Name) (op p q : Expr) : MetaM Expr := do
-  let stableImplication ← mkAppM ``TLA.always_implies #[p, q]
-  let mappedImplication ← mkAppM ``TLA.tla_implies #[mkApp op p, mkApp op q]
-  let expectedFormula ← mkAppM ``TLA.tla_implies #[stableImplication, mappedImplication]
+  let stableImplication ← mkAppM ``Lentil.always_implies #[p, q]
+  let mappedImplication ← mkAppM ``Lentil.tl_implies #[mkApp op p, mkApp op q]
+  let expectedFormula ← mkAppM ``Lentil.tl_implies #[stableImplication, mappedImplication]
   -- CHECK This might be problematic if the theorem is not a `valid` but a `pred_implies`
-  let expectedType ← mkAppM ``TLA.valid #[expectedFormula]
+  let expectedType ← mkAppM ``Lentil.valid #[expectedFormula]
   let goal ← mkFreshExprMVar (some expectedType)
   let theoremExpr ← mkConstWithFreshMVarLevels theoremName
   let subgoals ← goal.mvarId!.apply theoremExpr
@@ -118,11 +118,11 @@ and proof-mode rules share the same recursive traversal but maintain different
 proof invariants while that traversal unwinds. -/
 private abbrev LiftStep := (inner target monotonicity proof : Expr) → MetaM Expr
 
-/-- Lift one step when `proof` is the global raw implication `inner |-tla- target`. -/
+/-- Lift one step when `proof` is the global raw implication `inner |-tl- target`. -/
 private def liftGlobalStep (inner target monotonicity proof : Expr) : MetaM Expr := do
   let introEq ← mkAppM ``always_impl_intro #[inner, target]
   let stableProof ← mkAppM ``Eq.mpr #[introEq, proof]
-  mkAppM ``TLA.impl_decouple #[monotonicity, stableProof]
+  mkAppM ``Lentil.impl_decouple #[monotonicity, stableProof]
 
 /-- Lift one step when `proof` keeps a proof-mode rule as its explicit premise. -/
 private def liftTemporalStep
@@ -154,7 +154,7 @@ private theorem Entails_add_global_map {σ : Type u}
     (sourceIdx : Nat)
     (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
     (newHypName : String) (newHyp : pred σ) :
-    (source) |-tla- (newHyp) →
+    (source) |-tl- (newHyp) →
     Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
     Entails hyps goal := by
   refine Entails_add_new [source] ?_ newHypName newHyp ; grind
@@ -167,7 +167,7 @@ private theorem Entails_add_temporal_map {σ : Type u}
     (hrule : (hyps.map NamedPred.pred)[ruleIdx]? = some relation)
     (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
     (newHypName : String) (newHyp : pred σ) :
-    (relation ∧ source) |-tla- (newHyp) →
+    (relation ∧ source) |-tl- (newHyp) →
     Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
     Entails hyps goal := by
   refine Entails_add_new [relation, source] ?_ newHypName newHyp ; grind
@@ -202,7 +202,7 @@ private def proofModeMap (newName : String) (sourceLoc : TemporalHypLoc)
       | throwError "tmap: temporal rule must have the form `p ⇒ q` or `□ (p → q)`; got {relation}"
     -- Reflexivity makes the selected temporal rule an explicit premise. Each
     -- lifting step preserves that same premise via `always_implies_map`.
-    let relationProof ← mkAppM ``TLA.pred_implies_refl #[relation]
+    let relationProof ← mkAppM ``Lentil.pred_implies_refl #[relation]
     let rule : MapRule := ⟨lhs, rhs, relationProof⟩
     let (dst, liftedProof) ← liftRule source rule liftTemporalStep
     -- Only now combine the lifted implication with the selected source.
@@ -246,30 +246,30 @@ private def proofModeMapReplace (sourceLoc : TemporalHypLoc)
 `tmap hnew := hsrc using rule` applies an implication `rule` underneath
 nesting of modalities that have registered monotonicity.
 
-The rule may prove `p |-tla- q`, `|-tla- (p ⇒ q)`, or `|-tla- □ (p → q)`.
+The rule may prove `p |-tl- q`, `|-tl- (p ⇒ q)`, or `|-tl- □ (p → q)`.
 A proof-mode hypothesis `hrule : p ⇒ q` or `hrule : □ (p → q)` is also accepted.
 
 Additional unary predicate operators can be registered with:
 ```lean
 @[tmap_mono]
 theorem op_monotone {p q : pred σ} :
-    |-tla- ((p ⇒ q) → (op p → op q)) := by
+    |-tl- ((p ⇒ q) → (op p → op q)) := by
   ...
 ```
 Operators may have parameters before their predicate argument.
 
-For example, from `hp : □ ◇ p` and `hpq : p |-tla- q`,
+For example, from `hp : □ ◇ p` and `hpq : p |-tl- q`,
 ```lean
 tmap hq := hp using hpq
 ```
 adds `hq : □ ◇ q` while preserving the rest of the context.
 -/
-syntax (name := tlaMapTac) "tmap " ident " := " temporalHypLoc " using " term : tactic
+syntax (name := tlMapTac) "tmap " ident " := " temporalHypLoc " using " term : tactic
 
 /-- `tmap hsrc using rule` is like `tmap`, but replaces `hsrc` with the result of applying `rule`
 underneath its supported modality context. The replacement keeps the original
 name and moves to the end of the temporal context. -/
-syntax (name := tlaMapReplaceTac) "tmap " temporalHypLoc " using " term : tactic
+syntax (name := tlMapReplaceTac) "tmap " temporalHypLoc " using " term : tactic
 
 elab_rules : tactic
   | `(tactic| tmap $newName:ident := $source:temporalHypLoc using $rule:term) => do
@@ -279,4 +279,4 @@ elab_rules : tactic
     let sourceLoc ← parseTemporalHypLoc source "tmap: invalid source hypothesis"
     proofModeMapReplace sourceLoc rule
 
-end TLA.ProofMode
+end Lentil.ProofMode

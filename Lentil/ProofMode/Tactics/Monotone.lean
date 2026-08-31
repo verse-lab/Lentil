@@ -1,7 +1,7 @@
 import Lentil.ProofMode.Basic
 import Lentil.Rules.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -22,90 +22,90 @@ section
 variable {σ : Type u}
 
 theorem repeatedAnd_map_later (ps : List (pred σ)) :
-  repeatedAnd (ps.map TLA.later) = TLA.later (repeatedAnd ps) :=
-  repeatedAnd_map_comm ps TLA.later (by funext e i ; tunfold_simp) later_and
+  repeatedAnd (ps.map Lentil.later) = Lentil.later (repeatedAnd ps) :=
+  repeatedAnd_map_comm ps Lentil.later (by funext e i ; tunfold_simp) later_and
 
 theorem repeatedAnd_map_always (ps : List (pred σ)) :
-  repeatedAnd (ps.map TLA.always) = TLA.always (repeatedAnd ps) :=
-  repeatedAnd_map_comm ps TLA.always (by funext e i ; tunfold_simp) (by intro p q ; symm ; apply always_and)
+  repeatedAnd (ps.map Lentil.always) = Lentil.always (repeatedAnd ps) :=
+  repeatedAnd_map_comm ps Lentil.always (by funext e i ; tunfold_simp) (by intro p q ; symm ; apply always_and)
 
 theorem repeatedAnd_map_eventually_always (ps : List (pred σ)) :
-  repeatedAnd (ps.map (fun p => TLA.eventually (TLA.always p))) =
-    TLA.eventually (TLA.always (repeatedAnd ps)) :=
-  repeatedAnd_map_comm ps (TLA.eventually ∘ TLA.always) (by funext e i ; tunfold_simp) (by intro p q ; symm ; apply eventually_always_and_distrib)
+  repeatedAnd (ps.map (fun p => Lentil.eventually (Lentil.always p))) =
+    Lentil.eventually (Lentil.always (repeatedAnd ps)) :=
+  repeatedAnd_map_comm ps (Lentil.eventually ∘ Lentil.always) (by funext e i ; tunfold_simp) (by intro p q ; symm ; apply eventually_always_and_distrib)
 
 variable {hyps : List (NamedPred σ)} {goal : pred σ}
 
 private theorem Entails_monotone_aux (f : pred σ → pred σ)
   (h : ∀ ps, repeatedAnd (ps.map f) = f (repeatedAnd ps))
-  (hmono : ∀ {p q : pred σ}, (p) |-tla- (q) → ((f p)) |-tla- ((f q))) :
+  (hmono : ∀ {p q : pred σ}, (p) |-tl- (q) → ((f p)) |-tl- ((f q))) :
   Entails hyps goal → Entails (mapHypPreds f hyps) (f goal) := by
   unfold Entails ; intro hh
   rw [mapHypPreds_preds, h]
   exact hmono hh
 
 theorem Entails_later_monotone :
-  Entails hyps goal → Entails (mapHypPreds TLA.later hyps) (TLA.later goal) :=
-  Entails_monotone_aux TLA.later repeatedAnd_map_later TLA.later_monotone
+  Entails hyps goal → Entails (mapHypPreds Lentil.later hyps) (Lentil.later goal) :=
+  Entails_monotone_aux Lentil.later repeatedAnd_map_later Lentil.later_monotone
 
 theorem Entails_always_monotone :
-  Entails hyps goal → Entails (mapHypPreds TLA.always hyps) (TLA.always goal) :=
-  Entails_monotone_aux TLA.always repeatedAnd_map_always TLA.always_monotone
+  Entails hyps goal → Entails (mapHypPreds Lentil.always hyps) (Lentil.always goal) :=
+  Entails_monotone_aux Lentil.always repeatedAnd_map_always Lentil.always_monotone
 
 theorem Entails_eventually_always_monotone :
   Entails hyps goal →
-  Entails (mapHypPreds (fun p => TLA.eventually (TLA.always p)) hyps)
-    (TLA.eventually (TLA.always goal)) :=
-  Entails_monotone_aux (TLA.eventually ∘ TLA.always) repeatedAnd_map_eventually_always eventually_always_monotone
+  Entails (mapHypPreds (fun p => Lentil.eventually (Lentil.always p)) hyps)
+    (Lentil.eventually (Lentil.always goal)) :=
+  Entails_monotone_aux (Lentil.eventually ∘ Lentil.always) repeatedAnd_map_eventually_always eventually_always_monotone
 
 theorem Entails_eventually_monotone_single {name : String} {p : pred σ}
   (h : hyps = [⟨name, p⟩]) :
   Entails hyps goal →
-  Entails (mapHypPreds TLA.eventually hyps) (TLA.eventually goal) := by
-  subst hyps ; exact TLA.eventually_monotone (p := p) (q := goal)
+  Entails (mapHypPreds Lentil.eventually hyps) (Lentil.eventually goal) := by
+  subst hyps ; exact Lentil.eventually_monotone (p := p) (q := goal)
 
 theorem Entails_always_eventually_monotone_single {name : String} {p : pred σ}
   (h : hyps = [⟨name, p⟩]) :
   Entails hyps goal →
-  Entails (mapHypPreds (fun p => TLA.always (TLA.eventually p)) hyps)
-    (TLA.always (TLA.eventually goal)) := by
-  subst hyps ; exact TLA.always_eventually_monotone (p := p) (q := goal)
+  Entails (mapHypPreds (fun p => Lentil.always (Lentil.eventually p)) hyps)
+    (Lentil.always (Lentil.eventually goal)) := by
+  subst hyps ; exact Lentil.always_eventually_monotone (p := p) (q := goal)
 
 end
 
 /-- Remove one application of `modality`. This direct variant does not unfold
 the expression head; it is useful when recognizing several alternatives at once. -/
-def peelTlaModalityDirect? (modality : Name) (e : Expr) : Option Expr :=
+def peelTlModalityDirect? (modality : Name) (e : Expr) : Option Expr :=
   if e.getAppFn'.isConstOf modality then
     if h : e.isApp = true then some (e.appArg h) else none
   else
     none
 
-/-- As `peelTlaModalityDirect?`, but allowing a definition tagged with `[tla_modality_unfold]` at the
+/-- As `peelTlModalityDirect?`, but allowing a definition tagged with `[tl_modality_unfold]` at the
 expression head. This is shared with the other modality tactics. -/
-def peelTlaModality? (modality : Name) (e : Expr) : MetaM (Option Expr) :=
-  recognizeWithTlaModalityHeadUnfold? (peelTlaModalityDirect? modality) e
+def peelTlModality? (modality : Name) (e : Expr) : MetaM (Option Expr) :=
+  recognizeWithTlModalityHeadUnfold? (peelTlModalityDirect? modality) e
 
 /- The order is significant: `tmonotone` peels `□◇` and `◇□` in one step when
 possible, before falling back to their outer modality. These composite cases
 exist because proof mode must also distribute the prefix over the conjunction of
 all hypotheses; that is separate from ordinary one-formula monotonicity. -/
 private def monotoneKinds : List ((Expr → Option Expr) × Name) := [
-  (matchFirstTwo ``TLA.always ``TLA.eventually, ``Entails_always_eventually_monotone_single),
-  (matchFirstTwo ``TLA.eventually ``TLA.always, ``Entails_eventually_always_monotone),
-  (peelTlaModalityDirect? ``TLA.later, ``Entails_later_monotone),
-  (peelTlaModalityDirect? ``TLA.always, ``Entails_always_monotone),
-  (peelTlaModalityDirect? ``TLA.eventually, ``Entails_eventually_monotone_single),
+  (matchFirstTwo ``Lentil.always ``Lentil.eventually, ``Entails_always_eventually_monotone_single),
+  (matchFirstTwo ``Lentil.eventually ``Lentil.always, ``Entails_eventually_always_monotone),
+  (peelTlModalityDirect? ``Lentil.later, ``Entails_later_monotone),
+  (peelTlModalityDirect? ``Lentil.always, ``Entails_always_monotone),
+  (peelTlModalityDirect? ``Lentil.eventually, ``Entails_eventually_monotone_single),
 ]
 where
   matchFirstTwo (outer inner : Name) (e : Expr) : Option Expr :=
-    peelTlaModalityDirect? outer e >>= peelTlaModalityDirect? inner
+    peelTlModalityDirect? outer e >>= peelTlModalityDirect? inner
 
 private def findMonotonePeel? (hyps : List (String × Expr)) (goal : Expr) :
     MetaM (Option (Name × List (String × Expr) × Expr)) := do
   let recognizeDirect (e : Expr) : Option (Name × Expr) :=
     monotoneKinds.findSome? fun (recognizer, nm) => recognizer e |>.map (fun p => (nm, p))
-  let recognize (e : Expr) := recognizeWithTlaModalityHeadUnfold? recognizeDirect e
+  let recognize (e : Expr) := recognizeWithTlModalityHeadUnfold? recognizeDirect e
   let some (nm, peeledGoal) ← recognize goal
     | return none
   let mut peeledHyps := []
@@ -120,11 +120,11 @@ private def findMonotonePeel? (hyps : List (String × Expr)) (goal : Expr) :
 private def rawMonotone : TacticM Unit := do
   evalTactic <| ← `(tactic|
     first
-    | apply TLA.always_eventually_monotone
-    | apply TLA.eventually_always_monotone
-    | apply TLA.later_monotone
-    | apply TLA.always_monotone
-    | apply TLA.eventually_monotone)
+    | apply Lentil.always_eventually_monotone
+    | apply Lentil.eventually_always_monotone
+    | apply Lentil.later_monotone
+    | apply Lentil.always_monotone
+    | apply Lentil.eventually_monotone)
 
 private def proofModeMonotone : TacticM Unit := withMainContext do
   let g ← getMainGoal
@@ -164,19 +164,19 @@ It also supports `◯` and `◇□` over multiple hypotheses, and the single-hyp
 cases for `◇` and `□◇`.
 
 When the outer modality is hidden behind a definition tagged with
-`[tla_modality_unfold]`, this tactic unfolds only that expression head while
-recognizing the prefix. This includes the built-in wrappers `TLA.always_implies`
-(`⇒`), `TLA.leads_to` (`↝`), and `TLA.weak_fairness` (`𝒲ℱ`).
+`[tl_modality_unfold]`, this tactic unfolds only that expression head while
+recognizing the prefix. This includes the built-in wrappers `Lentil.always_implies`
+(`⇒`), `Lentil.leads_to` (`↝`), and `Lentil.weak_fairness` (`𝒲ℱ`).
 
 Outside proof mode it applies the corresponding raw monotonicity theorem:
 ```lean
 tmonotone
 ```
-changes a raw goal `□ p |-tla- □ q` to `p |-tla- q`.
+changes a raw goal `□ p |-tl- □ q` to `p |-tl- q`.
 -/
-syntax (name := tlaMonotoneTac) "tmonotone" : tactic
+syntax (name := tlMonotoneTac) "tmonotone" : tactic
 
 elab_rules : tactic
   | `(tactic| tmonotone) => proofModeMonotone
 
-end TLA.ProofMode
+end Lentil.ProofMode

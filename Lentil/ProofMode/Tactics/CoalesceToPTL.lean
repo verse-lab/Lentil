@@ -3,7 +3,7 @@ import Lean.Meta.CollectFVars
 import Lean.Elab.Tactic.Config
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
@@ -41,17 +41,17 @@ declare_config_elab elabCoalesceConfig CoalesceConfig
 
 -- FIXME: In principle the following two should also be customizable
 private def coalesceLeafHeads : List Name := [
-  ``TLA.state_pred,
-  ``TLA.action_pred,
-  ``TLA.pure_pred,
-  ``TLA.tla_enabled
+  ``Lentil.state_pred,
+  ``Lentil.action_pred,
+  ``Lentil.pure_pred,
+  ``Lentil.tl_enabled
 ]
 
 private def coalesceBinderHeads : List Name := [
-  ``TLA.tla_forall,
-  ``TLA.tla_exists,
-  ``TLA.tla_bigwedge,
-  ``TLA.tla_bigvee
+  ``Lentil.tl_forall,
+  ``Lentil.tl_exists,
+  ``Lentil.tl_bigwedge,
+  ``Lentil.tl_bigvee
 ]
 
 private def hasAnyHead (heads : List Name) (p : Expr) : Bool :=
@@ -96,22 +96,22 @@ private partial def collectPTLBlocks (cfg : CoalesceConfig) (bound : Array Expr)
     return res
   -- FIXME: The following is too specific for LTL
   match_expr p with
-  | TLA.tla_not _ p =>
-    collectUnary ``TLA.tla_not p
-  | TLA.tla_and _ p q => collectBinary ``TLA.tla_and p q
-  | TLA.tla_or _ p q => collectBinary ``TLA.tla_or p q
-  | TLA.tla_implies _ p q => collectBinary ``TLA.tla_implies p q
-  | TLA.tla_forall _ _ p => collectBinder ``TLA.tla_forall p
-  | TLA.tla_exists _ _ p => collectBinder ``TLA.tla_exists p
+  | Lentil.tl_not _ p =>
+    collectUnary ``Lentil.tl_not p
+  | Lentil.tl_and _ p q => collectBinary ``Lentil.tl_and p q
+  | Lentil.tl_or _ p q => collectBinary ``Lentil.tl_or p q
+  | Lentil.tl_implies _ p q => collectBinary ``Lentil.tl_implies p q
+  | Lentil.tl_forall _ _ p => collectBinder ``Lentil.tl_forall p
+  | Lentil.tl_exists _ _ p => collectBinder ``Lentil.tl_exists p
   -- NOTE: Design choice: big op should be first turned into `forall`/`exists`
   /-
-  | TLA.tla_bigwedge _ _ _ _ p s => collectBigOp ``TLA.tla_bigwedge p s
-  | TLA.tla_bigvee _ _ _ _ p s => collectBigOp ``TLA.tla_bigvee p s
+  | Lentil.tl_bigwedge _ _ _ _ p s => collectBigOp ``Lentil.tl_bigwedge p s
+  | Lentil.tl_bigvee _ _ _ _ p s => collectBigOp ``Lentil.tl_bigvee p s
   -/
-  | TLA.always _ p => collectModal ``TLA.always p
-  | TLA.eventually _ p => collectModal ``TLA.eventually p
-  | TLA.later _ p => collectModal ``TLA.later p
-  | TLA.tla_until _ p q => collectBinary ``TLA.tla_until p q
+  | Lentil.always _ p => collectModal ``Lentil.always p
+  | Lentil.eventually _ p => collectModal ``Lentil.eventually p
+  | Lentil.later _ p => collectModal ``Lentil.later p
+  | Lentil.tl_until _ p q => collectBinary ``Lentil.tl_until p q
   | _ =>
     -- Opaque `pred σ` terms already behave like propositional temporal atoms
     -- unless the user asks to refresh them into fresh coalescing atoms.
@@ -157,15 +157,15 @@ where
 
 private def collectGoalBlocks (cfg : CoalesceConfig) (target : Expr) : MetaM CollectResult := do
   match_expr target with
-  | TLA.valid _ p =>
+  | Lentil.valid _ p =>
     let r ← collectPTLBlocks cfg #[] p
-    return ⟨r.blocks, ← mkAppM ``TLA.valid #[r.expr]⟩
-  | TLA.pred_implies _ p q =>
+    return ⟨r.blocks, ← mkAppM ``Lentil.valid #[r.expr]⟩
+  | Lentil.pred_implies _ p q =>
     let rp ← collectPTLBlocks cfg #[] p
     let rq ← collectPTLBlocks cfg #[] q
-    return ⟨rp.blocks ++ rq.blocks, ← mkAppM ``TLA.pred_implies #[rp.expr, rq.expr]⟩
+    return ⟨rp.blocks ++ rq.blocks, ← mkAppM ``Lentil.pred_implies #[rp.expr, rq.expr]⟩
   | Entails _ hyps goal => collectEntailsBlocks cfg hyps goal
-  | _ => throwError "tcoalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
+  | _ => throwError "tcoalesce_to_ptl: expected a LTL validity goal, raw LTL sequent, or proof-mode Entails goal"
 where collectEntailsBlocks (cfg : CoalesceConfig) (hypsExpr goal : Expr) : MetaM CollectResult := do
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
     | throwError "tcoalesce_to_ptl: proof-mode hypotheses are not in canonical literal-list form"
@@ -180,10 +180,10 @@ where collectEntailsBlocks (cfg : CoalesceConfig) (hypsExpr goal : Expr) : MetaM
 
 private def ensureSupportedGoalShape (target : Expr) : MetaM Unit := do
   match_expr target with
-  | TLA.valid _ _ => pure ()
-  | TLA.pred_implies _ _ _ => pure ()
+  | Lentil.valid _ _ => pure ()
+  | Lentil.pred_implies _ _ _ => pure ()
   | Entails _ _ _ => pure ()
-  | _ => throwError "tcoalesce_to_ptl: expected a TLA validity goal, raw TLA sequent, or proof-mode Entails goal"
+  | _ => throwError "tcoalesce_to_ptl: expected a LTL validity goal, raw LTL sequent, or proof-mode Entails goal"
 
 private def dedupBlocks (blocks : Array Expr) : MetaM (Array Expr) :=
   blocks.foldlM (init := #[]) fun seen block => do
@@ -195,7 +195,7 @@ private def dedupBlocks (blocks : Array Expr) : MetaM (Array Expr) :=
 /-
 private def unfoldDerivedTemporalHeads : TacticM Unit := do
   evalTactic <| ← `(tactic|
-    try dsimp only [TLA.leads_to, TLA.always_implies, TLA.weak_fairness])
+    try dsimp only [Lentil.leads_to, Lentil.always_implies, Lentil.weak_fairness])
 -/
 
 private def coalesceToPTL (cfg : CoalesceConfig) : TacticM Unit := withMainContext do
@@ -220,10 +220,10 @@ private def coalesceToPTL (cfg : CoalesceConfig) : TacticM Unit := withMainConte
   replaceMainGoal [g']
 
 /--
-`tcoalesce_to_ptl` abstracts formula blocks from a TLA goal and keeps the
+`tcoalesce_to_ptl` abstracts formula blocks from a LTL goal and keeps the
 requested amount of propositional temporal skeleton.
 
-It supports raw validity goals, raw TLA sequents, and proof-mode `Entails`
+It supports raw validity goals, raw LTL sequents, and proof-mode `Entails`
 goals. The resulting fresh atoms are arbitrary `pred σ` values, so subsequent
 steps can reason propositionally about the remaining temporal structure.
 
@@ -238,10 +238,10 @@ Granularity options:
 * `abstractOpaque := true` also abstracts opaque `pred σ` leaves.
 * `unfoldDerived := false` leaves derived temporal definitions opaque.
 -/
-syntax (name := tlaCoalesceToPTLTac) "tcoalesce_to_ptl" optConfig : tactic
+syntax (name := tlCoalesceToPTLTac) "tcoalesce_to_ptl" optConfig : tactic
 
 elab_rules : tactic
   | `(tactic| tcoalesce_to_ptl $cfg:optConfig) => do
     coalesceToPTL (← elabCoalesceConfig cfg)
 
-end TLA.ProofMode
+end Lentil.ProofMode

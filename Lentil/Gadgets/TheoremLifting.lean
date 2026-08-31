@@ -3,12 +3,12 @@ import Lentil.Basic
 
 /-! Gadgets for lifting a propositional theorem to the level of temporal logic. -/
 
-namespace TLA.Lifting
+namespace Lentil.Lifting
 
 open Lean Meta Core Elab LentilLib
 
-/-- If `p : Prop`, then lift it to `⌞ p ⌟` of type `TLA.pred σ`; otherwise
-    do nothing and return `p` (note that in this case, whether `p` is of type `TLA.pred σ`
+/-- If `p : Prop`, then lift it to `⌞ p ⌟` of type `Lentil.pred σ`; otherwise
+    do nothing and return `p` (note that in this case, whether `p` is of type `Lentil.pred σ`
     is not checked). -/
 def liftPropToPurePred (σ p : Expr) : MetaM Expr := do
   trace[lentil.debug] "p is {p}"
@@ -16,28 +16,28 @@ def liftPropToPurePred (σ p : Expr) : MetaM Expr := do
     trace[lentil.debug] "lifted"
     -- do some very simple special checking
     if p.isTrue then
-      mkAppOptM ``TLA.tla_true #[some σ]
+      mkAppOptM ``Lentil.tl_true #[some σ]
     else if p.isFalse then
-      mkAppOptM ``TLA.tla_false #[some σ]
+      mkAppOptM ``Lentil.tl_false #[some σ]
     else
-      mkAppOptM ``TLA.pure_pred #[some σ, some p]
+      mkAppOptM ``Lentil.pure_pred #[some σ, some p]
   else
     pure p
 
-partial def convertPropToTLAPredAux (alist : AssocList Expr Expr) (σ p : Expr) : MetaM Expr := do
+partial def convertPropToTLPredAux (alist : AssocList Expr Expr) (σ p : Expr) : MetaM Expr := do
   match_expr p with
   | And a b => do
     trace[lentil.debug] "And case: {a} and {b}"
     let a' ← go a ; let b' ← go b
-    mkAppM ``TLA.tla_and #[a', b']
+    mkAppM ``Lentil.tl_and #[a', b']
   | Or a b => do
     trace[lentil.debug] "Or case: {a} or {b}"
     let a' ← go a ; let b' ← go b
-    mkAppM ``TLA.tla_or #[a', b']
+    mkAppM ``Lentil.tl_or #[a', b']
   | Not a => do
     trace[lentil.debug] "Not case: not {a}"
     let a' ← go a
-    mkAppM ``TLA.tla_not #[a']
+    mkAppM ``Lentil.tl_not #[a']
   | Exists _ f => do
     trace[lentil.debug] "Exists case: ∃ {f}"
     -- here, do some simple checking
@@ -49,10 +49,10 @@ partial def convertPropToTLAPredAux (alist : AssocList Expr Expr) (σ p : Expr) 
         let b_ := b.instantiate1 avar
         let b' ← go b_
         let b'' ← mkLambdaFVars #[avar] b'
-        mkAppM ``TLA.tla_exists #[b'']
+        mkAppM ``Lentil.tl_exists #[b'']
     | _ =>
       let f' ← go f
-      mkAppM ``TLA.tla_exists #[f']
+      mkAppM ``Lentil.tl_exists #[f']
   | _ =>
     -- `p` is not any propositional connective listed above
     match p with
@@ -61,7 +61,7 @@ partial def convertPropToTLAPredAux (alist : AssocList Expr Expr) (σ p : Expr) 
       if p.isArrow then
         trace[lentil.debug] "Arrow case: {a} → {b}"
         let a' ← go a ; let b' ← go b
-        mkAppM ``TLA.tla_implies #[a', b']
+        mkAppM ``Lentil.tl_implies #[a', b']
       else
         trace[lentil.debug] "Forall case: ∀ {a}, {b}"
         -- HMM slightly repetitive
@@ -70,16 +70,16 @@ partial def convertPropToTLAPredAux (alist : AssocList Expr Expr) (σ p : Expr) 
           let b_ := b.instantiate1 avar
           let b' ← go b_
           let b'' ← mkLambdaFVars #[avar] b'
-          mkAppM ``TLA.tla_forall #[b'']
+          mkAppM ``Lentil.tl_forall #[b'']
     | _ =>
       -- simply do a holistic replacement
       trace[lentil.debug] "Terminal case: {p}"
       pure <| p.replace alist.find?
 where go (p : Expr) : MetaM Expr :=
-  convertPropToTLAPredAux alist σ p >>= liftPropToPurePred σ
+  convertPropToTLPredAux alist σ p >>= liftPropToPurePred σ
 
-partial def convertPropToTLAPred (alist : AssocList Expr Expr) (σ p : Expr) : MetaM Expr :=
-  convertPropToTLAPredAux alist σ p >>= liftPropToPurePred σ
+partial def convertPropToTLPred (alist : AssocList Expr Expr) (σ p : Expr) : MetaM Expr :=
+  convertPropToTLPredAux alist σ p >>= liftPropToPurePred σ
 
 inductive LiftingCase where
   /-- The case where the conclusion is a single `↔`. -/
@@ -108,19 +108,19 @@ private def guessWhereToStart (thmStmt : Expr) : MetaM Nat := do
     guessWhereToStartAux [body] xs.reverse.toList
 
 /-- Convert a theorem statement to the level of temporal logic. Given the theorem statement
-    and the name of the additional universe level (required by `σ` in `TLA.pred σ`),
+    and the name of the additional universe level (required by `σ` in `Lentil.pred σ`),
     return the case for lifting and the converted statement. -/
 partial def convertTheoremStatement (thmStmt : Expr) (uName : Name) : MetaM (LiftingCase × Expr) := do
   -- create a fresh state type `σ`
   let u := mkLevelSucc <| mkLevelParam uName
   -- NOTE: couldn't come up with a good way to avoid generating a fresh `σ` with a dagger, so just use `σ` here
   withLocalDecl `σ BinderInfo.implicit (.sort u) fun σ => do
-    let pred ← mkAppM ``TLA.pred #[σ]
+    let pred ← mkAppM ``Lentil.pred #[σ]
     let n ← guessWhereToStart thmStmt
     forallBoundedTelescope thmStmt n fun xs body => do
       trace[lentil.debug] "xs := {xs}, body := {body}"
       /- convert the things in `xs` according to need; for example,
-         if `x` in `xs` has type `Prop`, then convert it to `TLA.pred σ` -/
+         if `x` in `xs` has type `Prop`, then convert it to `Lentil.pred σ` -/
       /- at the same time, associate things in `xs` with the converted things
          by returning an association list -/
       let (_, xs') ← xs.foldlM (fun (xspre, xs'_) x => do
@@ -136,7 +136,7 @@ partial def convertTheoremStatement (thmStmt : Expr) (uName : Name) : MetaM (Lif
             if ← Meta.isProp ty then
               pure ty
             else
-              -- try replacing `Prop` with `TLA.pred σ` within `ty`
+              -- try replacing `Prop` with `Lentil.pred σ` within `ty`
               trace[lentil.debug] "ty := {ty}"
               let res := ty.replace fun e => if e == .sort .zero then some pred else none
               trace[lentil.debug] "ty after replacement := {res}"
@@ -151,15 +151,15 @@ partial def convertTheoremStatement (thmStmt : Expr) (uName : Name) : MetaM (Lif
         match_expr body with
         | Iff a b => do
           trace[lentil.debug] "a := {a}, b := {b}"
-          let a' ← convertPropToTLAPred alist σ a
-          let b' ← convertPropToTLAPred alist σ b
+          let a' ← convertPropToTLPred alist σ a
+          let b' ← convertPropToTLPred alist σ b
           trace[lentil.debug] "a' := {a'}, b' := {b'}"
           -- now get the statement to prove
           let thmStmt' ← mkAppM ``Eq #[a', b'] >>= mkForallFVars (Array.append #[σ] ys)
           pure (LiftingCase.Iff, thmStmt')
         | _ =>
-          let body' ← convertPropToTLAPred alist σ body
-          let thmStmt' ← mkAppM ``TLA.valid #[body'] >>= mkForallFVars (Array.append #[σ] ys)
+          let body' ← convertPropToTLPred alist σ body
+          let thmStmt' ← mkAppM ``Lentil.valid #[body'] >>= mkForallFVars (Array.append #[σ] ys)
           pure (LiftingCase.Other, thmStmt')
 
 partial def liftTheorem (thmName : Name) (liftedThmName : Option Name)
@@ -177,7 +177,7 @@ partial def liftTheorem (thmName : Name) (liftedThmName : Option Name)
   -- now prove `ty'` using the theorem
   /- NOTE: it seems that directly manipulating the proof term of `thmName`
      does not work well, so again resort to `simpleProveTheorem` to prove -/
-  let newThmName := liftedThmName.getD <| thmName.updatePrefix `TLA
+  let newThmName := liftedThmName.getD <| thmName.updatePrefix `Lentil
   let noncomputable? := isNoncomputable (← getEnv) thmName
   let e ← mkIdent <$> mkFreshUserName `e
   let finalTac ← `(tactic| open Classical in (try solve
@@ -195,29 +195,29 @@ partial def liftTheorem (thmName : Name) (liftedThmName : Option Name)
     simpleProveTheorem newThmName (uName :: lvlParams) ty'
       (tactic?.getD defaultTac) noncomputable?
 
-end TLA.Lifting
+end Lentil.Lifting
 
-/-- `#tla_lift thm₁ ... thmₙ` lifts (typically purely first-order) theorems
+/-- `#tl_lift thm₁ ... thmₙ` lifts (typically purely first-order) theorems
     `thm₁`, ... ,`thmₙ` to the temporal logic level. Each new theorem will
-    have the prefix `TLA.` and the same suffix as before.
+    have the prefix `Lentil.` and the same suffix as before.
 
-    For example, after executing ```#tla_lift Decidable.not_not```,
-    there will be a new theorem named `TLA.not_not` in the environment. -/
-syntax (name := tlaLiftTac) "#tla_lift" ident+ : command
-/-- `#tla_lift thm => newthm` behaves like `#tla_lift`, but only lifts
+    For example, after executing ```#tl_lift Decidable.not_not```,
+    there will be a new theorem named `Lentil.not_not` in the environment. -/
+syntax (name := tlLiftTac) "#tl_lift" ident+ : command
+/-- `#tl_lift thm => newthm` behaves like `#tl_lift`, but only lifts
     one theorem, while naming the new theorem as `newthm`. -/
-syntax (name := tlaLiftSingleTac) "#tla_lift" ident ("=>" ident)? ("by" tactic)? : command
+syntax (name := tlLiftSingleTac) "#tl_lift" ident ("=>" ident)? ("by" tactic)? : command
 
 open Lean Elab Term in
 elab_rules : command
-  | `(command| #tla_lift $idts:ident* ) => Command.liftTermElabM do
+  | `(command| #tl_lift $idts:ident* ) => Command.liftTermElabM do
     for idt in idts do
       -- FIXME: this approach prevents using shorter names after `open`, since it does not use `elabTerm`?
       let nm := idt.getId
       addTermInfo' idt (← Lean.mkConstWithLevelParams nm)
-      TLA.Lifting.liftTheorem nm none none
-  | `(command| #tla_lift $idt:ident $[=> $nm:ident]? $[by $tac:tactic]?) => Command.liftTermElabM do
+      Lentil.Lifting.liftTheorem nm none none
+  | `(command| #tl_lift $idt:ident $[=> $nm:ident]? $[by $tac:tactic]?) => Command.liftTermElabM do
     addTermInfo' idt (← Lean.mkConstWithLevelParams idt.getId)
-    TLA.Lifting.liftTheorem idt.getId (nm.map (·.getId)) (← tac.mapM fun tac => `(term| by $tac:tactic ))
+    Lentil.Lifting.liftTheorem idt.getId (nm.map (·.getId)) (← tac.mapM fun tac => `(term| by $tac:tactic ))
     if let some nm := nm then
       addTermInfo' nm (← Lean.mkConstWithLevelParams nm.getId)

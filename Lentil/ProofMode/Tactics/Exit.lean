@@ -1,24 +1,24 @@
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
 /--
 `texit` is the inverse of `tstart`: it leaves the proof mode by
-converting an `Entails`-shaped goal back into a raw `|-tla-` sequent whose
+converting an `Entails`-shaped goal back into a raw `|-tl-` sequent whose
 left-hand side is the conjunction of the proof-mode hypotheses.
 
 For example, in a proof-mode context with `hp : p`, `hq : q`, and goal `r`,
 ```lean
 texit
 ```
-changes the proof state back to `(p ∧ q) |-tla- r`. A single hypothesis
-`hp : p` becomes `p |-tla- r`. An empty proof-mode context becomes the
-canonical `|-tla- r` (i.e. `valid r`), rather than the equivalent
-`(⊤) |-tla- r`.
+changes the proof state back to `(p ∧ q) |-tl- r`. A single hypothesis
+`hp : p` becomes `p |-tl- r`. An empty proof-mode context becomes the
+canonical `|-tl- r` (i.e. `valid r`), rather than the equivalent
+`(⊤) |-tl- r`.
 -/
-syntax (name := tlaExitTac) "texit" : tactic
+syntax (name := tlExitTac) "texit" : tactic
 
 elab_rules : tactic
   | `(tactic| texit) => withMainContext do
@@ -34,8 +34,8 @@ elab_rules : tactic
       replaceMainGoal gs
     else
       let lhs ← mkRepeatedAndExpr σ preds
-      let newGoal ← mkAppM ``TLA.pred_implies #[lhs, rhs]
+      let newGoal ← mkAppM ``Lentil.pred_implies #[lhs, rhs]
       let g' ← mainGoal.change newGoal
       replaceMainGoal [g']
 
-end TLA.ProofMode
+end Lentil.ProofMode

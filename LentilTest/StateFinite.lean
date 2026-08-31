@@ -2,51 +2,51 @@ import Lentil
 
 /- Tests for finite-window sequent reduction. -/
 
-namespace TLA.Test.StateFinite
+namespace Lentil.Test.StateFinite
 
-open TLA
+open Lentil
 
 variable {σ : Type u}
 
 example {init inv : σ → Prop} (hinit : ∀ s, init s → inv s) :
-    (⌜ init ⌝) |-tla- (⌜ inv ⌝) := by
+    (⌜ init ⌝) |-tl- (⌜ inv ⌝) := by
   tfinite_window
   guard_target =ₛ init s → inv s
   aesop
 
 example {inv : σ → Prop} {next : action σ}
     (hnext : ∀ s s', next s s' → inv s → inv s') :
-    (⌜ inv ⌝ ∧ ⟨next⟩) |-tla- (◯ ⌜ inv ⌝) := by
+    (⌜ inv ⌝ ∧ ⟨next⟩) |-tl- (◯ ⌜ inv ⌝) := by
   tfinite_window
   guard_target =ₛ inv s ∧ next s s' → inv s'
   aesop
 
 example {p q : σ → Prop} :
-    (⌜ p ⌝ ∧ ◯ ⌜ q ⌝) |-tla- (◯ ⌜ q ⌝ ∧ ⌜ p ⌝) := by
+    (⌜ p ⌝ ∧ ◯ ⌜ q ⌝) |-tl- (◯ ⌜ q ⌝ ∧ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ p s ∧ q s' → q s' ∧ p s
   aesop
 
 example {p : σ → Prop} :
-    (□ ⌜ p ⌝) |-tla- (◯ ⌜ p ⌝) := by
+    (□ ⌜ p ⌝) |-tl- (◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ p s ∧ p s' → p s'
   aesop
 
 example {p : σ → Prop} :
-    (□ ⌜ p ⌝) |-tla- (◯ ◯ ⌜ p ⌝) := by
+    (□ ⌜ p ⌝) |-tl- (◯ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ p s ∧ p s' ∧ p s'' → p s''
   aesop
 
 example {p q : σ → Prop} :
-    (□ ⌜ p ⌝ ∧ □ ⌜ q ⌝) |-tla- (◯ (⌜ p ⌝ ∧ ⌜ q ⌝)) := by
+    (□ ⌜ p ⌝ ∧ □ ⌜ q ⌝) |-tl- (◯ (⌜ p ⌝ ∧ ⌜ q ⌝)) := by
   tfinite_window
   guard_target =ₛ (p s ∧ p s') ∧ q s ∧ q s' → p s' ∧ q s'
   aesop
 
 example {a : action σ} :
-    (□ ⟨a⟩) |-tla- (◯ ⟨a⟩) := by
+    (□ ⟨a⟩) |-tl- (◯ ⟨a⟩) := by
   tfinite_window
   guard_target =ₛ a s s' ∧ a s' s'' → a s' s''
   aesop
@@ -54,7 +54,7 @@ example {a : action σ} :
 -- The implication antecedent flips polarity recursively; this is not limited
 -- to a leading proof-mode hypothesis.
 example {p q : σ → Prop} :
-    (⌜ p ⌝ → □ ⌜ q ⌝) |-tla- (⌜ p ⌝ → ◯ ⌜ q ⌝) := by
+    (⌜ p ⌝ → □ ⌜ q ⌝) |-tl- (⌜ p ⌝ → ◯ ⌜ q ⌝) := by
   tfinite_window
   guard_target =ₛ (p s → q s ∧ q s') → p s → q s'
   aesop
@@ -62,7 +62,7 @@ example {p q : σ → Prop} :
 -- Negation flips polarity, so a negative occurrence of `□` in the conclusion
 -- is also reducible.
 example {p : σ → Prop} :
-    (¬ ⌜ p ⌝) |-tla- (¬ □ ⌜ p ⌝) := by
+    (¬ ⌜ p ⌝) |-tl- (¬ □ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ ¬p s → ¬p s
   aesop
@@ -70,7 +70,7 @@ example {p : σ → Prop} :
 -- `□` is nested under negation and `◯`.  The outer hypothesis supplies the
 -- two-state prefix needed by the shifted negative-always conclusion.
 example {p : σ → Prop} :
-    (□ ⌜ p ⌝) |-tla- (◯ (¬ □ (¬ ⌜ p ⌝))) := by
+    (□ ⌜ p ⌝) |-tl- (◯ (¬ □ (¬ ⌜ p ⌝))) := by
   tfinite_window
   guard_target =ₛ p s ∧ p s' → ¬¬p s'
   aesop
@@ -78,7 +78,7 @@ example {p : σ → Prop} :
 -- Two negations flip polarity twice and therefore make the nested `□`
 -- necessary again in the implication antecedent.
 example {p : σ → Prop} :
-    (¬ ¬ □ ⌜ p ⌝) |-tla- (¬ ¬ ◯ ⌜ p ⌝) := by
+    (¬ ¬ □ ⌜ p ⌝) |-tl- (¬ ¬ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ ¬¬(p s ∧ p s') → ¬¬p s'
   aesop
@@ -87,7 +87,7 @@ example {p : σ → Prop} :
 -- hypothesis position.  The two contravariant steps cancel; the separate
 -- `¬◯p` hypothesis establishes its finite two-state approximation.
 example {p r : σ → Prop} :
-    (((¬ □ ⌜ p ⌝) → ◯ ⌜ r ⌝) ∧ (¬ ◯ ⌜ p ⌝)) |-tla- (◯ ⌜ r ⌝) := by
+    (((¬ □ ⌜ p ⌝) → ◯ ⌜ r ⌝) ∧ (¬ ◯ ⌜ p ⌝)) |-tl- (◯ ⌜ r ⌝) := by
   tfinite_window
   guard_target =ₛ (¬(p s ∧ p s') → r s') ∧ ¬p s' → r s'
   aesop
@@ -95,7 +95,7 @@ example {p r : σ → Prop} :
 -- The same polarity path through `⇒ = □(· → ·)` requires `□` to expand a
 -- body which is itself only directionally approximable.
 example {p r : σ → Prop} :
-    (((¬ □ ⌜ p ⌝) ⇒ ◯ ⌜ r ⌝) ∧ (¬ ◯ ⌜ p ⌝)) |-tla- (◯ ⌜ r ⌝) := by
+    (((¬ □ ⌜ p ⌝) ⇒ ◯ ⌜ r ⌝) ∧ (¬ ◯ ⌜ p ⌝)) |-tl- (◯ ⌜ r ⌝) := by
   tfinite_window
   guard_target =ₛ (¬(p s ∧ p s') → r s') ∧ ¬p s' → r s'
   aesop
@@ -103,7 +103,7 @@ example {p r : σ → Prop} :
 -- A larger enclosing window forces the `⇒` hypothesis itself to unroll and
 -- use its directionally approximated body at the next suffix.
 example {p r : σ → Prop} :
-    (((¬ □ ⌜ p ⌝) ⇒ ◯ ⌜ r ⌝) ∧ (¬ ◯ ◯ ⌜ p ⌝)) |-tla- (◯ ◯ ⌜ r ⌝) := by
+    (((¬ □ ⌜ p ⌝) ⇒ ◯ ⌜ r ⌝) ∧ (¬ ◯ ◯ ⌜ p ⌝)) |-tl- (◯ ◯ ⌜ r ⌝) := by
   tfinite_window
   guard_target =ₛ
     ((¬(p s ∧ p s' ∧ p s'') → r s') ∧
@@ -113,7 +113,7 @@ example {p r : σ → Prop} :
 -- Necessary approximation is recursive, so nested always hypotheses remain
 -- usable even though the inner always has no exact finite window.
 example {p : σ → Prop} :
-    (□ □ ⌜ p ⌝) |-tla- (◯ ◯ ⌜ p ⌝) := by
+    (□ □ ⌜ p ⌝) |-tl- (◯ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ
     (p s ∧ p s' ∧ p s'') ∧ (p s' ∧ p s'') ∧ p s'' → p s''
@@ -122,13 +122,13 @@ example {p : σ → Prop} :
 -- `◇p` uses the dual of the necessary approximation of `□¬p`.  A larger
 -- enclosing window therefore exposes every possible witness in that prefix.
 example {p : σ → Prop} :
-    (◯ ◯ ⌜ p ⌝) |-tla- (◇ ⌜ p ⌝) := by
+    (◯ ◯ ⌜ p ⌝) |-tl- (◇ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ p s'' → ¬(¬p s ∧ ¬p s' ∧ ¬p s'')
   aesop
 
 example {a : action σ} :
-    (◯ ⟨a⟩) |-tla- (◇ ⟨a⟩) := by
+    (◯ ⟨a⟩) |-tl- (◇ ⟨a⟩) := by
   tfinite_window
   guard_target =ₛ a s' s'' → ¬(¬a s s' ∧ ¬a s' s'')
   aesop
@@ -136,14 +136,14 @@ example {a : action σ} :
 -- Negation flips the new sufficient approximation back to necessary polarity,
 -- so a negated eventuality remains useful as a hypothesis.
 example {p : σ → Prop} :
-    (¬ ◇ ⌜ p ⌝) |-tla- (¬ ◯ ◯ ⌜ p ⌝) := by
+    (¬ ◇ ⌜ p ⌝) |-tl- (¬ ◯ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ ¬¬(¬p s ∧ ¬p s' ∧ ¬p s'') → ¬p s''
   aesop
 
 -- The same approximation remains usable when nested below another `□`.
 example {p : σ → Prop} :
-    (□ (¬ ◇ ⌜ p ⌝)) |-tla- (¬ ◯ ◯ ⌜ p ⌝) := by
+    (□ (¬ ◇ ⌜ p ⌝)) |-tl- (¬ ◯ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ
     ¬¬(¬p s ∧ ¬p s' ∧ ¬p s'') ∧
@@ -153,13 +153,13 @@ example {p : σ → Prop} :
 -- Binders preserve polarity pointwise, so their bodies may use directional
 -- approximations rather than requiring exact finite windows.
 example {α : Type v} {p : α → σ → Prop} :
-    (∀ x, □ ⌜ p x ⌝) |-tla- (◯ (∀ x, ⌜ p x ⌝)) := by
+    (∀ x, □ ⌜ p x ⌝) |-tl- (◯ (∀ x, ⌜ p x ⌝)) := by
   tfinite_window
   guard_target =ₛ (∀ x, p x s ∧ p x s') → ∀ x, p x s'
   aesop
 
 example {α : Type v} {p : α → σ → Prop} :
-    (∃ x, □ ⌜ p x ⌝) |-tla- (◯ (∃ x, ⌜ p x ⌝)) := by
+    (∃ x, □ ⌜ p x ⌝) |-tl- (◯ (∃ x, ⌜ p x ⌝)) := by
   tfinite_window
   guard_target =ₛ (∃ x, p x s ∧ p x s') → ∃ x, p x s'
   aesop
@@ -167,7 +167,7 @@ example {α : Type v} {p : α → σ → Prop} :
 -- Here the quantifier is inside `□`, so each tiled suffix contains one whole
 -- pointwise quantified body rather than one independently tiled formula per x.
 example {α : Type v} {p q : α → σ → Prop} :
-    (□ (∀ x, ⌜ p x ⌝ ∧ ◯ ⌜ q x ⌝)) |-tla-
+    (□ (∀ x, ⌜ p x ⌝ ∧ ◯ ⌜ q x ⌝)) |-tl-
       (◯ ◯ (∀ x, ⌜ p x ⌝ ∧ ◯ ⌜ q x ⌝)) := by
   tfinite_window
   guard_target =ₛ
@@ -179,7 +179,7 @@ example {α : Type v} {p q : α → σ → Prop} :
 -- Nested Boolean connectives are preserved pointwise while `□` tiles the
 -- entire composite body over every suffix in the enclosing window.
 example {p q r : σ → Prop} :
-    (□ (⌜ p ⌝ ∧ (⌜ q ⌝ ∨ ¬ ⌜ r ⌝))) |-tla-
+    (□ (⌜ p ⌝ ∧ (⌜ q ⌝ ∨ ¬ ⌜ r ⌝))) |-tl-
       (◯ ◯ (⌜ p ⌝ ∧ (⌜ q ⌝ ∨ ¬ ⌜ r ⌝))) := by
   tfinite_window
   guard_target =ₛ
@@ -190,7 +190,7 @@ example {p q r : σ → Prop} :
 -- A disjunction combines the necessary approximations of both always
 -- formulas without distributing the disjunction over the finite prefix.
 example {p q : σ → Prop} :
-    (□ ⌜ p ⌝ ∨ □ ⌜ q ⌝) |-tla- (◯ ◯ (⌜ p ⌝ ∨ ⌜ q ⌝)) := by
+    (□ ⌜ p ⌝ ∨ □ ⌜ q ⌝) |-tl- (◯ ◯ (⌜ p ⌝ ∨ ⌜ q ⌝)) := by
   tfinite_window
   guard_target =ₛ
     p s ∧ p s' ∧ p s'' ∨ q s ∧ q s' ∧ q s'' → p s'' ∨ q s''
@@ -200,7 +200,7 @@ example {p q : σ → Prop} :
 -- disjunction in its antecedent and consequent.
 example {p q r t : σ → Prop} :
     ((((⌜ p ⌝ ∧ ¬ ⌜ q ⌝) ⇒ (⌜ r ⌝ ∨ ⌜ t ⌝)) ∧
-      ◯ ◯ (⌜ p ⌝ ∧ ¬ ⌜ q ⌝))) |-tla- (◯ ◯ (⌜ r ⌝ ∨ ⌜ t ⌝)) := by
+      ◯ ◯ (⌜ p ⌝ ∧ ¬ ⌜ q ⌝))) |-tl- (◯ ◯ (⌜ r ⌝ ∨ ⌜ t ⌝)) := by
   tfinite_window
   guard_target =ₛ
     ((p s ∧ ¬q s → r s ∨ t s) ∧
@@ -213,7 +213,7 @@ example {p q r t : σ → Prop} :
 -- pointwise polarity through a shared three-state window.
 example {α : Type v} {p q r : α → σ → Prop} :
     ((∀ x, □ (⌜ p x ⌝ → (⌜ q x ⌝ ∧ ¬ ⌜ r x ⌝))) ∧
-      ◯ ◯ (∃ x, ⌜ p x ⌝)) |-tla- (◯ ◯ (∃ x, ⌜ q x ⌝)) := by
+      ◯ ◯ (∃ x, ⌜ p x ⌝)) |-tl- (◯ ◯ (∃ x, ⌜ q x ⌝)) := by
   tfinite_window
   guard_target =ₛ
     ((∀ x, (p x s → q x s ∧ ¬r x s) ∧
@@ -225,7 +225,7 @@ example {α : Type v} {p q r : α → σ → Prop} :
 -- An action implication under `□` is rebuilt at each suffix at which its
 -- two-state body still fits.
 example {a : action σ} {p : σ → Prop} :
-    (□ (⟨a⟩ → ◯ ⌜ p ⌝) ∧ ◯ ⟨a⟩) |-tla- (◯ ◯ ⌜ p ⌝) := by
+    (□ (⟨a⟩ → ◯ ⌜ p ⌝) ∧ ◯ ⟨a⟩) |-tl- (◯ ◯ ⌜ p ⌝) := by
   tfinite_window
   guard_target =ₛ
     ((a s s' → p s') ∧ (a s' s'' → p s'')) ∧ a s' s'' → p s''
@@ -234,7 +234,7 @@ example {a : action σ} {p : σ → Prop} :
 -- The sufficient approximation of a composite eventuality is the negation
 -- of all failures of that whole body across the finite prefix.
 example {p q r : σ → Prop} :
-    (◯ ◯ (⌜ p ⌝ ∨ (⌜ q ⌝ ∧ ¬ ⌜ r ⌝))) |-tla-
+    (◯ ◯ (⌜ p ⌝ ∨ (⌜ q ⌝ ∧ ¬ ⌜ r ⌝))) |-tl-
       (◇ (⌜ p ⌝ ∨ (⌜ q ⌝ ∧ ¬ ⌜ r ⌝))) := by
   tfinite_window
   guard_target =ₛ
@@ -246,7 +246,7 @@ example {p q r : σ → Prop} :
 -- Conversely, this existential is inside `◇`; the whole quantified body is
 -- negated and tiled by the `¬□¬` sufficient approximation.
 example {α : Type v} {p q : α → σ → Prop} :
-    (◯ ◯ (∃ x, ⌜ p x ⌝ ∧ ¬ ⌜ q x ⌝)) |-tla-
+    (◯ ◯ (∃ x, ⌜ p x ⌝ ∧ ¬ ⌜ q x ⌝)) |-tl-
       (◇ (∃ x, ⌜ p x ⌝ ∧ ¬ ⌜ q x ⌝)) := by
   tfinite_window
   guard_target =ₛ
@@ -261,7 +261,7 @@ example {p q r t : σ → Prop} :
     (((¬ □ (⌜ p ⌝ ∧ ◯ ⌜ q ⌝)) ⇒
         (◯ ⌜ r ⌝ ∨ ◯ ◯ ⌜ t ⌝)) ∧
       (¬ ◯ ◯ (⌜ p ⌝ ∧ ◯ ⌜ q ⌝)) ∧
-      (¬ ◯ ⌜ r ⌝)) |-tla- (◯ ◯ ⌜ t ⌝) := by
+      (¬ ◯ ⌜ r ⌝)) |-tl- (◯ ◯ ⌜ t ⌝) := by
   tfinite_window
   guard_target =ₛ
     ((¬((p s ∧ q s') ∧ (p s' ∧ q s'') ∧ p s'' ∧ q s''') →
@@ -272,29 +272,29 @@ example {p q r t : σ → Prop} :
   aesop
 
 example {p q : σ → Prop} (h : ∀ s, p s ↔ q s) :
-    (⌜ p ⌝) =tla= (⌜ q ⌝) := by
+    (⌜ p ⌝) =tl= (⌜ q ⌝) := by
   tfinite_window
   guard_target = p s ↔ q s
   exact h _
 
 example {p q : σ → Prop} (h : ∀ s s', p s ↔ q s') :
-    (⌜ p ⌝) =tla= (◯ ⌜ q ⌝) := by
+    (⌜ p ⌝) =tl= (◯ ⌜ q ⌝) := by
   tfinite_window
   guard_target = p s ↔ q s'
   exact h _ _
 
 /--
-error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlafml|□⌜ p ⌝ → □⌜ p ⌝]
+error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlfml|□⌜ p ⌝ → □⌜ p ⌝]
 -/
 #guard_msgs in
-example {p : σ → Prop} : (□ ⌜ p ⌝) |-tla- (□ ⌜ p ⌝) := by
+example {p : σ → Prop} : (□ ⌜ p ⌝) |-tl- (□ ⌜ p ⌝) := by
   tfinite_window
 
 /--
-error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlafml|□◇⌜ p ⌝ → ⌜ p ⌝]
+error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlfml|□◇⌜ p ⌝ → ⌜ p ⌝]
 -/
 #guard_msgs in
-example {p : σ → Prop} : (□ ◇ ⌜ p ⌝) |-tla- (⌜ p ⌝) := by
+example {p : σ → Prop} : (□ ◇ ⌜ p ⌝) |-tl- (⌜ p ⌝) := by
   tfinite_window
 
-end TLA.Test.StateFinite
+end Lentil.Test.StateFinite

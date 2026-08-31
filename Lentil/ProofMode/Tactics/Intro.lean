@@ -1,43 +1,43 @@
 import Lentil.Rules.Basic
 import Lentil.ProofMode.Basic
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
 theorem Entails_intro_forall {σ : Type u} {hyps : List (NamedPred σ)}
   {α : Sort v} {p : α → pred σ} :
-  (∀ x, Entails hyps (p x)) → Entails hyps (TLA.tla_forall p) := forall_elim.mp
+  (∀ x, Entails hyps (p x)) → Entails hyps (Lentil.tl_forall p) := forall_elim.mp
 
 theorem Entails_pure_fact_intro {σ : Type u} {hyps : List (NamedPred σ)}
   {q : Prop} {p : pred σ} :
-  (q → Entails hyps p) = Entails hyps [tlafml| ⌞ q ⌟ → p ] := pure_fact_intro
+  (q → Entails hyps p) = Entails hyps [tlfml| ⌞ q ⌟ → p ] := pure_fact_intro
 
 theorem Entails_intro_temporal {σ : Type u} {hyps : List (NamedPred σ)}
   {goal newHyp : pred σ} (newHypName : String) :
   Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal =
-  Entails hyps [tlafml| newHyp → goal ] := by
+  Entails hyps [tlfml| newHyp → goal ] := by
   unfold Entails ; simp [impl_intro_add_r, repeatedAnd_append] ; rfl
 
 private def introTacDSimps := #[``List.cons_append, ``List.nil_append]
 
-def tlaIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
+def tlIntroCoreStep (k : SyntaxNodeKind) (name : TSyntax k)
   (ident? : TSyntax k → TacticM (Option Ident))
   (errorMsgPrefix : String) (tacIntroNonTemporalHyp : TSyntax k → TacticM (TSyntax `tactic))
   -- (tacIntroTemporalHyp : TSyntax k → TacticM Unit)
   : TacticM Bool := withMainContext do
   let ty ← getMainTarget
   let ty := ty.headBeta.cleanupAnnotations
-  let_expr TLA.ProofMode.Entails _ _ goalPred := ty
+  let_expr Lentil.ProofMode.Entails _ _ goalPred := ty
     | throwError m!"{errorMsgPrefix}: goal is not an Entails sequent, but {ty}"
   match_expr goalPred with
-  | TLA.tla_forall _ _ _ =>
+  | Lentil.tl_forall _ _ _ =>
     let tac ← tacIntroNonTemporalHyp name
     evalTactic <| ← `(tactic|
       refine $(mkIdent ``Entails_intro_forall) ?_ ; $tac)
     return false
-  | TLA.tla_implies _ lhs _ =>
-    if lhs.isAppOf' ``TLA.pure_pred then
+  | Lentil.tl_implies _ lhs _ =>
+    if lhs.isAppOf' ``Lentil.pure_pred then
       let tac ← tacIntroNonTemporalHyp name
       evalTactic <| ← `(tactic|
         refine $(mkIdent ``Entails_pure_fact_intro).$(mkIdent `mp) ?_ ; $tac)
@@ -68,7 +68,7 @@ tintro hp    -- p → q  becomes  hp : p ⊢ q
 tintro n hp -- ∀ n, p n → q n  introduces `n`, then `hp`
 ```
 -/
-syntax (name := tlaIntroTac) "tintro" (ppSpace colGt ident)+ : tactic
+syntax (name := tlIntroTac) "tintro" (ppSpace colGt ident)+ : tactic
 
 elab_rules : tactic
   | `(tactic| tintro%$tk $[$names:ident]*) => do
@@ -79,6 +79,6 @@ elab_rules : tactic
     for name in names, i in 0...* do
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, name] else name
       withTacticInfoContext ctxRef <| withRef name <|
-        discard <| tlaIntroCoreStep `ident name (fun x => pure (some x)) "tintro" tacNonTemporal
+        discard <| tlIntroCoreStep `ident name (fun x => pure (some x)) "tintro" tacNonTemporal
 
-end TLA.ProofMode
+end Lentil.ProofMode

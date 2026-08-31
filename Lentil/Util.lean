@@ -12,28 +12,28 @@ register_option lentil.pp.useDelab : Bool := {
 
 register_option lentil.pp.autoRenderSatisfies : Bool := {
   defValue := true
-  descr := "Automatically render an application `p e` as `e |=tla= p` when `p` is a TLA formula. "
+  descr := "Automatically render an application `p e` as `e |=tl= p` when `p` is a LTL formula. "
 }
 
-/-- Marking the non-temporal parts of TLA. -/
-register_simp_attr tla_nontemporal_def
+/-- Marking the non-temporal parts of Lentil. -/
+register_simp_attr tl_nontemporal_def
 
-/-- Marking the TLA definitions. -/
-register_simp_attr tlasimp_def
+/-- Marking the LTL definitions. -/
+register_simp_attr tlsimp_def
 
 /-- Marking the things to simplify when explicitly reasoning about `exec`. -/
 register_simp_attr execsimp
 
 /-- Marking the definitions unfolded by `tfinite_window`. -/
-register_simp_attr tla_finite_window_def
+register_simp_attr tl_finite_window_def
 
-/-- Marking the theorems that can be simplify reasoning at the TLA level. -/
-register_simp_attr tlasimp
+/-- Marking the theorems that can be simplify reasoning at the LTL level. -/
+register_simp_attr tlsimp
 
 /-- Marking the theorems that are dual to some existing theorems. -/
-register_simp_attr tladual
+register_simp_attr tldual
 
 /-- Marking the theorems that are used for normalizing sequents. -/
-register_simp_attr tlanormsimp
+register_simp_attr tlnormsimp
 
 initialize registerTraceClass `lentil.debug

@@ -3,14 +3,14 @@ import Lentil.ProofMode.Tactics.Clear
 import Lentil.ProofMode.Tactics.Rename
 import Lentil.ProofMode.Tactics.Revert
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
 
 -- Not sure if this is generally useful, so just make it as a `private theorem` for now
 private theorem exists_put_witness_back {α : Sort v} {p : α → pred σ} {Γ g : pred σ} :
-  (∀ x, ((Γ) |-tla- ((p x) → g))) = ((Γ) |-tla- ((∃ x, (p x)) → g)) := by tunfold_simp ; grind
+  (∀ x, ((Γ) |-tl- ((p x) → g))) = ((Γ) |-tl- ((∃ x, (p x)) → g)) := by tunfold_simp ; grind
 
 section
 
@@ -21,7 +21,7 @@ section
 variable (name1 name2 : String) {a b : pred σ}
 
 theorem Entails_rcases_and_by_idx (idx : Nat)
-  (heq : hyps[idx]?.map NamedPred.pred = some (tla_and a b)) :
+  (heq : hyps[idx]?.map NamedPred.pred = some (tl_and a b)) :
   letI hyps' := hyps.eraseIdx idx
   Entails (hyps' ++ [⟨name1, a⟩, ⟨name2, b⟩]) goal → Entails hyps goal := by
   unfold Entails
@@ -38,9 +38,9 @@ theorem Entails_rcases_and_by_name (chosen : String) :
   Entails_rcases_and_by_idx _ _ _
 
 -- NOTE: This proof is slightly repetitive with `Entails_rcases_and_by_idx`, but
--- here the hypothesis is `tla_or`, so the destructure splits into two subgoals.
+-- here the hypothesis is `tl_or`, so the destructure splits into two subgoals.
 theorem Entails_rcases_or_by_idx (idx : Nat)
-  (heq : hyps[idx]?.map NamedPred.pred = some (tla_or a b)) :
+  (heq : hyps[idx]?.map NamedPred.pred = some (tl_or a b)) :
   letI hyps' := hyps.eraseIdx idx
   Entails (hyps' ++ [⟨name1, a⟩]) goal → Entails (hyps' ++ [⟨name2, b⟩]) goal →
   Entails hyps goal := by
@@ -53,7 +53,7 @@ theorem Entails_rcases_or_by_idx (idx : Nat)
   simp at heq ; rcases heq with ⟨r, heq1, heq2⟩
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
   -- Oh
-  intro e i hΓ hab ; exact TLA.or_elim e i hab (h1 e i hΓ) (h2 e i hΓ)
+  intro e i hΓ hab ; exact Lentil.or_elim e i hab (h1 e i hΓ) (h2 e i hΓ)
 
 theorem Entails_rcases_or_by_name (chosen : String) :
   letI idx := hyps.findIdx fun h => h.name == chosen
@@ -68,7 +68,7 @@ variable (newName : String) {α : Sort v} {p : α → pred σ}
 
 -- NOTE: This proof is slightly repetitive with the one above
 theorem Entails_rcases_exists_by_idx (idx : Nat)
-  (heq : hyps[idx]?.map NamedPred.pred = some (tla_exists p)) :
+  (heq : hyps[idx]?.map NamedPred.pred = some (tl_exists p)) :
   letI hyps' := hyps.eraseIdx idx
   (∀ x : α, Entails (hyps' ++ [⟨newName, p x⟩]) goal) → Entails hyps goal := by
   unfold Entails
@@ -170,9 +170,9 @@ mutual
     Precondition: the goal list contains exactly one goal — every caller
     enforces this by running through `focus` or `Tactic.run`.
 
-    A tuple `⟨..⟩` destructures `tla_and` / `tla_exists`; a parenthesized
-    alternation `(.. | ..)` case-splits a `tla_or`, producing two subgoals. -/
-partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := withMainContext do
+    A tuple `⟨..⟩` destructures `tl_and` / `tl_exists`; a parenthesized
+    alternation `(.. | ..)` case-splits a `tl_or`, producing two subgoals. -/
+partial def tlRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := withMainContext do
   -- FIXME: This handling also appears in the implementation of `tspecialize`,
   -- so maybe reuse it?
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | throwError "trcases: failed to read the hypotheses from the goal"
@@ -191,11 +191,11 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
   | `(rcasesPat| -) =>
     -- Clear the exact occurrence resolved above, even if multiple hypotheses
     -- share the same user-facing name.
-    tlaClearByIdx currentHypIdx
+    tlClearByIdx currentHypIdx
   | `(rcasesPat| ⟨ $pats,* ⟩) =>
     let (pat1, pat2) ← splitBinaryRightAssoc pats.getElems
     match_expr pred with
-    | TLA.tla_and _ _ _ =>
+    | Lentil.tl_and _ _ _ =>
       let n1Str ← nameStrForPat pat1
       let n2Str ← nameStrForPat pat2
       -- Inline `hpred := by rfl` so Lean can pin down the implicit `a, b` at
@@ -207,15 +207,15 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
       -- The `refine` left a single goal; `pat1` may case-split it, so `pat2`
       -- must then be applied to every goal `pat1` produced.
-      tlaRcasesCoreFocused (.byName n1Str) pat1
-      tlaRcasesCoreAllGoals (.byName n2Str) pat2
-    | TLA.tla_exists _ _ _ =>
+      tlRcasesCoreFocused (.byName n1Str) pat1
+      tlRcasesCoreAllGoals (.byName n2Str) pat2
+    | Lentil.tl_exists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
       let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote nInnerStr))
           ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_ ; rintro $pat1)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
-      tlaRcasesCoreAllGoals (.byName nInnerStr) pat2
+      tlRcasesCoreAllGoals (.byName nInnerStr) pat2
     | _ =>
       throwError "trcases: cannot destructure pred {pred} with pattern {pat}"
   | _ =>
@@ -223,7 +223,7 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
     | some branches =>
       let (pat1, pat2) ← splitAltRightAssoc branches
       match_expr pred with
-      | TLA.tla_or _ _ _ =>
+      | Lentil.tl_or _ _ _ =>
         let n1Str ← nameStrForPat pat1
         let n2Str ← nameStrForPat pat2
         let thm := if currentHyp matches .byName .. then ``Entails_rcases_or_by_name else ``Entails_rcases_or_by_idx
@@ -234,8 +234,8 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
         -- the `a`-branch and the `b`-branch. Recurse into each.
         match ← getGoals with
         | [g1, g2] =>
-          let g1s ← Tactic.run g1 (tlaRcasesCoreFocused (.byName n1Str) pat1)
-          let g2s ← Tactic.run g2 (tlaRcasesCoreFocused (.byName n2Str) pat2)
+          let g1s ← Tactic.run g1 (tlRcasesCoreFocused (.byName n1Str) pat1)
+          let g2s ← Tactic.run g2 (tlRcasesCoreFocused (.byName n2Str) pat2)
           setGoals (g1s ++ g2s)
         | _ => throwError "trcases: expected exactly two subgoals after the or-split"
       | _ =>
@@ -243,20 +243,20 @@ partial def tlaRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `r
     | none =>
       throwError "trcases: unsupported pattern (use ident, '_', ⟨..⟩ tuples, or | alternations)"
 
-/-- Run `tlaRcasesCoreFocused` on every current goal, collecting all resulting
+/-- Run `tlRcasesCoreFocused` on every current goal, collecting all resulting
     goals. Needed because an or-split multiplies goals, and sibling or
     subsequent patterns must then be applied to each of them. -/
-partial def tlaRcasesCoreAllGoals (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
-  let perGoal ← (← getGoals).mapM fun g => Tactic.run g (tlaRcasesCoreFocused currentHyp pat)
+partial def tlRcasesCoreAllGoals (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := do
+  let perGoal ← (← getGoals).mapM fun g => Tactic.run g (tlRcasesCoreFocused currentHyp pat)
   setGoals perGoal.flatten
 
 end
 
 /-- Destructure the proof-mode hypothesis at `currentHyp` against `pat`, acting
     on the main goal and leaving any other goals untouched. This is the entry
-    point; the recursive work happens in `tlaRcasesCoreFocused`. -/
-def tlaRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit :=
-  focus (tlaRcasesCoreFocused currentHyp pat)
+    point; the recursive work happens in `tlRcasesCoreFocused`. -/
+def tlRcasesCore (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit :=
+  focus (tlRcasesCoreFocused currentHyp pat)
 
 /--
 `trcases h with pat` destructures a temporal hypothesis in the proof-mode
@@ -286,19 +286,19 @@ A numeric index can be used instead of a name:
 trcases 0 with ⟨hp, hq⟩
 ```
 -/
-syntax (name := tlaRcasesTac) "trcases" temporalHypLoc " with " rcasesPat : tactic
+syntax (name := tlRcasesTac) "trcases" temporalHypLoc " with " rcasesPat : tactic
 
 elab_rules : tactic
   | `(tactic| trcases $hyp:temporalHypLoc with $pat) => withMainContext do
     let hyp ← parseTemporalHypLoc hyp "trcases: invalid syntax for hypothesis position"
-    -- `tlaRcasesCore` already acts only on the main goal.
-    tlaRcasesCore hyp pat
+    -- `tlRcasesCore` already acts only on the main goal.
+    tlRcasesCore hyp pat
 
 /--
 `tobtain pat := t` adds the temporal fact proved by `t` and immediately
 destructures it with `pat`.
 
-For example, if `h : |-tla- (p ∧ q)`, then
+For example, if `h : |-tl- (p ∧ q)`, then
 ```lean
 tobtain ⟨hp, hq⟩ := h
 ```
@@ -307,18 +307,18 @@ existential predicate, the pattern may introduce a Lean witness together with
 the temporal hypothesis for its body. A bare proof-mode hypothesis is
 destructured in place; other terms are first added as a new temporal hypothesis.
 -/
-syntax (name := tlaObtainTac) "tobtain" rcasesPat " := " term : tactic
+syntax (name := tlObtainTac) "tobtain" rcasesPat " := " term : tactic
 
 elab_rules : tactic
   | `(tactic| tobtain $pat:rcasesPat := $tm:term) => withMainContext do
     let some (_, hyps) ← recognizeEntailsHypsFromGoal
       | throwError "tobtain: failed to read the hypotheses from the goal"
     match ← temporalHypLocOfBareTerm? hyps tm with
-    | some loc => tlaRcasesCore loc pat
+    | some loc => tlRcasesCore loc pat
     | none =>
       let internalName ← mkFreshInternalTemporalHypName
-      let idx ← tlaHaveTerm internalName tm
-      tlaRcasesCore (.byIdx idx) pat
+      let idx ← tlHaveTerm internalName tm
+      tlRcasesCore (.byIdx idx) pat
 
 /--
 `tby_cases h : p` splits a proof-mode goal into the cases `h : p` and
@@ -331,11 +331,11 @@ tby_cases hp : p
 creates two goals. The first has the temporal hypothesis `hp : p`; the second
 has `hp : ¬ p`.
 -/
-syntax (name := tlaByCasesTac) "tby_cases " ident " : " tlafml : tactic
+syntax (name := tlByCasesTac) "tby_cases " ident " : " tlfml : tactic
 
 macro_rules
-  | `(tactic| tby_cases $h:ident : $p:tlafml) =>
-    `(tactic| tobtain ($h | $h) := TLA.excluded_middle [tlafml| $p])
+  | `(tactic| tby_cases $h:ident : $p:tlfml) =>
+    `(tactic| tobtain ($h | $h) := Lentil.excluded_middle [tlfml| $p])
 
 /--
 `trintro pat₁ pat₂ ...` introduces proof-mode goal binders like
@@ -361,7 +361,7 @@ trintro (hp | hq)
 ```
 introduces the antecedent and splits into two subgoals.
 -/
-syntax (name := tlaRintroTac) "trintro" (ppSpace colGt rintroPat)+ : tactic
+syntax (name := tlRintroTac) "trintro" (ppSpace colGt rintroPat)+ : tactic
 
 elab_rules : tactic
   | `(tactic| trintro%$tk $[$pats:rintroPat]*) => do
@@ -372,13 +372,13 @@ elab_rules : tactic
       | _ => return none
     -- Introduce/destructure a single pattern on the current (single) main goal.
     let stepOne (pat : TSyntax `rintroPat) : TacticM Unit := do
-      let isTemporal? ← tlaIntroCoreStep `rintroPat pat rintroPatIdent? "trintro" tacNonTemporal
+      let isTemporal? ← tlIntroCoreStep `rintroPat pat rintroPatIdent? "trintro" tacNonTemporal
       if isTemporal? then
         -- FIXME: This "getting the last index" also appears frequently ...
         let some hypCount ← goalHypsLength
           | throwError "trintro: failed to read the hypotheses after temporal introduction"
         match pat with
-        | `(rintroPat| $rpat:rcasesPat) => tlaRcasesCore (.byIdx <| hypCount - 1) rpat
+        | `(rintroPat| $rpat:rcasesPat) => tlRcasesCore (.byIdx <| hypCount - 1) rpat
         | _ => throwError "trintro: unsupported pattern (only rcasesPat is supported for `trintro` temporal hypotheses)"
     -- Focus the main goal; a case-splitting pattern multiplies goals, and
     -- `focus` merges any resulting subgoals back ahead of the others.
@@ -391,4 +391,4 @@ elab_rules : tactic
           let perGoal ← (← getGoals).mapM fun g => Tactic.run g (stepOne pat)
           setGoals perGoal.flatten
 
-end TLA.ProofMode
+end Lentil.ProofMode

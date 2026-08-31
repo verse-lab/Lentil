@@ -1,6 +1,6 @@
 import Lentil.ProofMode.Tactics.Intro
 
-namespace TLA.ProofMode
+namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
@@ -24,7 +24,7 @@ private def resolveBinderNameHintAsString (e : Expr) : CoreM Expr := do
 -- but here we need to deal with the binder name, so make it a separate theorem.
 theorem Entails_revert_forall {σ : Type u} {hyps : List (NamedPred σ)}
   {α : Sort v} {p : α → pred σ} (n : String) :
-  Entails hyps (TLA.tla_forall (binderNameHintAsString n p)) → (∀ x, Entails hyps (p x)) := forall_elim.mpr
+  Entails hyps (Lentil.tl_forall (binderNameHintAsString n p)) → (∀ x, Entails hyps (p x)) := forall_elim.mpr
 
 section
 
@@ -35,7 +35,7 @@ theorem Entails_revert_by_idx (idx : Nat) :
   -- to reduce, so use it instead of `getElem?`
   letI rev := hyps.get?Internal idx
   letI hyps' := hyps.eraseIdx idx
-  letI goal' := rev.elim goal fun r => [tlafml| (r.pred) → goal]
+  letI goal' := rev.elim goal fun r => [tlfml| (r.pred) → goal]
   Entails hyps' goal' → Entails hyps goal := by
   rw [List.get?Internal_eq_getElem?]
   rcases h : hyps[idx]? with _ | r <;> dsimp
@@ -88,7 +88,7 @@ Lean locals can also be reverted: a proof `hP : P` becomes a pure implication
 `⌞P⌟ → q`, while a non-Prop local such as `n : Nat` becomes a universal
 quantifier in the goal.
 -/
-syntax (name := tlaRevertTac) "trevert" (ppSpace colGt ident)+ : tactic
+syntax (name := tlRevertTac) "trevert" (ppSpace colGt ident)+ : tactic
 
 /--
 `trevert_all` moves every temporal hypothesis back into the proof-mode goal.
@@ -102,7 +102,7 @@ leaves an empty temporal context and changes the goal to `p → q → r`.
 Lean-local variables and pure assumptions are not reverted; use `trevert`
 with explicit names for those.
 -/
-syntax (name := tlaRevertAllTac) "trevert_all" : tactic
+syntax (name := tlRevertAllTac) "trevert_all" : tactic
 
 -- FIXME: Better error message? Since the current semantics is if the target is missing,
 -- then do nothing
@@ -132,4 +132,4 @@ elab_rules : tactic
             refine $(mkIdent ``Entails_revert_by_name) ($(quote nameStr)) ?_)
           postDSimpAfterApplyingReflectionTheorem revertTacDSimps
 
-end TLA.ProofMode
+end Lentil.ProofMode
