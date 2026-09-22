@@ -1,7 +1,11 @@
-import Lentil.Rules.Basic
-import Lentil.Gadgets.TheoremDeriving
-import Lentil.ProofMode.Tactics
-import Lentil.ProofMode.Display
+module
+
+public import Lentil.Rules.Basic
+public import Lentil.Gadgets.TheoremDeriving
+public import Lentil.ProofMode.Tactics
+public import Lentil.ProofMode.Display
+
+@[expose] public section
 
 /-! Theorems about weak-fairness. -/
 

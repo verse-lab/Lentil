@@ -1,5 +1,9 @@
-import Lentil.Rules.BigOp
-import Lentil.Tactics.FiniteWindow
+module
+
+public import Lentil.Rules.BigOp
+public import Lentil.Tactics.FiniteWindow
+
+@[expose] public section
 
 /-! Theorems specialized for state predicates.
     Their premises are typically pure Lean propositions involving

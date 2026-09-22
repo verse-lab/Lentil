@@ -1,7 +1,11 @@
-import Lean.Meta.Tactic.Generalize
-import Lean.Meta.CollectFVars
-import Lean.Elab.Tactic.Config
-import Lentil.ProofMode.Basic
+module
+
+public import Lean.Meta.Tactic.Generalize
+public import Lean.Meta.CollectFVars
+public import Lean.Elab.Tactic.Config
+public import Lentil.ProofMode.Basic
+
+public meta section
 
 namespace Lentil.ProofMode
 

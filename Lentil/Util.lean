@@ -1,7 +1,11 @@
-import Lean
-import Lentil.Utils.MetaUtil
-import Lentil.Utils.SyntaxUtil
-import Lentil.Utils.MiscLemmas
+module
+
+public import Lean
+public import Lentil.Utils.MetaUtil
+public import Lentil.Utils.SyntaxUtil
+public meta import Lentil.Utils.MiscLemmas
+
+public meta section
 
 open Lean
 

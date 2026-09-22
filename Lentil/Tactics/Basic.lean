@@ -1,10 +1,15 @@
-import Aesop
-import Batteries.Tactic.Basic
-import Lentil.Basic
+module
+
+public import Aesop
+public import Batteries.Tactic.Basic
+public import Batteries.Tactic.PermuteGoals
+public import Lentil.Basic
 
 open Lean Meta Elab Tactic
 
 namespace Lentil
+
+@[expose] public section
 
 syntax "try_unfold_at_all" ident+ : tactic
 macro_rules
@@ -35,6 +40,10 @@ attribute [tl_nontemporal_def] tl_and tl_or tl_not tl_implies tl_forall tl_exist
 
 macro "tnontemporal_simp" : tactic => `(tactic| (simp [tl_nontemporal_def] at *))
 
+end
+
+public meta section
+
 /-- Normalize a sequent goal into a validity goal, by definitional equality. -/
 def changePredImpliesToValid : TacticM Unit := withMainContext do
   let target ← getMainTarget
@@ -46,5 +55,7 @@ def changePredImpliesToValid : TacticM Unit := withMainContext do
     replaceMainGoal [← goal.change target']
   | _ =>
     pure ()
+
+end
 
 end Lentil

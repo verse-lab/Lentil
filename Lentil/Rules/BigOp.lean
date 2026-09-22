@@ -1,4 +1,8 @@
-import Lentil.Rules.Basic
+module
+
+public import Lentil.Rules.Basic
+
+@[expose] public section
 
 /-! Theorems about big operators (e.g., `⋀`, `⋁`). -/
 

@@ -1,12 +1,16 @@
-import Lentil.ProofMode.Tactics.Have
-import Lentil.ProofMode.Tactics.Clear
-import Lentil.ProofMode.Tactics.Rename
-import Lentil.ProofMode.Tactics.Revert
+module
+
+public import Lentil.ProofMode.Tactics.Have
+public import Lentil.ProofMode.Tactics.Clear
+public import Lentil.ProofMode.Tactics.Rename
+public import Lentil.ProofMode.Tactics.Revert
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 open Lean.Parser.Tactic
+
+@[expose] public section
 
 -- Not sure if this is generally useful, so just make it as a `private theorem` for now
 private theorem exists_put_witness_back {α : Sort v} {p : α → pred σ} {Γ g : pred σ} :
@@ -88,6 +92,10 @@ theorem Entails_rcases_exists_by_name (chosen : String) :
 end
 
 end
+
+end
+
+public meta section
 
 private def rcasesTacDSimps : Array Name :=
   #[``List.findIdx, ``List.findIdx.go, ``List.get?Internal,
@@ -390,5 +398,7 @@ elab_rules : tactic
           -- each of the resulting goals.
           let perGoal ← (← getGoals).mapM fun g => Tactic.run g (stepOne pat)
           setGoals perGoal.flatten
+
+end
 
 end Lentil.ProofMode

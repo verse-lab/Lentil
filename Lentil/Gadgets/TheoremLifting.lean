@@ -1,5 +1,9 @@
-import Lean
-import Lentil.Basic
+module
+
+public import Lean
+public import Lentil.Basic
+
+public meta section
 
 /-! Gadgets for lifting a propositional theorem to the level of temporal logic. -/
 

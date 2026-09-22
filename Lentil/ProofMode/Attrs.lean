@@ -1,4 +1,8 @@
-import Lentil.Basic
+module
+
+public import Lentil.Basic
+
+public meta section
 
 /-! Attributes and their registries used by proof-mode tactics. -/
 

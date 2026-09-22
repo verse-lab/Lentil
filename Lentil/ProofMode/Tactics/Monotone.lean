@@ -1,9 +1,13 @@
-import Lentil.ProofMode.Basic
-import Lentil.Rules.Basic
+module
+
+public import Lentil.ProofMode.Basic
+public import Lentil.Rules.Basic
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 def mapHypPreds {σ : Type u} (f : pred σ → pred σ) (hyps : List (NamedPred σ)) :
     List (NamedPred σ) :=
@@ -72,6 +76,10 @@ theorem Entails_always_eventually_monotone_single {name : String} {p : pred σ}
   subst hyps ; exact Lentil.always_eventually_monotone (p := p) (q := goal)
 
 end
+
+end
+
+public meta section
 
 /-- Remove one application of `modality`. This direct variant does not unfold
 the expression head; it is useful when recognizing several alternatives at once. -/
@@ -178,5 +186,7 @@ syntax (name := tlMonotoneTac) "tmonotone" : tactic
 
 elab_rules : tactic
   | `(tactic| tmonotone) => proofModeMonotone
+
+end
 
 end Lentil.ProofMode

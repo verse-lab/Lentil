@@ -1,5 +1,9 @@
-import Lentil.ProofMode.Basic
-import Lentil.Expr
+module
+
+public import Lentil.ProofMode.Basic
+public import Lentil.Expr
+
+public meta section
 
 namespace Lentil.ProofMode
 

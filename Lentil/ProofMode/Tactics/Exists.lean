@@ -1,12 +1,20 @@
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.ProofMode.Basic
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
+@[expose] public section
+
 theorem Entails_exists {σ : Type u} {hyps : List (NamedPred σ)}
     {α : Sort v} {p : α → pred σ} (witness : α) :
     Entails hyps (p witness) → Entails hyps (Lentil.tl_exists p) := exists_elim witness
+
+end
+
+public meta section
 
 /--
 `texists w₁, w₂, ...` supplies witnesses for existential quantifiers in the
@@ -26,5 +34,7 @@ elab_rules : tactic
     for t in ts do
       evalTactic <| ← `(tactic|
         refine $(mkIdent ``Entails_exists) $t ?_)
+
+end
 
 end Lentil.ProofMode

@@ -1,4 +1,8 @@
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.ProofMode.Basic
+
+public meta section
 
 open Lean
 

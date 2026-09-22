@@ -1,12 +1,20 @@
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.ProofMode.Basic
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
+@[expose] public section
+
 theorem Entails_assumption {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
   (idx : Nat) (hlookup : (hyps.map NamedPred.pred)[idx]? = some goal) :
   Entails hyps goal := by apply repeatedAnd_subset_implies [goal] ; grind
+
+end
+
+public meta section
 
 /--
 `tassumption` closes a proof-mode goal when the target predicate already
@@ -54,5 +62,7 @@ elab_rules : tactic
       let some idx ← findIdxM? hyps fun (_, hyp) => isDefEq hyp goal
         | throwError "tassumption: no matching temporal hypothesis for{indentExpr goal}"
       evalTactic <| ← `(tactic| exact $(mkIdent ``Entails_assumption) $(Syntax.mkNatLit idx) (by rfl))
+
+end
 
 end Lentil.ProofMode

@@ -1,11 +1,15 @@
-import Lentil.ProofMode.Location
-import Lentil.ProofMode.Tactics.Monotone
-import Lentil.ProofMode.Tactics.Apply
-import Lentil.ProofMode.Tactics.Revert
+module
+
+public import Lentil.ProofMode.Location
+public import Lentil.ProofMode.Tactics.Monotone
+public import Lentil.ProofMode.Tactics.Apply
+public import Lentil.ProofMode.Tactics.Revert
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 section
 
@@ -136,6 +140,10 @@ theorem Entails_step
   · exact Entails_step_aux stable stepped h
 
 end
+
+end
+
+public meta section
 
 private def peelAlwaysHyps? (hyps : List (String × Expr)) : MetaM (Option (List (String × Expr))) := do
   let mut peeledHyps := []
@@ -310,5 +318,7 @@ elab_rules : tactic
     let loc ← parseTemporalHypLoc hyp "tadvance: invalid syntax for hypothesis position"
     proofModeAdvanceEventually loc
   | `(tactic| tstep) => proofModeStep
+
+end
 
 end Lentil.ProofMode

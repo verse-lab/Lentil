@@ -1,8 +1,12 @@
-import Lean
-import Batteries.Util.ExtendedBinder
-import Lentil.Util
+module
+
+public import Lean
+public import Batteries.Util.ExtendedBinder
+public import Lentil.Util
 
 open Lean LentilLib
+
+@[expose] public section
 
 /-! ## A Shallow-Embedding of Linear Temporal Logic -/
 
@@ -210,7 +214,14 @@ macro_rules
   | `($e:term |=tl[$i:term]= $f:tlfml) => `(Lentil.exec.satisfies [tlfml| $f ] $e $i)
   | `($e:term |=tl= $f:tlfml) => `(Lentil.exec.satisfies [tlfml| $f ] $e 0)
 
-/-! ## Pretty-Printing for LTL Notations -/
+end
+
+/-! ## Pretty-Printing for LTL Notations
+
+    Everything below runs at elaboration time only, so it lives in the `meta`
+    phase of this module. -/
+
+public meta section
 
 /-- Converting a syntax in `term` category into `tlfml`.
     This is useful in the cases where we want to eliminate the redundant `[tlfml| ... ]`

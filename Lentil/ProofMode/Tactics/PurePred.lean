@@ -1,10 +1,14 @@
-import Lentil.ProofMode.Basic
-import Lentil.ProofMode.Tactics.Intro
-import Lentil.ProofMode.Tactics.Revert
+module
+
+public import Lentil.ProofMode.Basic
+public import Lentil.ProofMode.Tactics.Intro
+public import Lentil.ProofMode.Tactics.Revert
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 /-- Pull a pure-fact hypothesis `⟨h, ⌞q⌟⟩` from the temporal context into Lean's
     local context.
@@ -26,6 +30,10 @@ theorem Entails_pull_pure {σ : Type u} {hyps : List (NamedPred σ)} {goal : pre
   rw [List.get?Internal_eq_getElem?, heq1] ; simp only [Option.elim, heq2]
   rw [← Entails_pure_fact_intro]
   exact hh
+
+end
+
+public meta section
 
 /--
 `tpull_pure h₁ h₂ ...` moves pure temporal hypotheses into Lean's local
@@ -80,5 +88,7 @@ tprove_pure
 changes the remaining obligation to the Lean proposition `P`.
 -/
 macro "tprove_pure" : tactic => `(tactic| refine $(mkIdent ``pred_implies_pure) ?_)
+
+end
 
 end Lentil.ProofMode

@@ -1,6 +1,10 @@
-import Lean
-import Lentil.Rules.Basic
-import Lentil.Expr
+module
+
+public import Lean
+public import Lentil.Rules.Basic
+public import Lentil.Expr
+
+public meta section
 
 /-! Gadgets for providing different variants of a proven theorem. -/
 

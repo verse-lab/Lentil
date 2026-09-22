@@ -1,5 +1,9 @@
-import Lentil.Rules.Basic
-import Lentil.Rules.BigOp
+module
+
+public import Lentil.Rules.Basic
+public import Lentil.Rules.BigOp
+
+@[expose] public section
 
 /-! Theorems specialized for action predicates. -/
 

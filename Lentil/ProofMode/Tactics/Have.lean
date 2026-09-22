@@ -1,11 +1,15 @@
-import Lentil.ProofMode.Tactics.Clear
-import Lentil.ProofMode.Tactics.Specialize
-import Lentil.Expr
+module
+
+public import Lentil.ProofMode.Tactics.Clear
+public import Lentil.ProofMode.Tactics.Specialize
+public import Lentil.Expr
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
 open Lean.Parser.Tactic
+
+@[expose] public section
 
 section
 
@@ -48,6 +52,10 @@ theorem Entails_duplicate_one_hyp_by_name {newHyp : pred σ} (oldHypName : Strin
   Entails hyps goal := Entails_duplicate_one_hyp newHypName newHyp (by grind)
 
 end
+
+end
+
+public meta section
 
 /-
 -/
@@ -456,5 +464,7 @@ elab_rules : tactic
   | `(tactic| thave := $t:term) => do
     discard <| tlHaveTerm "this" t
   | `(tactic| treplace $h:ident := $t:term) => tlReplaceTerm h t
+
+end
 
 end Lentil.ProofMode

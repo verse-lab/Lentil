@@ -1,8 +1,12 @@
-import Lentil.ProofMode.Tactics.Rename
+module
+
+public import Lentil.ProofMode.Tactics.Rename
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
+
+@[expose] public section
 
 /-
 Design note: `tspecialize` should be the shared specialization engine for
@@ -193,6 +197,10 @@ end
 
 end
 
+end
+
+public meta section
+
 private def specializeTacDSimps := #[``replaceChosenPred, ``modifyHypByName, ``List.findIdx?, ``List.findIdx?.go,
   ``String.reduceBEq, ``String.reduceBNe, ``dreduceIte, ``Option.elim,
   ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx, ``List.modifyTailIdx.go,
@@ -270,5 +278,7 @@ elab_rules : tactic
     let pos ← parseTemporalHypLoc h "tspecialize: invalid syntax for specialization position"
     for arg in args do
       tlSpecializeStep pos arg
+
+end
 
 end Lentil.ProofMode

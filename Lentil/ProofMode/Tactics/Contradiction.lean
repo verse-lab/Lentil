@@ -1,9 +1,13 @@
-import Lentil.ProofMode.Tactics.Revert
-import Lentil.ProofMode.Tactics.Specialize
+module
+
+public import Lentil.ProofMode.Tactics.Revert
+public import Lentil.ProofMode.Tactics.Specialize
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 section
 
@@ -33,6 +37,10 @@ theorem Entails_false_elim (h : Entails hyps tl_false) : Entails hyps goal :=
   fun e i hhyps => (h e i hhyps).elim
 
 end
+
+end
+
+public meta section
 
 /-- `texfalso` changes the current proof-mode goal to `⊥`. -/
 macro "texfalso" : tactic =>
@@ -66,5 +74,7 @@ elab_rules : tactic
           exact $(mkIdent ``Entails_of_contradicting_hyps) ($(quote idx1)) ($(quote idx2)) (by rfl) (by rfl))
         return
     throwError "tcontradiction: no contradiction found in proof-mode context"
+
+end
 
 end Lentil.ProofMode

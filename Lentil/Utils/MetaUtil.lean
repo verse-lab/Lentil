@@ -1,4 +1,8 @@
-import Lean
+module
+
+public import Lean
+
+public meta section
 
 open Lean Meta Elab Tactic
 
@@ -13,10 +17,15 @@ def simpleAddTheorem (name : Name) (lvlParams : List Name) (type value : Expr) (
   else
     addAndCompile thm
 
-/-- Prove a theorem at the level of `MetaM`, without going into the proof mode. -/
+/-- Prove a theorem at the level of `MetaM`, without going into the proof mode.
+
+The proof is elaborated the way Lean elaborates the body of a `theorem`: under the
+theorem's own name and universe names, and outside the exporting scope of a module,
+since a theorem's proof is never exported. -/
 def simpleProveTheorem (name : Name) (lvlParams : List Name) (type : Expr) (proofScript : TSyntax `term)
     (nonComputable? : Bool) : MetaM Unit := do
-  let proof ← liftCommandElabM <| Command.liftTermElabM do
+  let proof ← liftCommandElabM <| Command.liftTermElabM <|
+      Term.withDeclName name <| Term.withLevelNames lvlParams <| withoutExporting do
     -- when things go wrong, print the proof goal
     let proof ← Term.elabTermAndSynthesize proofScript type
     if proof.hasSorry then

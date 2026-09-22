@@ -1,6 +1,10 @@
-import Lean
-import Lentil.Rules.Basic
-import Lentil.Gadgets.TheoremDeriving
+module
+
+public import Lean
+public import Lentil.Rules.Basic
+public import Lentil.Gadgets.TheoremDeriving
+
+@[expose] public section
 
 /-! Theorems about the leads-to operator. -/
 

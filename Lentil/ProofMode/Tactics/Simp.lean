@@ -1,4 +1,8 @@
-import Lentil.ProofMode.Location
+module
+
+public import Lentil.ProofMode.Location
+
+public meta section
 
 namespace Lentil.ProofMode
 

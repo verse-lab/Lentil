@@ -1,6 +1,10 @@
-import Lentil.Basic
-import Lentil.Tactics.Basic
-import Lentil.Gadgets.TheoremLifting
+module
+
+public import Lentil.Basic
+public import Lentil.Tactics.Basic
+public import Lentil.Gadgets.TheoremLifting
+
+@[expose] public section
 
 /-! Basic theorems about Lentil. -/
 

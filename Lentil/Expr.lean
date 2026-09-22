@@ -1,5 +1,9 @@
-import Lean
-import Lentil.Basic
+module
+
+public import Lean
+public import Lentil.Basic
+
+public meta section
 
 namespace Lentil.Expr
 

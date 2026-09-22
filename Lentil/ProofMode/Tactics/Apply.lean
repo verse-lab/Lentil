@@ -1,9 +1,13 @@
-import Lentil.ProofMode.Tactics.Have
-import Lentil.Expr
+module
+
+public import Lentil.ProofMode.Tactics.Have
+public import Lentil.Expr
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
+
+@[expose] public section
 
 theorem Entails_trans {σ : Type u} {hyps : List (NamedPred σ)} {mid goal : pred σ} :
   (mid) |-tl- (goal) → Entails hyps mid → Entails hyps goal := by
@@ -39,6 +43,10 @@ theorem Entails_apply_hyp_closing_goal (h : hyps.getLast?.map NamedPred.pred = s
   Entails hyps goal := Entails_apply_hyp [] h (by intro _ _ _ ; exact True.intro)
 
 end
+
+end
+
+public meta section
 
 private def applyTacDSimps := #[``repeatedAnd, ``LentilLib.List.foldrD, ``List.dropLast,
   ``List.foldr]
@@ -136,5 +144,7 @@ elab_rules : tactic
     let internalName ← mkFreshInternalTemporalHypName
     let idx ← tlHavePrimeTerm internalName head explicit?.isSome args
     applyIntroducedHypByIdx idx
+
+end
 
 end Lentil.ProofMode

@@ -1,27 +1,29 @@
-import Lentil.ProofMode.Tactics.Apply
-import Lentil.ProofMode.Tactics.Assumption
-import Lentil.ProofMode.Tactics.CheckGoalForm
-import Lentil.ProofMode.Tactics.Clear
-import Lentil.ProofMode.Tactics.Contradiction
-import Lentil.ProofMode.Tactics.CoalesceToPTL
-import Lentil.ProofMode.Tactics.Exists
-import Lentil.ProofMode.Tactics.Exit
-import Lentil.ProofMode.Tactics.Have
-import Lentil.ProofMode.Tactics.Intro
-import Lentil.ProofMode.Tactics.LeftRight
-import Lentil.ProofMode.Tactics.Map
-import Lentil.ProofMode.Tactics.ModalityMisc
-import Lentil.ProofMode.Tactics.Monotone
-import Lentil.ProofMode.Tactics.Normalize
-import Lentil.ProofMode.Tactics.PurePred
-import Lentil.ProofMode.Tactics.RCases
-import Lentil.ProofMode.Tactics.Rename
-import Lentil.ProofMode.Tactics.Revert
-import Lentil.ProofMode.Tactics.Rewrite
-import Lentil.ProofMode.Tactics.Simp
-import Lentil.ProofMode.Tactics.Specialize
-import Lentil.ProofMode.Tactics.SplitAnds
-import Lentil.ProofMode.Tactics.Start
+module
+
+public import Lentil.ProofMode.Tactics.Apply
+public import Lentil.ProofMode.Tactics.Assumption
+public import Lentil.ProofMode.Tactics.CheckGoalForm
+public import Lentil.ProofMode.Tactics.Clear
+public import Lentil.ProofMode.Tactics.Contradiction
+public import Lentil.ProofMode.Tactics.CoalesceToPTL
+public import Lentil.ProofMode.Tactics.Exists
+public import Lentil.ProofMode.Tactics.Exit
+public import Lentil.ProofMode.Tactics.Have
+public import Lentil.ProofMode.Tactics.Intro
+public import Lentil.ProofMode.Tactics.LeftRight
+public import Lentil.ProofMode.Tactics.Map
+public import Lentil.ProofMode.Tactics.ModalityMisc
+public import Lentil.ProofMode.Tactics.Monotone
+public import Lentil.ProofMode.Tactics.Normalize
+public import Lentil.ProofMode.Tactics.PurePred
+public import Lentil.ProofMode.Tactics.RCases
+public import Lentil.ProofMode.Tactics.Rename
+public import Lentil.ProofMode.Tactics.Revert
+public import Lentil.ProofMode.Tactics.Rewrite
+public import Lentil.ProofMode.Tactics.Simp
+public import Lentil.ProofMode.Tactics.Specialize
+public import Lentil.ProofMode.Tactics.SplitAnds
+public import Lentil.ProofMode.Tactics.Start
 
 /-
 NOTE: On the soundness theorems corresponding to these tactics:

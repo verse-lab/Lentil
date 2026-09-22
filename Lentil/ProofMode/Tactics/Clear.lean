@@ -1,8 +1,12 @@
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.ProofMode.Basic
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 theorem Entails_drop_hyps {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
   (subHyps : List (NamedPred σ)) (hinc : subHyps.map NamedPred.pred ⊆ hyps.map NamedPred.pred) :
@@ -27,6 +31,10 @@ theorem Entails_clear_except {σ : Type u} {hyps : List (NamedPred σ)} {goal : 
   (toKeep : List String) :
   letI hyps' := hyps.filter fun h => toKeep.contains h.name
   Entails hyps' goal → Entails hyps goal := Entails_drop_hyps _ (by grind)
+
+end
+
+public meta section
 
 /--
 `tclear * - h₁ h₂ ...` removes every temporal hypothesis except the named
@@ -70,5 +78,7 @@ elab_rules : tactic
   | `(tactic| tclear $[$names:ident]*) => withMainContext do
     let toClear := names.toList.map fun name => toString name.getId
     tlClearByName toClear
+
+end
 
 end Lentil.ProofMode

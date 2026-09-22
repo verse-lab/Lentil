@@ -1,24 +1,17 @@
-import Lentil.ProofMode.Tactics.Intro
+module
+
+public import Lentil.ProofMode.Tactics.Intro
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
+@[expose] public section
+
 -- NOTE: The following approach to restoring binder names is inspired by
 -- `binderNameHint` and `resolveBinderNameHint`
 set_option linter.unusedVariables false in
-private def binderNameHintAsString (n : String) (p : α → β) : α → β := p
-
-private def resolveBinderNameHintAsString (e : Expr) : CoreM Expr := do
-  Core.transform e (post := fun e' => do
-    if e'.isAppOfArity' ``binderNameHintAsString 4 then
-      let args := e'.getAppArgs'
-      let α := args[0]!
-      let target := args[3]!
-      let some name := parseStringLit? args[2]! | return .done e'
-      -- Manual eta-expansion
-      return .done <| Expr.lam (Name.mkSimple name) α (.app (target.liftLooseBVars 0 1) (.bvar 0)) .default
-    else return .done e')
+def binderNameHintAsString (n : String) (p : α → β) : α → β := p
 
 -- NOTE: This is essentially the other direction of the equality,
 -- but here we need to deal with the binder name, so make it a separate theorem.
@@ -59,11 +52,26 @@ theorem Entails_revert_all :
 
 end
 
+end
+
+public meta section
+
 private def revertTacDSimps := #[``List.findIdx, ``List.findIdx.go,
   ``List.get?Internal, ``List.eraseIdx, ``String.reduceBEq,
   ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
 
 private def revertAllTacDSimps := #[``repeatedImplies, ``List.map, ``List.foldr]
+
+private def resolveBinderNameHintAsString (e : Expr) : CoreM Expr := do
+  Core.transform e (post := fun e' => do
+    if e'.isAppOfArity' ``binderNameHintAsString 4 then
+      let args := e'.getAppArgs'
+      let α := args[0]!
+      let target := args[3]!
+      let some name := parseStringLit? args[2]! | return .done e'
+      -- Manual eta-expansion
+      return .done <| Expr.lam (Name.mkSimple name) α (.app (target.liftLooseBVars 0 1) (.bvar 0)) .default
+    else return .done e')
 
 private def restoreBinderNameInForallCase : TacticM Unit := do
   let g ← getMainGoal
@@ -131,5 +139,7 @@ elab_rules : tactic
           evalTactic <| ← `(tactic|
             refine $(mkIdent ``Entails_revert_by_name) ($(quote nameStr)) ?_)
           postDSimpAfterApplyingReflectionTheorem revertTacDSimps
+
+end
 
 end Lentil.ProofMode

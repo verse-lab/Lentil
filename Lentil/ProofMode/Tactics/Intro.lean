@@ -1,9 +1,14 @@
-import Lentil.Rules.Basic
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.Rules.Basic
+public import Lentil.ProofMode.Basic
+public import Batteries.Lean.Expr
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 theorem Entails_intro_forall {σ : Type u} {hyps : List (NamedPred σ)}
   {α : Sort v} {p : α → pred σ} :
@@ -18,6 +23,10 @@ theorem Entails_intro_temporal {σ : Type u} {hyps : List (NamedPred σ)}
   Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal =
   Entails hyps [tlfml| newHyp → goal ] := by
   unfold Entails ; simp [impl_intro_add_r, repeatedAnd_append] ; rfl
+
+end
+
+public meta section
 
 private def introTacDSimps := #[``List.cons_append, ``List.nil_append]
 
@@ -80,5 +89,7 @@ elab_rules : tactic
       let ctxRef := if i == 0 then Lean.mkNullNode #[tk, name] else name
       withTacticInfoContext ctxRef <| withRef name <|
         discard <| tlIntroCoreStep `ident name (fun x => pure (some x)) "tintro" tacNonTemporal
+
+end
 
 end Lentil.ProofMode

@@ -1,9 +1,13 @@
-import Lentil.Rules.BigOp
-import Lentil.ProofMode.Attrs
+module
+
+public import Lentil.Rules.BigOp
+public import Lentil.ProofMode.Attrs
 
 namespace Lentil.ProofMode
 
 open Lentil LentilLib
+
+@[expose] public section
 
 structure NamedPred (σ : Type u) where
   name : String
@@ -130,6 +134,12 @@ theorem modifyHypByName_spec {σ : Type u} (hyps : List (NamedPred σ)) (name : 
     dsimp only [Option.elim]
     rw [List.findIdx?_eq_some_iff_findIdx_eq] at hidx ; grind
 
+end
+
+/-! ### Elaboration-time helpers -/
+
+public meta section
+
 open Lean Meta Elab Tactic
 
 /-- Construct the reduced expression represented by `repeatedAnd preds`.
@@ -231,5 +241,7 @@ def toHypsList (hypTy : Expr) (hyps : List (String × Expr)) : MetaM Expr := do
 def goalHypsLength : TacticM (Option Nat) := do
   let some (_, hyps) ← recognizeEntailsHypsFromGoal | return none
   return some hyps.length
+
+end
 
 end Lentil.ProofMode

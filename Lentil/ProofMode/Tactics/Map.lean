@@ -1,5 +1,7 @@
-import Lentil.ProofMode.Attrs
-import Lentil.ProofMode.Tactics.Have
+module
+
+public import Lentil.ProofMode.Attrs
+public import Lentil.ProofMode.Tactics.Have
 
 /-!
 `tmap` adds the result of applying an implication underneath any nesting of
@@ -17,6 +19,8 @@ depends on both the rule hypothesis and the source.
 -/
 
 namespace Lentil.ProofMode
+
+@[expose] public section
 
 /-- Transport an `always_implies` consequence through one monotone step while
 keeping the original stable implication as the premise. -/
@@ -41,10 +45,39 @@ private theorem always_impl_intro (p q : pred σ) :
   unfold always_implies
   rw [← always_intro, impl_intro]
 
-open Lean Meta Elab Tactic
-
 attribute [tmap_mono]
   Lentil.later_monotone' Lentil.always_monotone' Lentil.eventually_monotone'
+
+-- CHECK These soundness theorems seem kind of tedious, but what would be a better way?
+/-- Add a mapped global-rule result using the reflected source position. -/
+private theorem Entails_add_global_map {σ : Type u}
+    {hyps : List (NamedPred σ)} {goal source : pred σ}
+    (sourceIdx : Nat)
+    (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
+    (newHypName : String) (newHyp : pred σ) :
+    (source) |-tl- (newHyp) →
+    Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
+    Entails hyps goal := by
+  refine Entails_add_new [source] ?_ newHypName newHyp ; grind
+
+/-- Add a mapped proof-mode-rule result using the reflected rule and source
+positions. -/
+private theorem Entails_add_temporal_map {σ : Type u}
+    {hyps : List (NamedPred σ)} {goal relation source : pred σ}
+    (ruleIdx sourceIdx : Nat)
+    (hrule : (hyps.map NamedPred.pred)[ruleIdx]? = some relation)
+    (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
+    (newHypName : String) (newHyp : pred σ) :
+    (relation ∧ source) |-tl- (newHyp) →
+    Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
+    Entails hyps goal := by
+  refine Entails_add_new [relation, source] ?_ newHypName newHyp ; grind
+
+end
+
+public meta section
+
+open Lean Meta Elab Tactic
 
 /-- The common internal form for both Lean-term and proof-mode rules. The
 meaning of `proof` is determined by the lifting step used with the rule. -/
@@ -146,31 +179,6 @@ private partial def liftRule
   let proof ← liftStep inner innerTarget monotonicity proof
   let target := mkApp op innerTarget
   return (target, proof)
-
--- CHECK These soundness theorems seem kind of tedious, but what would be a better way?
-/-- Add a mapped global-rule result using the reflected source position. -/
-private theorem Entails_add_global_map {σ : Type u}
-    {hyps : List (NamedPred σ)} {goal source : pred σ}
-    (sourceIdx : Nat)
-    (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
-    (newHypName : String) (newHyp : pred σ) :
-    (source) |-tl- (newHyp) →
-    Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
-    Entails hyps goal := by
-  refine Entails_add_new [source] ?_ newHypName newHyp ; grind
-
-/-- Add a mapped proof-mode-rule result using the reflected rule and source
-positions. -/
-private theorem Entails_add_temporal_map {σ : Type u}
-    {hyps : List (NamedPred σ)} {goal relation source : pred σ}
-    (ruleIdx sourceIdx : Nat)
-    (hrule : (hyps.map NamedPred.pred)[ruleIdx]? = some relation)
-    (hsource : (hyps.map NamedPred.pred)[sourceIdx]? = some source)
-    (newHypName : String) (newHyp : pred σ) :
-    (relation ∧ source) |-tl- (newHyp) →
-    Entails (hyps ++ [⟨newHypName, newHyp⟩]) goal →
-    Entails hyps goal := by
-  refine Entails_add_new [relation, source] ?_ newHypName newHyp ; grind
 
 /-- Apply a fully instantiated reflection theorem and assign its mapped-proof
 premise directly. -/
@@ -278,5 +286,7 @@ elab_rules : tactic
   | `(tactic| tmap $source:temporalHypLoc using $rule:term) => do
     let sourceLoc ← parseTemporalHypLoc source "tmap: invalid source hypothesis"
     proofModeMapReplace sourceLoc rule
+
+end
 
 end Lentil.ProofMode

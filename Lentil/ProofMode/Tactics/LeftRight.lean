@@ -1,8 +1,12 @@
-import Lentil.ProofMode.Basic
+module
+
+public import Lentil.ProofMode.Basic
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+
+@[expose] public section
 
 section
 
@@ -17,6 +21,10 @@ theorem Entails_or_right : Entails hyps b → Entails hyps (tl_or a b) :=
 
 end
 
+end
+
+public meta section
+
 /--
 `tleft` reduces a disjunctive proof-mode goal `p ∨ q` to its left disjunct
 `p`.
@@ -28,5 +36,7 @@ macro "tleft" : tactic => `(tactic| refine $(mkIdent ``Entails_or_left) ?_)
 disjunct `q`.
 -/
 macro "tright" : tactic => `(tactic| refine $(mkIdent ``Entails_or_right) ?_)
+
+end
 
 end Lentil.ProofMode

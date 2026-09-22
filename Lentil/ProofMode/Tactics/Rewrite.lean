@@ -1,9 +1,14 @@
-import Lentil.ProofMode.Location
+module
+
+public import Lentil.ProofMode.Location
+public import Batteries.Lean.Expr
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic LentilLib
 open Lean.Parser.Tactic
+
+@[expose] public section
 
 /-
 Design notes.
@@ -38,7 +43,7 @@ The body of the local `let` is opaque to `rewrite`, while the explicit argument
 for the current location remains a normal Lean expression. After rewriting,
 reverting and unfolding `cont` restores a literal `Entails` target with the
 original hypothesis order and names. The final target is computed here at the
-meta level; we do not rely on `dsimp` to clean up `replacePredsAtIndices`.
+level; we do not rely on `dsimp` to clean up `replacePredsAtIndices`.
 
 `tsimp` and `tdsimp` deliberately do not use this helper. They are
 implemented as direct `conv` visits to the selected expressions because
@@ -52,6 +57,10 @@ def replacePredsAtIndices {σ : Type u} (hyps : List (NamedPred σ))
 def EntailsWithSomePredsExtractedOut {σ : Type u} (hyps : List (NamedPred σ))
     (idxs : List Nat) (preds : List (pred σ)) (goal : pred σ) : Prop :=
   Entails (replacePredsAtIndices hyps idxs preds) goal
+
+end
+
+public meta section
 
 /-- Compute the restored `Entails` target by inspecting the partially exposed
 target itself. This is the meta-level counterpart of
@@ -199,5 +208,7 @@ elab_rules : tactic
   | `(tactic| trewrite $cfg:optConfig $rules:rwRuleSeq $[$loc]?) => do
     rewriteAtProofModeLocations loc do
       evalTactic <| ← `(tactic| rewrite $cfg:optConfig $rules:rwRuleSeq)
+
+end
 
 end Lentil.ProofMode

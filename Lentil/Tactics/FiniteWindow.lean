@@ -1,10 +1,14 @@
-import Lean
-import Lentil.ProofMode.Basic
-import Lentil.Tactics.Basic
+module
+
+public import Lean
+public import Lentil.ProofMode.Basic
+public import Lentil.Tactics.Basic
 
 open Lean
 
 namespace Lentil
+
+@[expose] public section
 
 /-!
 This file implements a finite-window reduction for local LTL obligations.
@@ -172,15 +176,8 @@ inductive ApproxDir where
   | sufficient
   /-- The formula implies the core. -/
   | necessary
-deriving ToExpr
 
 namespace ApproxDir
-
-instance : ToString ApproxDir where
-  toString
-    | .exact => "exact"
-    | .sufficient => "sufficient"
-    | .necessary => "necessary"
 
 /-- The semantic guarantee carried by a window approximation.
 
@@ -637,7 +634,7 @@ instance hasWindowApproxNecessaryAlwaysImplies {σ : Type u} (p q : pred σ) (n 
 end WindowApproxInstances
 
 attribute [tl_finite_window_def]
-  Nat.max_def Nat.reduceAdd Nat.reduceSub Nat.reduceEqDiff Nat.reduceLeDiff
+  Nat.max_def
   IteratedForall
   finiteWindowOfHasFiniteWindow
   hasFiniteWindowPure hasFiniteWindowTrue hasFiniteWindowFalse
@@ -666,9 +663,45 @@ attribute [tl_finite_window_def]
   IteratedHomPred.mkBinder
   FiniteWindow.binary
 
-attribute [tl_finite_window_def ↓] dreduceIte dreduceDIte reduceIte reduceDIte
+end
+
+public meta section
+
+/- NOTE: `tl_finite_window_def` also needs a few of core's builtin simprocs.
+   In a module, only a `meta` declaration may be added to a simproc set, and
+   core's `builtin_simproc`s are not marked `meta`, so `Nat.reduceAdd` and friends
+   cannot be tagged directly. Re-declare them here with the same patterns (and
+   the same pre/post placement below) and tag these copies instead. -/
+namespace FiniteWindowSimprocs
+
+dsimproc_decl natReduceAdd ((_ + _ : Nat)) := _root_.Nat.reduceAdd
+dsimproc_decl natReduceSub ((_ - _ : Nat)) := _root_.Nat.reduceSub
+simproc_decl natReduceEqDiff ((_ : Nat) = _) := _root_.Nat.reduceEqDiff
+simproc_decl natReduceLeDiff ((_ : Nat) ≤ _) := _root_.Nat.reduceLeDiff
+dsimproc_decl dreduceIte (ite _ _ _) := _root_.dreduceIte
+dsimproc_decl dreduceDIte (dite _ _ _) := _root_.dreduceDIte
+simproc_decl reduceIte (ite _ _ _) := _root_.reduceIte
+simproc_decl reduceDIte (dite _ _ _) := _root_.reduceDIte
+
+end FiniteWindowSimprocs
+
+attribute [tl_finite_window_def]
+  FiniteWindowSimprocs.natReduceAdd FiniteWindowSimprocs.natReduceSub
+  FiniteWindowSimprocs.natReduceEqDiff FiniteWindowSimprocs.natReduceLeDiff
+
+attribute [tl_finite_window_def ↓]
+  FiniteWindowSimprocs.dreduceIte FiniteWindowSimprocs.dreduceDIte
+  FiniteWindowSimprocs.reduceIte FiniteWindowSimprocs.reduceDIte
 
 open Elab Tactic Meta
+
+deriving instance ToExpr for ApproxDir
+
+instance : ToString ApproxDir where
+  toString
+    | .exact => "exact"
+    | .sufficient => "sufficient"
+    | .necessary => "necessary"
 
 private def windowApproxOf (dir : ApproxDir) (p : Expr) : MetaM (Expr × Nat) := do
   let win ← mkFreshExprMVar (some (mkConst ``Nat))
@@ -790,5 +823,7 @@ elab "tfinite_window" : tactic => withMainContext do
     let g ← getMainGoal
     let (_, g') ← liftMetaM <| g.introN proofModeHypNames.length proofModeHypNames
     replaceMainGoal [g']
+
+end
 
 end Lentil

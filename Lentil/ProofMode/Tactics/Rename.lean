@@ -1,10 +1,18 @@
-import Lentil.ProofMode.Location
+module
+
+public import Lentil.ProofMode.Location
 
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
 
-local macro "renameFun" : term => `((fun ⟨_, pred⟩ => ⟨$(mkIdent `newName), pred⟩))
+@[expose] public section
+
+/- NOTE: The body is written with a projection instead of the pattern match
+   `fun ⟨_, pred⟩ => ...`: inside a `public section` of a module, a
+   pattern-matching lambda appearing in a `variable` binder is silently
+   elaborated to `sorry` (Lean 4.32). -/
+local macro "renameFun" : term => `((fun np => ⟨$(mkIdent `newName), np.pred⟩))
 
 section
 
@@ -15,7 +23,7 @@ include h
 private theorem renameHyp_pred_same : hyps'.map NamedPred.pred = hyps.map NamedPred.pred := by
   rcases h with rfl | ⟨hidx, rfl⟩
   on_goal 1=> rfl
-  dsimp ; rw [List.modify_eq_take_cons_drop hidx]
+  rw [List.modify_eq_take_cons_drop hidx]
   conv => enter [2, 2] ; rw [← LentilLib.List.take_getElem_drop hidx]
   simp only [List.map_append, List.map_take, List.map_cons, List.map_drop]
 
@@ -40,6 +48,10 @@ theorem Entails_rename_by_idx (idx : Nat) :
   Entails (hyps.modify idx renameFun) goal = Entails hyps goal := Entails_rename_aux newName idx (ModifyHypSpecWithIndex_modify _ _ _)
 
 end
+
+end
+
+public meta section
 
 private def renameTacDSimps := #[``renameHyp, ``modifyHypByName, ``List.findIdx?, ``List.findIdx?.go, ``String.reduceBEq, ``String.reduceBNe,
     ``dreduceIte, ``Option.elim, ``Bool.false_eq_true, ``List.modify, ``List.modifyTailIdx,
@@ -72,5 +84,7 @@ elab_rules : tactic
     let old ← parseTemporalHypLoc old "trename: invalid syntax for renaming position"
     let newStr := toString new.getId
     tlRename old newStr
+
+end
 
 end Lentil.ProofMode
