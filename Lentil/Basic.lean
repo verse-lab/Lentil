@@ -62,6 +62,7 @@ def eventually {α : Type u} (p : pred α) : pred α := fun e i => ∃ k, p e (i
 def later {α : Type u} (p : pred α) : pred α := fun e i => p e (i + 1)
 
 theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).length = k := by
+  unfold exec at σ
   simp [exec.take]
 
 theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by

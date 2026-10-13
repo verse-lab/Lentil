@@ -524,7 +524,8 @@ theorem evalExec_tile {σ : Type u} {p : pred σ} {n : Nat}
   | k + 1, e, i => by
       rw [alwaysPrefix]
       simp only [tl_and, later]
-      rw [tile, evalExec_mkAnd, evalExec_weaken]
+      refine (evalExec_mkAnd _ _ e i).trans ?_
+      rw [evalExec_weaken]
       rw [FiniteWindow.iff_of_eval hp e]
       exact and_congr Iff.rfl (evalExec_tile hp k e (i + 1))
 
