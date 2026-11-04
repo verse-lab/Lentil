@@ -1,3 +1,5 @@
+module
+
 import Lentil
 
 namespace Lentil.Test.Map

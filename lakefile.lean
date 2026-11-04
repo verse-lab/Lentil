@@ -15,6 +15,9 @@ package «lentil» where
 lean_lib «Lentil» where
   globs := #[`«Lentil»]
 
+lean_lib «LentilApplications» where
+  globs := #[`«LentilApplications»]
+
 @[test_driver]
 lean_lib «LentilTest» where
   globs := #[Glob.submodules `LentilTest]
