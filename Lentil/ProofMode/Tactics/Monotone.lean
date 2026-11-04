@@ -111,18 +111,17 @@ where
 
 private def findMonotonePeel? (hyps : List (String × Expr)) (goal : Expr) :
     MetaM (Option (Name × List (String × Expr) × Expr)) := do
-  let recognizeDirect (e : Expr) : Option (Name × Expr) :=
-    monotoneKinds.findSome? fun (recognizer, nm) => recognizer e |>.map (fun p => (nm, p))
-  let recognize (e : Expr) := recognizeWithTlModalityHeadUnfold? recognizeDirect e
-  let some (nm, peeledGoal) ← recognize goal
-    | return none
-  let mut peeledHyps := []
-  for (name, pred) in hyps do
-    let some (nm', peeledPred) ← recognize pred | return none
-    unless nm' == nm do
-      return none
-    peeledHyps := (name, peeledPred) :: peeledHyps
-  return some (nm, peeledHyps.reverse, peeledGoal)
+  -- Try each prefix across the whole sequent before falling back to a shorter one.
+  for (recognizer, nm) in monotoneKinds do
+    let recognize (e : Expr) := recognizeWithTlModalityHeadUnfold? recognizer e
+    let some peeledGoal ← recognize goal | continue
+    let mut peeledHyps := []
+    for (name, pred) in hyps do
+      let some peeledPred ← recognize pred | break
+      peeledHyps := (name, peeledPred) :: peeledHyps
+    if peeledHyps.length == hyps.length then
+      return some (nm, peeledHyps.reverse, peeledGoal)
+  return none
 
 /-- A not quite useful fallback to non-proof-mode case. -/
 private def rawMonotone : TacticM Unit := do

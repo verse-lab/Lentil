@@ -42,6 +42,24 @@ example (h : (p) |-tl- (q)) : (□ ◇ p) |-tl- (□ ◇ q) := by
   guard_target =ₛ Entails [⟨"hp", p⟩] q
   exact h
 
+example (h : (◇ p) |-tl- (q)) : (□ ◇ p) |-tl- (□ q) := by
+  tstart hp
+  tmonotone
+  guard_target =ₛ Entails [⟨"hp", [tlfml| ◇ p]⟩] q
+  exact h
+
+example (h : (p) |-tl- (◇ q)) : (□ p) |-tl- (□ ◇ q) := by
+  tstart hp
+  tmonotone
+  guard_target =ₛ Entails [⟨"hp", p⟩] [tlfml| ◇ q]
+  exact h
+
+example (h : (◇ p ∧ q) |-tl- (◇ r)) : (□ ◇ p ∧ □ q) |-tl- (□ ◇ r) := by
+  tstart hp hq
+  tmonotone
+  guard_target =ₛ Entails [⟨"hp", [tlfml| ◇ p]⟩, ⟨"hq", q⟩] [tlfml| ◇ r]
+  exact h
+
 example (h : (p ∧ q) |-tl- (r)) : (◇ □ p ∧ ◇ □ q) |-tl- (◇ □ r) := by
   tstart hp hq
   tmonotone
