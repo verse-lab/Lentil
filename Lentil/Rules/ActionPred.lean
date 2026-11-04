@@ -39,6 +39,10 @@ theorem action_pred_implies (a b : action σ) :
     (⟨ fun s s' => a s s' → b s s' ⟩) =tl= (⟨ a ⟩ → ⟨ b ⟩) := by
   funext e i ; tunfold_simp
 
+theorem action_pred_iff (a b : action σ) :
+    (⟨ fun s s' => a s s' ↔ b s s' ⟩) =tl= (⟨ a ⟩ ↔ ⟨ b ⟩) := by
+  funext e i ; tunfold_simp
+
 theorem action_pred_forall {α : Sort v} (a : α → action σ) :
     (⟨ fun s s' => ∀ x, a x s s' ⟩) =tl= (∀ x, ⟨ a x ⟩) := by
   funext e i ; tunfold_simp

@@ -229,6 +229,37 @@ example (A B C : Nat → pred σ)
   · tprove_pure
     trivial
 
+/-! ## Iff destructure -/
+
+-- `trcases h with ⟨hab, hba⟩` on `h : a ↔ b` yields both directions, like
+-- Lean's `rcases` on `Iff`.
+example : (a ↔ b) |-tl- (b → a) := by
+  tstart h
+  trcases h with ⟨hab, hba⟩
+  guard_target =ₛ Entails [⟨"hab", [tlfml| a → b]⟩, ⟨"hba", [tlfml| b → a]⟩] [tlfml| b → a]
+  tassumption
+
+-- By index, discarding one direction.
+example : (c ∧ (a ↔ b)) |-tl- (a → b) := by
+  tstart hc h
+  trcases 1 with ⟨hab, -⟩
+  guard_target =ₛ Entails [⟨"hc", c⟩, ⟨"hab", [tlfml| a → b]⟩] [tlfml| a → b]
+  tassumption
+
+-- A biconditional nested inside a conjunction.
+example (lem : (c) |-tl- ((a ↔ b) ∧ a)) : (c) |-tl- (b) := by
+  tstart hc
+  tobtain ⟨⟨hab, -⟩, ha⟩ := lem hc
+  guard_target =ₛ Entails [⟨"hc", c⟩, ⟨"ha", a⟩, ⟨"hab", [tlfml| a → b]⟩] b
+  tapply hab ha
+
+-- `trintro` destructures an introduced biconditional.
+example : (c) |-tl- ((a ↔ b) → b → a) := by
+  tstart hc
+  trintro ⟨-, hba⟩ hb
+  guard_target =ₛ Entails [⟨"hc", c⟩, ⟨"hba", [tlfml| b → a]⟩, ⟨"hb", b⟩] a
+  tapply hba hb
+
 /-! ## Obtain and by-cases -/
 
 example (lem : |-tl- (a ∧ b)) : (⊤) |-tl- (a) := by
@@ -313,7 +344,7 @@ example (lem : (a) |-tl- (a ∨ b)) : (a) |-tl- (⊤) := by
 
 /-! ## Errors -/
 
--- Pred head is neither `tl_and` nor `tl_exists`.
+-- Pred head is none of `tl_and`, `tl_iff` and `tl_exists`.
 /--
 error: trcases: cannot destructure pred a with pattern ⟨ha, hb⟩
 -/

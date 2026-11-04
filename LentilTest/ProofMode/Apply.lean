@@ -113,6 +113,28 @@ example (lem1 : |-tl- (a ∨ b)) (lem2 : |-tl- (a → c)) :
   · tapply lem2
   · tassumption
 
+-- Backward application of `iff_intro` leaves both directions of a
+-- biconditional as one conjunctive goal.
+example : (p ∧ q) |-tl- (p ↔ q) := by
+  tstart hp hq
+  tapply Lentil.iff_intro
+  guard_target =ₛ Entails [⟨"hp", p⟩, ⟨"hq", q⟩] [tlfml| (p → q) ∧ (q → p)]
+  tsplit_ands <;> (tintro h ; tassumption)
+
+-- A biconditional hypothesis is used through `iff_mp` and `iff_mpr`.
+example : ((p ↔ q) ∧ q) |-tl- (p) := by
+  tstart h hq
+  tapply Lentil.iff_mpr h hq
+
+example : ((p ↔ q) ∧ (q ↔ r)) |-tl- (r ↔ p) := by
+  tstart hpq hqr
+  thave hpr := Lentil.iff_trans hpq hqr
+  tapply Lentil.iff_symm hpr
+
+example : (r) |-tl- (p ↔ p) := by
+  tstart hr
+  tapply Lentil.iff_refl
+
 -- Predicate parameters of inference rules are inferred from the target and
 -- the temporal premises created by backward application.
 example : (a ∧ (a → b)) |-tl- (b) := by

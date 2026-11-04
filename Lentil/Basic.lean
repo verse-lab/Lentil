@@ -36,6 +36,7 @@ def tl_false {α : Type u} : pred α := pure_pred False
 def tl_and {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∧ q e i
 def tl_or {α : Type u} (p q : pred α) : pred α := fun e i => p e i ∨ q e i
 def tl_implies {α : Type u} (p q : pred α) : pred α := fun e i => p e i → q e i
+def tl_iff {α : Type u} (p q : pred α) : pred α := fun e i => p e i ↔ q e i
 def tl_not {α : Type u} (p : pred α) : pred α := fun e i => ¬ p e i
 def tl_forall {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∀ x, p x e i
 def tl_exists {α : Sort u} {β : Type v} (p : α → pred β) : pred β := fun e i => ∃ x, p x e i
@@ -135,6 +136,8 @@ syntax:max tlfml_heading_op tlfml:40 : tlfml
 syntax:max "Enabled" term:lead : tlfml
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
 syntax:25 tlfml:26 " → " tlfml:25 : tlfml
+-- like Lean's `↔`, this binds more loosely than `→` and is non-associative
+syntax:20 tlfml:21 " ↔ " tlfml:21 : tlfml
 syntax:35 tlfml:36 " ∧ " tlfml:35 : tlfml
 syntax:30 tlfml:31 " ∨ " tlfml:30 : tlfml
 syntax:29 tlfml:30 " ↝ " tlfml:29 : tlfml
@@ -170,6 +173,7 @@ macro_rules
     `($opterm [tlfml| $f ])
   | `([tlfml| Enabled $t:term ]) => `(Lentil.tl_enabled $t)
   | `([tlfml| $f1:tlfml → $f2:tlfml ]) => `(Lentil.tl_implies [tlfml| $f1 ] [tlfml| $f2 ])
+  | `([tlfml| $f1:tlfml ↔ $f2:tlfml ]) => `(Lentil.tl_iff [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml ∧ $f2:tlfml ]) => `(Lentil.tl_and [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml ∨ $f2:tlfml ]) => `(Lentil.tl_or [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml 𝑈 $f2:tlfml ]) => `(Lentil.tl_until [tlfml| $f1 ] [tlfml| $f2 ])
@@ -303,13 +307,14 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
       | ``Lentil.eventually => `(tlfml| ◇ $f:tlfml )
       | ``Lentil.later => `(tlfml| ◯ $f:tlfml )
       | _ => unreachable!
-    | ``Lentil.tl_and | ``Lentil.tl_or | ``Lentil.tl_implies | ``Lentil.leads_to | ``Lentil.tl_until | ``Lentil.always_implies =>
+    | ``Lentil.tl_and | ``Lentil.tl_or | ``Lentil.tl_implies | ``Lentil.tl_iff | ``Lentil.leads_to | ``Lentil.tl_until | ``Lentil.always_implies =>
       let f1 ← withAppFn <| withAppArg delab_tlfml_inner
       let f2 ← withAppArg delab_tlfml_inner
       match fn with
       | ``Lentil.tl_and => `(tlfml| $f1:tlfml ∧ $f2:tlfml)
       | ``Lentil.tl_or => `(tlfml| $f1:tlfml ∨ $f2:tlfml)
       | ``Lentil.tl_implies => `(tlfml| $f1:tlfml → $f2:tlfml)
+      | ``Lentil.tl_iff => `(tlfml| $f1:tlfml ↔ $f2:tlfml)
       | ``Lentil.leads_to => `(tlfml| $f1:tlfml ↝ $f2:tlfml)
       | ``Lentil.tl_until => `(tlfml| $f1:tlfml 𝑈 $f2:tlfml)
       | ``Lentil.always_implies => `(tlfml| $f1:tlfml ⇒ $f2:tlfml)
@@ -346,7 +351,7 @@ partial def delab_tlfml : Delab := Lentil.delab_tlfml_app (fun e offset =>
     (List.elem fn [``Lentil.state_pred, ``Lentil.pure_pred, ``Lentil.action_pred, ``Lentil.tl_enabled, ``Lentil.weak_fairness,
         ``Lentil.tl_not, ``Lentil.always, ``Lentil.eventually, ``Lentil.later]
       && e.getAppNumArgs' == 2 + offset) ||
-    (List.elem fn [``Lentil.tl_and, ``Lentil.tl_or, ``Lentil.tl_implies, ``Lentil.leads_to, ``Lentil.tl_until, ``Lentil.always_implies,
+    (List.elem fn [``Lentil.tl_and, ``Lentil.tl_or, ``Lentil.tl_implies, ``Lentil.tl_iff, ``Lentil.leads_to, ``Lentil.tl_until, ``Lentil.always_implies,
         ``Lentil.tl_forall, ``Lentil.tl_exists]
       && e.getAppNumArgs' == 3 + offset) ||
     (List.elem fn [``Lentil.tl_true, ``Lentil.tl_false]
@@ -357,7 +362,7 @@ partial def delab_tlfml : Delab := Lentil.delab_tlfml_app (fun e offset =>
 
 attribute [delab app.Lentil.state_pred, delab app.Lentil.pure_pred, delab app.Lentil.action_pred, delab app.Lentil.tl_enabled, delab app.Lentil.weak_fairness] delab_tlfml
 attribute [delab app.Lentil.tl_not, delab app.Lentil.always, delab app.Lentil.eventually, delab app.Lentil.later] delab_tlfml
-attribute [delab app.Lentil.tl_and, delab app.Lentil.tl_or, delab app.Lentil.tl_implies, delab app.Lentil.leads_to, delab app.Lentil.tl_until, delab app.Lentil.always_implies] delab_tlfml
+attribute [delab app.Lentil.tl_and, delab app.Lentil.tl_or, delab app.Lentil.tl_implies, delab app.Lentil.tl_iff, delab app.Lentil.leads_to, delab app.Lentil.tl_until, delab app.Lentil.always_implies] delab_tlfml
 attribute [delab app.Lentil.tl_true, delab app.Lentil.tl_false] delab_tlfml
 attribute [delab app.Lentil.tl_forall, delab app.Lentil.tl_exists] delab_tlfml
 attribute [delab app.Lentil.tl_bigwedge, delab app.Lentil.tl_bigvee] delab_tlfml

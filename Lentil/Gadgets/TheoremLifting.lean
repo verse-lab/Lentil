@@ -38,6 +38,10 @@ partial def convertPropToTLPredAux (alist : AssocList Expr Expr) (σ p : Expr) :
     trace[lentil.debug] "Or case: {a} or {b}"
     let a' ← go a ; let b' ← go b
     mkAppM ``Lentil.tl_or #[a', b']
+  | Iff a b => do
+    trace[lentil.debug] "Iff case: {a} iff {b}"
+    let a' ← go a ; let b' ← go b
+    mkAppM ``Lentil.tl_iff #[a', b']
   | Not a => do
     trace[lentil.debug] "Not case: not {a}"
     let a' ← go a

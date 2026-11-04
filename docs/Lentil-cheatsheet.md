@@ -22,7 +22,7 @@ successor.
 | `⌞ P ⌟` | pure Lean proposition, `P : Prop` |
 | `⟨ a ⟩` | action predicate, `a : σ → σ → Prop` |
 | `⊤` / `⊥` | true / false |
-| `¬ p`, `p ∧ q`, `p ∨ q`, `p → q` | propositional connectives, on temporal formulas |
+| `¬ p`, `p ∧ q`, `p ∨ q`, `p → q`, `p ↔ q` | propositional connectives, on temporal formulas |
 | `□ p` / `◇ p` / `◯ p` | always / eventually / next |
 | `p 𝑈 q` | until |
 | `p ↝ q` | leads-to, i.e. `□ (p → ◇ q)` |
@@ -42,7 +42,8 @@ Term level:
 | `e \|=tl= p` | execution `e` satisfies `p` |
 
 Precedence, shortest form: unary modalities bind tightest, then `𝑈`, then
-`∧`/`∨`, then `↝`/`⇒`, then `→` (right-associative). Lean applications are atoms,
+`∧`/`∨`, then `↝`/`⇒`, then `→` (right-associative), then `↔`
+(non-associative). Lean applications are atoms,
 so `Enabled A n ∧ p` is `(Enabled (A n)) ∧ p`. Parenthesize when mixing
 implication-like operators. Usually, both sides of `|-tl-` and `=tl=` must be
 parenthesized: `(p ∧ q) |-tl- (r)`, never `(p ∧ q) |-tl- r`.
@@ -132,7 +133,7 @@ differs from that.
 
 | Tactic | What it does |
 |---|---|
-| `trcases h with pat` | destructure a hypothesis; patterns `ident`, `_`, `-`, `⟨..⟩`, `(.. \| ..)` |
+| `trcases h with pat` | destructure a hypothesis; patterns `ident`, `_`, `-`, `⟨..⟩`, `(.. \| ..)`; `⟨..⟩` splits `p ↔ q` into `p → q` and `q → p` |
 | `tobtain pat := t` | add the fact from `t` and destructure it immediately |
 
 ### Rewriting and simplification
@@ -192,6 +193,12 @@ example : (p) |-tl- ((q ∧ r) → q) := by
 example (lem : (p ∧ q) |-tl- (r)) : (p ∧ q) |-tl- (r) := by
   tstart hp hq
   tapply lem ⟨hp, hq⟩
+
+-- prove a biconditional by its two directions
+example : (p ∧ q) |-tl- (p ↔ q) := by
+  tstart hp hq
+  tapply Lentil.iff_intro
+  tsplit_ands <;> (tintro h; tassumption)
 
 -- keep a derived fact
 example (lem : (p) |-tl- (q)) : (p) |-tl- (q) := by

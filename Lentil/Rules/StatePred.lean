@@ -33,6 +33,9 @@ theorem state_preds_or (p q : σ → Prop) : (⌜ p ⌝ ∨ ⌜ q ⌝) =tl= ⌜ 
 theorem state_preds_implies (p q : σ → Prop) : (⌜ p ⌝ → ⌜ q ⌝) =tl= ⌜ fun s => p s → q s ⌝ := by
   funext e i ; tnontemporal_simp
 
+theorem state_preds_iff (p q : σ → Prop) : (⌜ p ⌝ ↔ ⌜ q ⌝) =tl= ⌜ fun s => p s ↔ q s ⌝ := by
+  funext e i ; tnontemporal_simp
+
 theorem state_preds_forall {α : Sort v} (p : α → σ → Prop) : (∀ x, ⌜ p x ⌝) =tl= ⌜ fun s => ∀ x, p x s ⌝ := by
   funext e i ; tnontemporal_simp
 

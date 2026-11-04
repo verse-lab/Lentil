@@ -39,6 +39,15 @@ example : [tlfml| p → q ⇒ r] = [tlfml| p → (q ⇒ r)] := rfl
 example : [tlfml| p ↝ q → r] = [tlfml| (p ↝ q) → r] := rfl
 example : [tlfml| p → q ↝ r] = [tlfml| p → (q ↝ r)] := rfl
 
+-- The LTL biconditional follows Lean's `↔`: it binds more loosely than all other binary operators.
+example : [tlfml| p → q ↔ r] = [tlfml| (p → q) ↔ r] := rfl
+example : [tlfml| p ↔ q → r] = [tlfml| p ↔ (q → r)] := rfl
+example : [tlfml| p ∧ q ↔ q ∨ p] = [tlfml| (p ∧ q) ↔ (q ∨ p)] := rfl
+example : [tlfml| p ⇒ q ↔ r] = [tlfml| (p ⇒ q) ↔ r] := rfl
+example : [tlfml| ¬ p ↔ q] = [tlfml| (¬ p) ↔ q] := rfl
+example : [tlfml| ∀ n : Nat, P n ↔ q] = [tlfml| ∀ n : Nat, ((P n) ↔ q)] := rfl
+example : [tlfml| p ↔ q] = Lentil.tl_iff p q := rfl
+
 -- Weakening the term fallback should not make a following sequent prefix become a Lean argument.
 example : (□ p |-tl- (q)) = ((□ p) |-tl- (q)) := rfl
 example : (|-tl- (p → q)) = Lentil.valid [tlfml| p → q] := rfl

@@ -48,6 +48,13 @@ hr : r
 #guard_msgs in
 #check (Entails [⟨"hp", p⟩, ⟨"hq", q⟩, ⟨"hr", r⟩] [tlfml| p ∧ q ∧ r] : Prop)
 
+-- Biconditionals print with Lean's precedence: an implication operand needs no
+-- parentheses, but a nested biconditional does.
+/-- info: h : p ↔ q
+|-tl- p → q ↔ (q ↔ r) : Prop -/
+#guard_msgs in
+#check (Entails [⟨"h", [tlfml| p ↔ q]⟩] [tlfml| (p → q) ↔ (q ↔ r)] : Prop)
+
 -- Unicode hypothesis label is preserved (the name string becomes an `Ident`).
 /-- info: ψ : p
 |-tl- p : Prop -/

@@ -490,6 +490,16 @@ instance hasWindowApproxImplies {σ : Type u} {dir : ApproxDir}
     (hp.build w (Nat.le_trans (Nat.le_max_left n m) h))
     (hq.build w (Nat.le_trans (Nat.le_max_right n m) h))
 
+/- `↔` is monotone in neither argument, so it only combines exact
+certificates; the sufficient and necessary ones then follow from
+`hasWindowApproxSufficientOfFinite` and `hasWindowApproxNecessaryOfFinite`. -/
+instance hasFiniteWindowIff {σ : Type u} (p q : pred σ) (n m : Nat)
+    [hp : HasFiniteWindow p n] [hq : HasFiniteWindow q m] :
+    HasFiniteWindow (tl_iff p q) (max n m) where
+  build w h := FiniteWindow.binary Iff
+    (hp.build w (Nat.le_trans (Nat.le_max_left n m) h))
+    (hq.build w (Nat.le_trans (Nat.le_max_right n m) h))
+
 def windowApproxLater {σ : Type u} {dir : ApproxDir} {p : pred σ} {n : Nat}
     (hp : HasWindowApprox dir p n) :
     ∀ w, n + 1 ≤ w → WindowApprox dir (later p) w
@@ -649,7 +659,7 @@ attribute [tl_finite_window_def]
   WindowApprox.implies WindowApprox.later
   hasWindowApproxAnd hasWindowApproxOr
   hasWindowApproxForall hasWindowApproxExists hasWindowApproxNot
-  hasWindowApproxImplies windowApproxLater hasWindowApproxLater
+  hasWindowApproxImplies hasFiniteWindowIff windowApproxLater hasWindowApproxLater
   finiteWindowAlwaysPrefix IteratedHomPred.tile
   hasWindowApproxNecessaryAlways
   WindowApprox.ofAlways WindowApprox.alwaysCons

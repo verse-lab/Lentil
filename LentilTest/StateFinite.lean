@@ -271,6 +271,26 @@ example {p q r t : σ → Prop} :
       ¬(p s'' ∧ q s''') ∧ ¬r s' → t s''
   aesop
 
+-- `↔` has only exact certificates, which serve both as an assumption and as a
+-- conclusion.
+example {p q : σ → Prop} :
+    (⌜ p ⌝ ↔ ◯ ⌜ q ⌝) |-tl- (◯ ⌜ q ⌝ ↔ ⌜ p ⌝) := by
+  tfinite_window
+  guard_target =ₛ (p s ↔ q s') → (q s' ↔ p s)
+  exact Iff.symm
+
+example {p q : σ → Prop} :
+    (□ (⌜ p ⌝ ↔ ⌜ q ⌝) ∧ ◯ ⌜ p ⌝) |-tl- (◯ ⌜ q ⌝) := by
+  tfinite_window
+  guard_target =ₛ ((p s ↔ q s) ∧ (p s' ↔ q s')) ∧ p s' → q s'
+  aesop
+
+example {p q : σ → Prop} :
+    (⌜ p ⌝ ↔ ◯ ⌜ q ⌝) =tl= ⟨ fun s s' => p s ↔ q s' ⟩ := by
+  tfinite_window
+  guard_target =ₛ (p s ↔ q s') ↔ (p s ↔ q s')
+  exact Iff.rfl
+
 example {p q : σ → Prop} (h : ∀ s, p s ↔ q s) :
     (⌜ p ⌝) =tl= (⌜ q ⌝) := by
   tfinite_window
@@ -295,6 +315,14 @@ error: tfinite_window: failed to synthesize sufficient finite-window approximati
 -/
 #guard_msgs in
 example {p : σ → Prop} : (□ ◇ ⌜ p ⌝) |-tl- (⌜ p ⌝) := by
+  tfinite_window
+
+-- `□ p` has no exact certificate, so neither has a biconditional around it.
+/--
+error: tfinite_window: failed to synthesize sufficient finite-window approximation for [tlfml|(□⌜ p ⌝ ↔ ⌜ q ⌝) → ⌜ q ⌝]
+-/
+#guard_msgs in
+example {p q : σ → Prop} : (□ ⌜ p ⌝ ↔ ⌜ q ⌝) |-tl- (⌜ q ⌝) := by
   tfinite_window
 
 end Lentil.Test.StateFinite

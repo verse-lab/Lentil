@@ -77,6 +77,7 @@ import Lentil
     - [Prove a conjunction](#prove-a-conjunction)
     - [Prove a disjunction](#prove-a-disjunction)
     - [Introduce a temporal implication](#introduce-a-temporal-implication)
+    - [Prove and use a biconditional](#prove-and-use-a-biconditional)
     - [Destructure an introduced conjunction](#destructure-an-introduced-conjunction)
     - [Apply a theorem with temporal premises](#apply-a-theorem-with-temporal-premises)
     - [Keep a derived fact](#keep-a-derived-fact)
@@ -136,6 +137,7 @@ Formula forms:
 | `◯ p` | `Lentil.later p` | Next/later. |
 | `Enabled a` | `Lentil.tl_enabled a` | Enabled action. |
 | `p → q` | `Lentil.tl_implies p q` | Temporal implication. |
+| `p ↔ q` | `Lentil.tl_iff p q` | Temporal biconditional. |
 | `p ∧ q` | `Lentil.tl_and p q` | Conjunction. |
 | `p ∨ q` | `Lentil.tl_or p q` | Disjunction. |
 | `p 𝑈 q` | `Lentil.tl_until p q` | Until. |
@@ -194,6 +196,9 @@ Facts pinned by `LentilTest/Notation.lean`:
 - `𝑈` binds more tightly than `∧` and `∨`.
 - Temporal implication `→` is right-associative: `p → q → r` is `p → (q → r)`.
 - `↝` and `⇒` bind more tightly than plain `→`.
+- Temporal biconditional `↔` binds most loosely of the binary operators, as in Lean:
+  `p → q ↔ r` is `(p → q) ↔ r`. It is non-associative, so `p ↔ q ↔ r` is
+  rejected; write `(p ↔ q) ↔ r` or `p ↔ (q ↔ r)`.
 - Parenthesize mixed implication-like expressions unless the intended parse is
   obvious.
 - Both sides of `|-tl-` and of `=tl=` must be maximal-precedence formulas: a
@@ -201,8 +206,8 @@ Facts pinned by `LentilTest/Notation.lean`:
   application (`□ p`), or a parenthesized formula. A bare Lean term such as a
   variable `p` is not accepted, so write `(p ∧ q) |-tl- (r)`, not
   `(p ∧ q) |-tl- r`.
-- `|-tl-` as validity binds tighter than a temporal `→`, so `|-tl- p → q` parses
-  as `(|-tl- p) → q` at the Lean level. Write `|-tl- (p → q)`.
+- `|-tl-` as validity binds tighter than a temporal `→` or `↔`, so `|-tl- p → q`
+  parses as `(|-tl- p) → q` at the Lean level. Write `|-tl- (p → q)`.
 
 Examples:
 
@@ -210,6 +215,7 @@ Examples:
 [tlfml| p ∧ q 𝑈 r] = [tlfml| p ∧ (q 𝑈 r)]
 [tlfml| p → q ∨ r] = [tlfml| p → (q ∨ r)]
 [tlfml| p ⇒ q → r] = [tlfml| (p ⇒ q) → r]
+[tlfml| p → q ↔ r] = [tlfml| (p → q) ↔ r]
 ```
 
 ## Proof-mode mental model
@@ -677,7 +683,8 @@ Supported patterns:
 - `ident`: rename selected hyp to `ident`.
 - `_`: keep/discard generated name without changing context.
 - `-`: clear the selected hypothesis.
-- `⟨p1, p2, ...⟩`: destructure conjunctions or existentials.
+- `⟨p1, p2, ...⟩`: destructure conjunctions or existentials, or split a
+  biconditional `p ↔ q` into `p → q` and `q → p`.
 - `(p1 | p2 | ...)`: case-split disjunctions.
 - Nested combinations, for example `⟨ha, hb | hc⟩`.
 
@@ -686,6 +693,7 @@ Examples:
 ```lean
 trcases h with ⟨hp, hq⟩
 trcases h with ⟨n, hp⟩
+trcases h with ⟨hpq, hqp⟩   -- h : p ↔ q
 trcases h with (hp | hq)
 trcases h with ⟨ha, -⟩
 trcases 0 with ⟨hp, hq⟩
@@ -865,7 +873,11 @@ it is used in:
   the window;
 - a conclusion `◇ p` is fine: it may be proved by a witness inside the window;
 - a conclusion `□ p` fails: no finite prefix establishes it;
-- an assumption `◇ p` fails: it gives no uniformly bounded witness.
+- an assumption `◇ p` fails: it gives no uniformly bounded witness;
+- a biconditional `p ↔ q` uses each side both as an assumption and as a
+  conclusion, so neither side may contain a temporal operator other than `◯`:
+  `⌜ p ⌝ ↔ ◯ ⌜ q ⌝` is fine, while `□ ⌜ p ⌝ ↔ ⌜ q ⌝` fails even as an
+  assumption.
 
 Support comes from `HasFiniteWindow` certificates and directional
 `HasWindowApprox` instances; further predicate forms can be covered by adding
@@ -919,6 +931,25 @@ example : (p) |-tl- (q → p) := by
   tstart hp
   tintro hq
   tassumption
+```
+
+### Prove and use a biconditional
+
+`tapply Lentil.iff_intro` turns a biconditional goal into its two directions;
+a biconditional hypothesis is used with `Lentil.iff_mp` / `Lentil.iff_mpr`, or
+split with `trcases`.
+
+```lean
+example : (p ∧ q) |-tl- (p ↔ q) := by
+  tstart hp hq
+  tapply Lentil.iff_intro
+  tsplit_ands
+  · tintro hp' ; tassumption
+  · tintro hq' ; tassumption
+
+example : ((p ↔ q) ∧ p) |-tl- (q) := by
+  tstart h hp
+  tapply Lentil.iff_mp h hp
 ```
 
 ### Destructure an introduced conjunction

@@ -16,7 +16,7 @@ macro_rules
   | `(tactic| try_unfold_at_all $idt:ident ) => `(tactic| (try unfold $idt at *) )
   | `(tactic| try_unfold_at_all $idt:ident $idts:ident* ) => `(tactic| (try unfold $idt at *) ; try_unfold_at_all $idts* )
 
-attribute [tlsimp_def] leads_to weak_fairness tl_and tl_or tl_not tl_implies tl_forall tl_exists tl_true tl_false always_implies
+attribute [tlsimp_def] leads_to weak_fairness tl_and tl_or tl_not tl_implies tl_iff tl_forall tl_exists tl_true tl_false always_implies
   always eventually later tl_until state_pred pure_pred action_pred
   valid pred_implies exec.satisfies exec.drop_drop
   tl_bigwedge tl_bigvee Foldable.fold
@@ -32,7 +32,7 @@ macro "tunfold_simp" : tactic => `(tactic| (simp [tlsimp_def] at *))
 
 macro "tunfold_simp'" : tactic => `(tactic| (tunfold_simp ; (try simp only [execsimp] at *)))
 
-attribute [tl_nontemporal_def] tl_and tl_or tl_not tl_implies tl_forall tl_exists tl_true tl_false
+attribute [tl_nontemporal_def] tl_and tl_or tl_not tl_implies tl_iff tl_forall tl_exists tl_true tl_false
   state_pred pure_pred action_pred
   valid pred_implies exec.satisfies
   tl_bigwedge tl_bigvee Foldable.fold

@@ -41,6 +41,12 @@ example (P Q : σ → Prop) : (⌜ P ⌝ 𝑈 ⌜ Q ⌝) |-tl- (⌜ P ⌝ 𝑈 �
   guard_target =ₛ ((p 𝑈 ptlAtom) |-tl- (p 𝑈 ptlAtom))
   exact pred_implies_refl _
 
+example (P Q : σ → Prop) : (⌜ P ⌝ ↔ □ ⌜ Q ⌝) |-tl- (□ ⌜ Q ⌝ ↔ ⌜ P ⌝) := by
+  tcoalesce_to_ptl
+  rename_i p
+  guard_target =ₛ ((p ↔ □ ptlAtom) |-tl- (□ ptlAtom ↔ p))
+  tstart h ; tapply Lentil.iff_symm h
+
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, ⌜ P x ⌝) |-tl- (∀ x, ⌜ P x ⌝) := by
   tcoalesce_to_ptl

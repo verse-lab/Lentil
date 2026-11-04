@@ -41,6 +41,18 @@ theorem Entails_rcases_and_by_name (chosen : String) :
   (type_of% (@Entails_rcases_and_by_idx _ hyps goal name1 name2 a b idx)) :=
   Entails_rcases_and_by_idx _ _ _
 
+-- `tl_iff a b` is destructured as `tl_and (tl_implies a b) (tl_implies b a)`.
+theorem Entails_rcases_iff_by_idx (idx : Nat)
+  (heq : hyps[idx]?.map NamedPred.pred = some (tl_iff a b)) :
+  letI hyps' := hyps.eraseIdx idx
+  Entails (hyps' ++ [⟨name1, tl_implies a b⟩, ⟨name2, tl_implies b a⟩]) goal → Entails hyps goal :=
+  Entails_rcases_and_by_idx name1 name2 idx (by rw [heq, Lentil.iff_def])
+
+theorem Entails_rcases_iff_by_name (chosen : String) :
+  letI idx := hyps.findIdx fun h => h.name == chosen
+  (type_of% (@Entails_rcases_iff_by_idx _ hyps goal name1 name2 a b idx)) :=
+  Entails_rcases_iff_by_idx _ _ _
+
 -- NOTE: This proof is slightly repetitive with `Entails_rcases_and_by_idx`, but
 -- here the hypothesis is `tl_or`, so the destructure splits into two subgoals.
 theorem Entails_rcases_or_by_idx (idx : Nat)
@@ -178,7 +190,7 @@ mutual
     Precondition: the goal list contains exactly one goal — every caller
     enforces this by running through `focus` or `Tactic.run`.
 
-    A tuple `⟨..⟩` destructures `tl_and` / `tl_exists`; a parenthesized
+    A tuple `⟨..⟩` destructures `tl_and` / `tl_iff` / `tl_exists`; a parenthesized
     alternation `(.. | ..)` case-splits a `tl_or`, producing two subgoals. -/
 partial def tlRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rcasesPat) : TacticM Unit := withMainContext do
   -- FIXME: This handling also appears in the implementation of `tspecialize`,
@@ -202,14 +214,15 @@ partial def tlRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rc
     tlClearByIdx currentHypIdx
   | `(rcasesPat| ⟨ $pats,* ⟩) =>
     let (pat1, pat2) ← splitBinaryRightAssoc pats.getElems
-    match_expr pred with
-    | Lentil.tl_and _ _ _ =>
+    -- Shared by `tl_and` and `tl_iff`, whose reflection theorems both replace
+    -- the hypothesis with two new ones.
+    let rcasesBinary (byNameThm byIdxThm : Name) : TacticM Unit := do
       let n1Str ← nameStrForPat pat1
       let n2Str ← nameStrForPat pat2
       -- Inline `hpred := by rfl` so Lean can pin down the implicit `a, b` at
       -- the time `refine` is elaborated (they don't otherwise appear in the
       -- visible conclusion).
-      let thm := if currentHyp matches .byName .. then ``Entails_rcases_and_by_name else ``Entails_rcases_and_by_idx
+      let thm := if currentHyp matches .byName .. then byNameThm else byIdxThm
       evalTactic <| ← `(tactic| refine $(mkIdent thm) ($(quote n1Str)) ($(quote n2Str))
           ($(quoteTemporalHypLocToTerm currentHyp)) (by rfl) ?_)
       postDSimpAfterApplyingReflectionTheorem rcasesTacDSimps
@@ -217,6 +230,11 @@ partial def tlRcasesCoreFocused (currentHyp : TemporalHypLoc) (pat : TSyntax `rc
       -- must then be applied to every goal `pat1` produced.
       tlRcasesCoreFocused (.byName n1Str) pat1
       tlRcasesCoreAllGoals (.byName n2Str) pat2
+    match_expr pred with
+    | Lentil.tl_and _ _ _ =>
+      rcasesBinary ``Entails_rcases_and_by_name ``Entails_rcases_and_by_idx
+    | Lentil.tl_iff _ _ _ =>
+      rcasesBinary ``Entails_rcases_iff_by_name ``Entails_rcases_iff_by_idx
     | Lentil.tl_exists _ _ _ =>
       let nInnerStr ← nameStrForPat pat2
       let thm := if currentHyp matches .byName .. then ``Entails_rcases_exists_by_name else ``Entails_rcases_exists_by_idx
@@ -274,7 +292,8 @@ If `h : p ∧ q`, then
 ```lean
 trcases h with ⟨hp, hq⟩
 ```
-removes `h` and adds `hp : p` and `hq : q`. If `h : ∃ x, P x`, then
+removes `h` and adds `hp : p` and `hq : q`. The same pattern on `h : p ↔ q`
+adds `hp : p → q` and `hq : q → p`. If `h : ∃ x, P x`, then
 ```lean
 trcases h with ⟨x, hx⟩
 ```

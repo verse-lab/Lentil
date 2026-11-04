@@ -105,6 +105,7 @@ private partial def collectPTLBlocks (cfg : CoalesceConfig) (bound : Array Expr)
   | Lentil.tl_and _ p q => collectBinary ``Lentil.tl_and p q
   | Lentil.tl_or _ p q => collectBinary ``Lentil.tl_or p q
   | Lentil.tl_implies _ p q => collectBinary ``Lentil.tl_implies p q
+  | Lentil.tl_iff _ p q => collectBinary ``Lentil.tl_iff p q
   | Lentil.tl_forall _ _ p => collectBinder ``Lentil.tl_forall p
   | Lentil.tl_exists _ _ p => collectBinder ``Lentil.tl_exists p
   -- NOTE: Design choice: big op should be first turned into `forall`/`exists`
