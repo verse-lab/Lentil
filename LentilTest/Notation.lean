@@ -14,6 +14,8 @@ example (n : Nat) : [tlfml| P (n + 1)] = P (n + 1) := rfl
 example (n : Nat) : [tlfml| P n ∧ q] = [tlfml| (P n) ∧ q] := rfl
 example (n : Nat) : [tlfml| Enabled A n ∧ p] = [tlfml| (Enabled (A n)) ∧ p] := rfl
 example (n : Nat) : [tlfml| 𝒲ℱ A n ∧ p] = [tlfml| (𝒲ℱ (A n)) ∧ p] := rfl
+example (n : Nat) : [tlfml| 𝒮ℱ A n ∧ p] = [tlfml| (𝒮ℱ (A n)) ∧ p] := rfl
+example (n : Nat) : [tlfml| 𝒮ℱ A n] = Lentil.strong_fairness (A n) := rfl
 
 -- Quantifiers scope over the whole following formula, matching Lean's binders.
 example : [tlfml| ∀ n : Nat, P n ∧ q] = [tlfml| ∀ n : Nat, ((P n) ∧ q)] := rfl

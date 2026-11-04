@@ -145,6 +145,7 @@ Formula forms:
 | `p ↝ q` | `Lentil.leads_to p q` | Leads-to, defined as `□ (p → ◇ q)`. |
 | `p ⇒ q` | `Lentil.always_implies p q` | Always-implies, defined as `□ (p → q)`. |
 | `𝒲ℱ a` | `Lentil.weak_fairness a` | Weak fairness for action `a`. |
+| `𝒮ℱ a` | `Lentil.strong_fairness a` | Strong fairness for action `a`. |
 | `∀ x, p x` | `Lentil.tl_forall (fun x => p x)` | Temporal universal quantifier. |
 | `∃ x, p x` | `Lentil.tl_exists (fun x => p x)` | Temporal existential quantifier. |
 | `⋀ x ∈ xs, p x` | `Lentil.tl_bigwedge (fun x => p x) xs` | Big conjunction over a `Foldable`. |
@@ -191,7 +192,7 @@ Facts pinned by `LentilTest/Notation.lean`:
 
 - Lean applications are accepted as formula atoms: `P n ∧ q` parses as `(P n) ∧ q`.
 - `Enabled A n ∧ p` parses as `(Enabled (A n)) ∧ p`.
-- `𝒲ℱ A n ∧ p` parses as `(𝒲ℱ (A n)) ∧ p`.
+- `𝒲ℱ A n ∧ p` parses as `(𝒲ℱ (A n)) ∧ p`, and likewise for `𝒮ℱ`.
 - `∀` and `∃` scope over the whole following formula.
 - Unary temporal operators bind more tightly than `𝑈`.
 - `𝑈` binds more tightly than `∧` and `∨`.
@@ -795,7 +796,7 @@ Supported prefixes:
 
 It also works outside proof mode by applying raw monotonicity theorems.
 
-If a leading modality is hidden behind a definition tagged with `[tl_modality_unfold]`, the tactic may unfold that head for recognition. Built-in tagged wrappers are `Lentil.leads_to` (`↝`), `Lentil.always_implies` (`⇒`), and `Lentil.weak_fairness` (`𝒲ℱ`).
+If a leading modality is hidden behind a definition tagged with `[tl_modality_unfold]`, the tactic may unfold that head for recognition. Built-in tagged wrappers are `Lentil.leads_to` (`↝`), `Lentil.always_implies` (`⇒`), `Lentil.weak_fairness` (`𝒲ℱ`), and `Lentil.strong_fairness` (`𝒮ℱ`).
 
 ### `ttoggle_goal_under_always`
 

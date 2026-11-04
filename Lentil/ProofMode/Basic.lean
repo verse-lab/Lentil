@@ -186,6 +186,7 @@ partial def recognizeWithTlModalityHeadUnfold? {α : Type} (recognize : Expr →
 attribute [tl_modality_unfold] Lentil.leads_to
 attribute [tl_modality_unfold] Lentil.always_implies
 attribute [tl_modality_unfold] Lentil.weak_fairness
+attribute [tl_modality_unfold] Lentil.strong_fairness
 
 def postDSimpAfterApplyingReflectionTheorem (l : Array Name) : TacticM Unit := do
   let gs ← getGoals

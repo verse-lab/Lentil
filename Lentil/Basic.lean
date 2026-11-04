@@ -144,6 +144,7 @@ syntax:29 tlfml:30 " ↝ " tlfml:29 : tlfml
 syntax:37 tlfml:38 " 𝑈 " tlfml:37 : tlfml
 syntax:27 tlfml:28 " ⇒ " tlfml:27 : tlfml
 syntax:arg "𝒲ℱ" term:lead : tlfml
+syntax:arg "𝒮ℱ" term:lead : tlfml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
 open Batteries.ExtendedBinder in
@@ -193,11 +194,13 @@ macro_rules
 def Lentil.leads_to {α : Type u} (p q : Lentil.pred α) : Lentil.pred α := [tlfml| □ (p → ◇ q) ]
 def Lentil.always_implies {α : Type u} (p q : Lentil.pred α) : Lentil.pred α := [tlfml| □ (p → q) ]
 def Lentil.weak_fairness {α : Type u} (a : action α) : pred α := [tlfml| □ ((□ (Enabled a)) → ◇ ⟨a⟩)]
+def Lentil.strong_fairness {α : Type u} (a : action α) : pred α := [tlfml| □ ((□ ◇ (Enabled a)) → ◇ ⟨a⟩)]
 
 macro_rules
   | `([tlfml| $f1:tlfml ↝ $f2:tlfml ]) => `(Lentil.leads_to [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml ⇒ $f2:tlfml ]) => `(Lentil.always_implies [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| 𝒲ℱ $t:term ]) => `(Lentil.weak_fairness $t)
+  | `([tlfml| 𝒮ℱ $t:term ]) => `(Lentil.strong_fairness $t)
 
 /- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
    easily typed in Lean VSCode extension, so anyway -/
@@ -290,7 +293,8 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
     match fn with
     | ``Lentil.tl_true => `(tlfml| ⊤ )
     | ``Lentil.tl_false => `(tlfml| ⊥ )
-    | ``Lentil.state_pred | ``Lentil.pure_pred | ``Lentil.action_pred | ``Lentil.tl_enabled | ``Lentil.weak_fairness =>
+    | ``Lentil.state_pred | ``Lentil.pure_pred | ``Lentil.action_pred | ``Lentil.tl_enabled | ``Lentil.weak_fairness
+      | ``Lentil.strong_fairness =>
       let t ← withAppArg delab
       match fn with
       | ``Lentil.state_pred => `(tlfml| ⌜ $t:term ⌝ )
@@ -298,6 +302,7 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
       | ``Lentil.action_pred => `(tlfml| ⟨ $t:term ⟩ )
       | ``Lentil.tl_enabled => `(tlfml| Enabled $t:term )
       | ``Lentil.weak_fairness => `(tlfml| 𝒲ℱ $t:term )
+      | ``Lentil.strong_fairness => `(tlfml| 𝒮ℱ $t:term )
       | _ => unreachable!
     | ``Lentil.tl_not | ``Lentil.always | ``Lentil.eventually | ``Lentil.later =>
       let f ← withAppArg delab_tlfml_inner
@@ -349,7 +354,7 @@ partial def delab_tlfml : Delab := Lentil.delab_tlfml_app (fun e offset =>
   -- need to consider implicit arguments below in comparing `e.getAppNumArgs'`
   let fn := e.getAppFn.constName;
     (List.elem fn [``Lentil.state_pred, ``Lentil.pure_pred, ``Lentil.action_pred, ``Lentil.tl_enabled, ``Lentil.weak_fairness,
-        ``Lentil.tl_not, ``Lentil.always, ``Lentil.eventually, ``Lentil.later]
+        ``Lentil.strong_fairness, ``Lentil.tl_not, ``Lentil.always, ``Lentil.eventually, ``Lentil.later]
       && e.getAppNumArgs' == 2 + offset) ||
     (List.elem fn [``Lentil.tl_and, ``Lentil.tl_or, ``Lentil.tl_implies, ``Lentil.tl_iff, ``Lentil.leads_to, ``Lentil.tl_until, ``Lentil.always_implies,
         ``Lentil.tl_forall, ``Lentil.tl_exists]
@@ -360,7 +365,7 @@ partial def delab_tlfml : Delab := Lentil.delab_tlfml_app (fun e offset =>
       && e.getAppNumArgs' == 6 + offset)
   ) delab_tlfml_inner
 
-attribute [delab app.Lentil.state_pred, delab app.Lentil.pure_pred, delab app.Lentil.action_pred, delab app.Lentil.tl_enabled, delab app.Lentil.weak_fairness] delab_tlfml
+attribute [delab app.Lentil.state_pred, delab app.Lentil.pure_pred, delab app.Lentil.action_pred, delab app.Lentil.tl_enabled, delab app.Lentil.weak_fairness, delab app.Lentil.strong_fairness] delab_tlfml
 attribute [delab app.Lentil.tl_not, delab app.Lentil.always, delab app.Lentil.eventually, delab app.Lentil.later] delab_tlfml
 attribute [delab app.Lentil.tl_and, delab app.Lentil.tl_or, delab app.Lentil.tl_implies, delab app.Lentil.tl_iff, delab app.Lentil.leads_to, delab app.Lentil.tl_until, delab app.Lentil.always_implies] delab_tlfml
 attribute [delab app.Lentil.tl_true, delab app.Lentil.tl_false] delab_tlfml

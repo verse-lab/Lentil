@@ -58,6 +58,23 @@ example (h : (𝒲ℱ a) |-tl- (r)) : (𝒲ℱ a) |-tl- (□ r) := by
   trace_state
   exact h
 
+/--
+trace: σ : Type u
+p q r : pred σ
+a : action σ
+h : (𝒮ℱ a) |-tl- (r)
+⊢ ⏎
+  hsf : 𝒮ℱ a
+  |-tl- r
+-/
+#guard_msgs in
+example (h : (𝒮ℱ a) |-tl- (r)) : (𝒮ℱ a) |-tl- (□ r) := by
+  tstart hsf
+  ttoggle_goal_under_always
+  guard_target =ₛ Entails [⟨"hsf", [tlfml| 𝒮ℱ a]⟩] r
+  trace_state
+  exact h
+
 example (h : (p ∧ q) |-tl- (r)) :
     (wrappedAlways p ∧ wrappedAlways q) |-tl- (wrappedAlways r) := by
   tstart hp hq
@@ -77,6 +94,13 @@ example (h : (𝒲ℱ a ∧ p) |-tl- (◇ q)) :
   tstart hwf hp
   tadvance hp
   guard_target =ₛ Entails [⟨"hwf", [tlfml| 𝒲ℱ a]⟩, ⟨"hp", p⟩] [tlfml| ◇ q]
+  exact h
+
+example (h : (𝒮ℱ a ∧ p) |-tl- (◇ q)) :
+    (𝒮ℱ a ∧ ◇ p) |-tl- (◇ q) := by
+  tstart hsf hp
+  tadvance hp
+  guard_target =ₛ Entails [⟨"hsf", [tlfml| 𝒮ℱ a]⟩, ⟨"hp", p⟩] [tlfml| ◇ q]
   exact h
 
 example (h : (□ p ∧ q ∧ □ r) |-tl- (□ ◇ r)) :

@@ -274,8 +274,8 @@ proof-mode goal when every temporal hypothesis has a leading `□`.
 When the leading `□` is hidden behind a definition tagged with
 `[tl_modality_unfold]`, this tactic unfolds only that expression head while
 checking for the prefix. This includes the built-in wrappers
-`Lentil.always_implies` (`⇒`), `Lentil.leads_to` (`↝`), and `Lentil.weak_fairness`
-(`𝒲ℱ`).
+`Lentil.always_implies` (`⇒`), `Lentil.leads_to` (`↝`), `Lentil.weak_fairness`
+(`𝒲ℱ`), and `Lentil.strong_fairness` (`𝒮ℱ`).
 
 For example, with `hp : □ p`, it changes a proof-mode goal `□ q` to `q`:
 ```lean

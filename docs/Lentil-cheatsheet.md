@@ -29,6 +29,7 @@ successor.
 | `p ⇒ q` | always-implies, i.e. `□ (p → q)` |
 | `Enabled a` | action `a` is enabled |
 | `𝒲ℱ a` | weak fairness for `a` |
+| `𝒮ℱ a` | strong fairness for `a` |
 | `∀ x, p x` / `∃ x, p x` | temporal quantifiers |
 | `⋀ x ∈ xs, p x` / `⋁ x ∈ xs, p x` | big conjunction / disjunction |
 

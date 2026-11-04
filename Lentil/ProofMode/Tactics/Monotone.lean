@@ -174,7 +174,8 @@ cases for `◇` and `□◇`.
 When the outer modality is hidden behind a definition tagged with
 `[tl_modality_unfold]`, this tactic unfolds only that expression head while
 recognizing the prefix. This includes the built-in wrappers `Lentil.always_implies`
-(`⇒`), `Lentil.leads_to` (`↝`), and `Lentil.weak_fairness` (`𝒲ℱ`).
+(`⇒`), `Lentil.leads_to` (`↝`), `Lentil.weak_fairness` (`𝒲ℱ`), and
+`Lentil.strong_fairness` (`𝒮ℱ`).
 
 Outside proof mode it applies the corresponding raw monotonicity theorem:
 ```lean

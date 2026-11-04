@@ -30,6 +30,11 @@ theorem wf_alt1 : (𝒲ℱ a) =tl= □ ◇ ((¬ Enabled a) ∨ □ ◇ ⟨a⟩) 
 theorem wf_alt1' : (𝒲ℱ a) =tl= □ ◇ ((¬ Enabled a) ∨ ⟨a⟩) := by
   rw [wf_alt1] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlsimp]
 
+/-- The usual presentation of weak fairness: if `a` is eventually enabled forever,
+then it is taken infinitely often. -/
+theorem wf_as_implies : (𝒲ℱ a) =tl= ((◇ □ Enabled a) → □ ◇ ⟨a⟩) := by
+  rw [wf_alt1, implies_to_or] ; (repeat rw [always_eventually_or_distrib]) ; simp [tlsimp]
+
 end wf_def
 
 /--
