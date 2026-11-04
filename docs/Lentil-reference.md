@@ -44,6 +44,7 @@ import Lentil
     - [`texists`](#texists)
     - [`tleft` and `tright`](#tleft-and-tright)
     - [`tsplit_ands`](#tsplit_ands)
+    - [`tconstructor`](#tconstructor)
     - [`tprove_pure`](#tprove_pure)
     - [`texfalso`](#texfalso)
     - [`tby_cases`](#tby_cases)
@@ -462,6 +463,20 @@ tsplit_ands
 ```
 
 Splits a conjunctive proof-mode goal into separate goals.
+
+### `tconstructor`
+
+```lean
+tconstructor
+```
+
+Applies the introduction rule of the goal's outermost `∧`, `↔` or `∃`, like
+Lean's `constructor`; the converse of `trcases` tuple patterns.
+
+- `p ∧ q`: goals `p` and `q`.
+- `p ↔ q`: goals `p → q` and `q → p`.
+- `∃ x, p x`: goal `p ?w`, leaving the witness `?w` to unification or to
+  `case w`; `texists` gives it directly.
 
 ### `tprove_pure`
 
@@ -935,15 +950,14 @@ example : (p) |-tl- (q → p) := by
 
 ### Prove and use a biconditional
 
-`tapply Lentil.iff_intro` turns a biconditional goal into its two directions;
-a biconditional hypothesis is used with `Lentil.iff_mp` / `Lentil.iff_mpr`, or
+`tconstructor` turns a biconditional goal into its two directions; a
+biconditional hypothesis is used with `Lentil.iff_mp` / `Lentil.iff_mpr`, or
 split with `trcases`.
 
 ```lean
 example : (p ∧ q) |-tl- (p ↔ q) := by
   tstart hp hq
-  tapply Lentil.iff_intro
-  tsplit_ands
+  tconstructor
   · tintro hp' ; tassumption
   · tintro hq' ; tassumption
 

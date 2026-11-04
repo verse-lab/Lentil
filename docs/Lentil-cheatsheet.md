@@ -111,6 +111,7 @@ differs from that.
 | `texists w1, w2` | supply witnesses for temporal `∃` goals |
 | `tleft` / `tright` | pick a disjunct of `p ∨ q` |
 | `tsplit_ands` | split a conjunctive goal |
+| `tconstructor` | split the outermost `∧`, `↔` or `∃` of the goal; the converse of `trcases` tuple patterns |
 | `tprove_pure` | reduce a pure goal `⌞P⌟` to the Lean goal `P` |
 | `tby_cases h : p` | split into `h : p` and `h : ¬ p` |
 | `texfalso` | change the goal to `⊥` |
@@ -197,8 +198,7 @@ example (lem : (p ∧ q) |-tl- (r)) : (p ∧ q) |-tl- (r) := by
 -- prove a biconditional by its two directions
 example : (p ∧ q) |-tl- (p ↔ q) := by
   tstart hp hq
-  tapply Lentil.iff_intro
-  tsplit_ands <;> (tintro h; tassumption)
+  tconstructor <;> (tintro h; tassumption)
 
 -- keep a derived fact
 example (lem : (p) |-tl- (q)) : (p) |-tl- (q) := by

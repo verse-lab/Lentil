@@ -6,6 +6,7 @@ public import Lentil.ProofMode.Tactics.CheckGoalForm
 public import Lentil.ProofMode.Tactics.Clear
 public import Lentil.ProofMode.Tactics.Contradiction
 public import Lentil.ProofMode.Tactics.CoalesceToPTL
+public import Lentil.ProofMode.Tactics.Constructor
 public import Lentil.ProofMode.Tactics.Exists
 public import Lentil.ProofMode.Tactics.Exit
 public import Lentil.ProofMode.Tactics.Have
@@ -33,6 +34,8 @@ NOTE: On the soundness theorems corresponding to these tactics:
 - `coalesce_to_ptl`: generalize first-order predicate blocks while preserving
   their propositional temporal skeleton
 - `exists`, `intro`: basically reducing to existing rules
+- `constructor`: the introduction rules of `∧`, `↔` and `∃`, the converse of
+  `rcases` with tuple patterns
 - `revert`: basically the inversion of `intro`
 - `pull_pure`: `revert` + `intro`
 - `rename`: a very special case of inclusion reasoning (eq)
