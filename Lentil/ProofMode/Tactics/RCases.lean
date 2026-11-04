@@ -46,7 +46,7 @@ theorem Entails_rcases_iff_by_idx (idx : Nat)
   (heq : hyps[idx]?.map NamedPred.pred = some (tl_iff a b)) :
   letI hyps' := hyps.eraseIdx idx
   Entails (hyps' ++ [⟨name1, tl_implies a b⟩, ⟨name2, tl_implies b a⟩]) goal → Entails hyps goal :=
-  Entails_rcases_and_by_idx name1 name2 idx (by rw [heq, Lentil.iff_def])
+  Entails_rcases_and_by_idx name1 name2 idx (by rw [heq, Lentil.tl_iff_def])
 
 theorem Entails_rcases_iff_by_name (chosen : String) :
   letI idx := hyps.findIdx fun h => h.name == chosen

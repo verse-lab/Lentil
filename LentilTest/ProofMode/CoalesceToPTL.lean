@@ -45,7 +45,7 @@ example (P Q : σ → Prop) : (⌜ P ⌝ ↔ □ ⌜ Q ⌝) |-tl- (□ ⌜ Q ⌝
   tcoalesce_to_ptl
   rename_i p
   guard_target =ₛ ((p ↔ □ ptlAtom) |-tl- (□ ptlAtom ↔ p))
-  tstart h ; tapply Lentil.iff_symm h
+  tstart h ; tapply Lentil.tl_iff_symm h
 
 example {α : Type v} (P : α → σ → Prop) :
     (∀ x, ⌜ P x ⌝) |-tl- (∀ x, ⌜ P x ⌝) := by

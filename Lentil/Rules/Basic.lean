@@ -34,13 +34,15 @@ open Classical LentilLib
 #tl_lift Or.imp_left => Lentil.or_imp_left
 #tl_lift Or.imp_right => Lentil.or_imp_right
 
--- `Iff`; `iff_refl` is stated below, since lifting turns a top-level `↔` into `=tl=`
-#tl_lift iff_def iff_def' iff_comm
-#tl_lift Iff.intro => Lentil.iff_intro
-#tl_lift Iff.mp => Lentil.iff_mp
-#tl_lift Iff.mpr => Lentil.iff_mpr
-#tl_lift Iff.symm => Lentil.iff_symm
-#tl_lift Iff.trans => Lentil.iff_trans
+-- `Iff`
+#tl_lift iff_def => Lentil.tl_iff_def
+#tl_lift iff_def' => Lentil.tl_iff_def'
+#tl_lift iff_comm => Lentil.tl_iff_comm
+#tl_lift Iff.intro => Lentil.tl_iff_intro
+#tl_lift Iff.mp => Lentil.tl_iff_mp
+#tl_lift Iff.mpr => Lentil.tl_iff_mpr
+#tl_lift Iff.symm => Lentil.tl_iff_symm
+#tl_lift Iff.trans => Lentil.tl_iff_trans
 
 -- distributive laws
 #tl_lift and_or_left or_and_right or_and_left and_or_right
@@ -61,8 +63,12 @@ open Classical LentilLib
   Decidable.not_imp_self Decidable.or_iff_not_imp_left
   Decidable.imp_iff_or_not Decidable.not_and_not_right
   Decidable.or_iff_not_not_and_not Decidable.and_iff_not_not_or_not
-#tl_lift Decidable.not_iff_not Decidable.not_iff_comm Decidable.not_iff Decidable.iff_not_comm
-  Decidable.iff_iff_and_or_not_and_not Decidable.iff_iff_not_or_and_or_not
+#tl_lift Decidable.not_iff_not => Lentil.tl_not_iff_not
+#tl_lift Decidable.not_iff_comm => Lentil.tl_not_iff_comm
+#tl_lift Decidable.not_iff => Lentil.tl_not_iff
+#tl_lift Decidable.iff_not_comm => Lentil.tl_iff_not_comm
+#tl_lift Decidable.iff_iff_and_or_not_and_not => Lentil.tl_iff_iff_and_or_not_and_not
+#tl_lift Decidable.iff_iff_not_or_and_or_not => Lentil.tl_iff_iff_not_or_and_or_not
 #tl_lift Decidable.em => Lentil.excluded_middle
 #tl_lift Decidable.not_and_iff_not_or_not => Lentil.not_and
 #tl_lift Decidable.imp_iff_not_or => Lentil.implies_to_or
@@ -132,15 +138,16 @@ theorem false_or (p : pred σ) : (⊥ ∨ p) =tl= (p) := by funext e i ; tunfold
 
 theorem imp_true (p : pred σ) : (p → ⊤) =tl= (⊤) := by funext e i ; tunfold_simp'
 
-theorem iff_self (p : pred σ) : (p ↔ p) =tl= (⊤) := by funext e i ; tunfold_simp'
+-- `Iff`, named with the `tl_` prefix as the lifted ones above
+theorem tl_iff_self (p : pred σ) : (p ↔ p) =tl= (⊤) := by funext e i ; tunfold_simp'
 
-theorem iff_true (p : pred σ) : (p ↔ ⊤) =tl= (p) := by funext e i ; tunfold_simp'
+theorem tl_iff_true (p : pred σ) : (p ↔ ⊤) =tl= (p) := by funext e i ; tunfold_simp'
 
-theorem true_iff (p : pred σ) : (⊤ ↔ p) =tl= (p) := by funext e i ; tunfold_simp'
+theorem tl_true_iff (p : pred σ) : (⊤ ↔ p) =tl= (p) := by funext e i ; tunfold_simp'
 
-theorem iff_false (p : pred σ) : (p ↔ ⊥) =tl= (¬ p) := by funext e i ; tunfold_simp'
+theorem tl_iff_false (p : pred σ) : (p ↔ ⊥) =tl= (¬ p) := by funext e i ; tunfold_simp'
 
-theorem false_iff (p : pred σ) : (⊥ ↔ p) =tl= (¬ p) := by funext e i ; tunfold_simp'
+theorem tl_false_iff (p : pred σ) : (⊥ ↔ p) =tl= (¬ p) := by funext e i ; tunfold_simp'
 
 theorem always_true :
   letI lhs : pred σ := [tlfml| □ ⊤]
@@ -184,7 +191,7 @@ theorem always_induction : □ p =tl= (p ∧ □ (p → ◯ p)) := by
 
 end one_explicit
 
-theorem iff_refl {p : pred σ} : |-tl- (p ↔ p) := by tunfold_simp
+theorem tl_iff_refl {p : pred σ} : |-tl- (p ↔ p) := by tunfold_simp
 
 theorem always_weaken {p : pred σ} : □ p |-tl- (p) := by
   tunfold_simp ; intro e i h ; simpa using h 0

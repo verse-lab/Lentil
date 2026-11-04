@@ -23,7 +23,7 @@ theorem Entails_and_intro {a b : pred σ} (left : Entails hyps a) (right : Entai
 theorem Entails_iff_intro {a b : pred σ}
     (mp : Entails hyps (tl_implies a b)) (mpr : Entails hyps (tl_implies b a)) :
     Entails hyps (tl_iff a b) := by
-  rw [Lentil.iff_def] ; exact Entails_and_intro mp mpr
+  rw [Lentil.tl_iff_def] ; exact Entails_and_intro mp mpr
 
 theorem Entails_exists_intro {α : Sort v} {p : α → pred σ} (w : α) (h : Entails hyps (p w)) :
     Entails hyps (tl_exists p) :=

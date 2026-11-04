@@ -951,8 +951,8 @@ example : (p) |-tl- (q → p) := by
 ### Prove and use a biconditional
 
 `tconstructor` turns a biconditional goal into its two directions; a
-biconditional hypothesis is used with `Lentil.iff_mp` / `Lentil.iff_mpr`, or
-split with `trcases`.
+biconditional hypothesis is used with `Lentil.tl_iff_mp` / `Lentil.tl_iff_mpr`,
+or split with `trcases`.
 
 ```lean
 example : (p ∧ q) |-tl- (p ↔ q) := by
@@ -963,7 +963,7 @@ example : (p ∧ q) |-tl- (p ↔ q) := by
 
 example : ((p ↔ q) ∧ p) |-tl- (q) := by
   tstart h hp
-  tapply Lentil.iff_mp h hp
+  tapply Lentil.tl_iff_mp h hp
 ```
 
 ### Destructure an introduced conjunction
