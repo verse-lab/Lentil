@@ -3,6 +3,8 @@ module
 public import Lean
 public import Lentil.Rules.Basic
 public import Lentil.Gadgets.TheoremDeriving
+public import Lentil.ProofMode.Tactics
+public import Lentil.ProofMode.Display
 
 @[expose] public section
 
@@ -15,6 +17,18 @@ namespace Lentil
 section leads_to
 
 variable {σ : Type u}
+
+theorem leads_to_refl {p : pred σ} : |-tl- (p ↝ p) := by
+  unfold Lentil.leads_to
+  rw [← always_intro, impl_intro]
+  exact now_weaken_to_eventually
+
+/-- Two sources of the same target combine by cases. -/
+theorem leads_to_or_lhs {p q r : pred σ} :
+    ((p ↝ r) ∧ (q ↝ r)) |-tl- ((p ∨ q) ↝ r) := by
+  tstart hp hq ; tmonotone ; trintro (h | h)
+  · tapply hp h
+  · tapply hq h
 
 -- FIXME: any chance to make the following two lemmas more general
 theorem leads_to_exists (Γ q : pred σ) (p : α → pred σ) :
