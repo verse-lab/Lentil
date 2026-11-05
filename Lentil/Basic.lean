@@ -25,7 +25,11 @@ def exec (σ : Type u) := Nat → σ
 def pred (σ : Type u) := exec σ → Nat → Prop
 def state_pred {σ : Type u} (f : σ → Prop) : pred σ :=
   fun e i => f (e i)
-def action (σ : Type u) := σ → σ → Prop
+-- NOTE: Anonymous actions (`⟨fun s s' => ...⟩`) expose a function type, so
+-- `tfinite_window` needs this alias to unfold when matching instance parameters.
+-- Ordinary DSL formulas retain `pred σ`; that workflow does not require the
+-- same implicit-type-checking annotation on `pred` or `exec`.
+@[implicit_reducible] def action (σ : Type u) := σ → σ → Prop
 def action_pred {σ : Type u} (a : action σ) : pred σ :=
   fun e i => a (e i) (e (i + 1))
 
@@ -63,6 +67,7 @@ def eventually {α : Type u} (p : pred α) : pred α := fun e i => ∃ k, p e (i
 def later {α : Type u} (p : pred α) : pred α := fun e i => p e (i + 1)
 
 theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).length = k := by
+  unfold exec at σ
   simp [exec.take]
 
 theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by

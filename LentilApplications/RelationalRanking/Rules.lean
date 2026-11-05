@@ -688,8 +688,9 @@ theorem rule7 : (C0 ∧ D1 ∧ D2 ∧ D3 ∧ D4) |-tl- (p ↝ q) := by
   · tclear *- hC0
     texit ; tfinite_window
     simp [R', simple_finite_record]
-    split <;> (try apply id)
-    next h' => intro h ; apply simple_finite_or <;> assumption
+    by_cases h' : simple_finite (fun x => δ x s) <;> simp only [h', ↓reduceIte]
+    · intro h ; apply simple_finite_or <;> assumption
+    · exact id
 
 theorem rule6 : (C0 ∧ C1 ∧ C2 ∧ C3) |-tl- (□ ◇ r → (p ↝ q)) := by
   -- for this rule, we do simple propositional reasoning

@@ -58,7 +58,7 @@ public meta section
 
 private def revertTacDSimps := #[``List.findIdx, ``List.findIdx.go,
   ``List.get?Internal, ``List.eraseIdx, ``String.reduceBEq,
-  ``String.reduceBNe, ``cond_false, ``cond_true, ``Option.elim]
+  ``String.reduceBNe, ``dreduceIte, ``Bool.false_eq_true, ``Option.elim]
 
 private def revertAllTacDSimps := #[``repeatedImplies, ``List.map, ``List.foldr]
 
