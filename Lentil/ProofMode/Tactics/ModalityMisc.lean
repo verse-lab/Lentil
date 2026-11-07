@@ -42,9 +42,9 @@ instance prefixClosedAlwaysEventually (p : pred σ) :
 instance prefixClosedPure (p : Prop) : @PrefixClosed σ (Lentil.pure_pred p) where
   prefix_closed := by tunfold_simp
 
-instance prefixClosedTrue : @PrefixClosed σ Lentil.tl_true := prefixClosedPure _
+forward_instance prefixClosedTrue unfolding [Lentil.tl_true] : @PrefixClosed σ Lentil.tl_true
 
-instance prefixClosedFalse : @PrefixClosed σ Lentil.tl_false := prefixClosedPure _
+forward_instance prefixClosedFalse unfolding [Lentil.tl_false] : @PrefixClosed σ Lentil.tl_false
 
 -- These are good, but let's have them later ...
 /-

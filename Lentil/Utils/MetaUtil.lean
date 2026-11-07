@@ -62,4 +62,29 @@ def «let» (g : MVarId) (h : Name) (v : Expr) (t : Option Expr := none) :
     MetaM (FVarId × MVarId) := do
   (← g.define h (← t.getDM (inferType v)) v).intro1P
 
+/-- `delta_with% [defs] t` elaborates `t` and unfolds the listed definitions. -/
+syntax (name := deltaWith) "delta_with% " "[" ident,* "] " term : term
+
+@[term_elab deltaWith] def elabDeltaWith : Term.TermElab
+  | `(delta_with% [$defs:ident,*] $ty), expectedType? => do
+    let names ← defs.getElems.mapM fun id => do
+      return ← realizeGlobalConstNoOverloadWithInfo id
+    let e ← Term.elabTerm ty expectedType?
+    Term.synthesizeSyntheticMVarsNoPostponing
+    let e ← instantiateMVars e
+    deltaExpand e names.contains
+  | _, _ => throwUnsupportedSyntax
+
+/-- Declare an instance of `ty` from an instance of `ty` with the listed definitions unfolded. -/
+-- NOTE: Lean attaches declaration hover info to the `declId` node. Parse and splice
+-- that node unchanged to retain its original source range; splicing an `ident`
+-- instead would create a synthetic `declId` wrapper without that original range.
+syntax "forward_instance " Lean.Parser.Command.declId " unfolding " "[" ident,* "]"
+  bracketedBinder* " : " term : command
+
+macro_rules
+  | `(forward_instance $name:declId unfolding [$defs:ident,*] $binders:bracketedBinder* : $ty:term) =>
+    `(instance $name:declId $binders:bracketedBinder*
+        [h : delta_with% [$defs:ident,*] $ty] : $ty := h)
+
 end LentilLib

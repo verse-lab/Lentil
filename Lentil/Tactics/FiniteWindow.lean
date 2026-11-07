@@ -308,11 +308,11 @@ def finiteWindowPure {σ : Type u} (P : Prop) : FiniteWindow (pure_pred (α := �
 instance hasFiniteWindowPure {σ : Type u} (P : Prop) : HasFiniteWindow (pure_pred (α := σ) P) 0 where
   build _ h := (finiteWindowPure P).weaken h
 
-instance hasFiniteWindowTrue {σ : Type u} : HasFiniteWindow (tl_true (α := σ)) 0 :=
-  hasFiniteWindowPure True
+forward_instance hasFiniteWindowTrue unfolding [tl_true] {σ : Type u} :
+    HasFiniteWindow (tl_true (α := σ)) 0
 
-instance hasFiniteWindowFalse {σ : Type u} : HasFiniteWindow (tl_false (α := σ)) 0 :=
-  hasFiniteWindowPure False
+forward_instance hasFiniteWindowFalse unfolding [tl_false] {σ : Type u} :
+    HasFiniteWindow (tl_false (α := σ)) 0
 
 def finiteWindowState {σ : Type u} (p : σ → Prop) : FiniteWindow (state_pred p) 1 where
   core := fun s => ULift.up (p s)
@@ -331,8 +331,8 @@ instance hasFiniteWindowAction {σ : Type u} (a : action σ) : HasFiniteWindow (
 def finiteWindowEnabled {σ : Type u} (a : action σ) : FiniteWindow (tl_enabled a) 1 :=
   finiteWindowState (enabled a)
 
-instance hasFiniteWindowEnabled {σ : Type u} (a : action σ) : HasFiniteWindow (tl_enabled a) 1 where
-  build _ h := (finiteWindowEnabled a).weaken h
+forward_instance hasFiniteWindowEnabled unfolding [tl_enabled] {σ : Type u} (a : action σ) :
+    HasFiniteWindow (tl_enabled a) 1
 
 def FiniteWindow.binary {σ : Type u} {p q : pred σ} {w : Nat}
     (op : Prop → Prop → Prop)
@@ -637,10 +637,9 @@ instance hasWindowApproxSufficientEventually {σ : Type u} (p : pred σ) (n : Na
 
 -- Typeclass search does not unfold the `⇒` wrapper while matching instance
 -- heads, so expose its underlying `□(p → q)` necessary approximation explicitly.
-instance hasWindowApproxNecessaryAlwaysImplies {σ : Type u} (p q : pred σ) (n : Nat)
-    [hpq : HasWindowApprox .necessary (tl_implies p q) n] :
-    HasWindowApprox .necessary (always_implies p q) n where
-  build w h := hpq.tile w h
+forward_instance hasWindowApproxNecessaryAlwaysImplies unfolding [always_implies]
+    {σ : Type u} (p q : pred σ) (n : Nat) :
+    HasWindowApprox .necessary (always_implies p q) n
 
 end WindowApproxInstances
 
