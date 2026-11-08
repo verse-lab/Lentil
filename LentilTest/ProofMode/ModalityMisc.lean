@@ -29,6 +29,20 @@ example (h : (□ p ∧ □ r) |-tl- (□ q)) : (□ p ∧ □ r) |-tl- (q) := b
   guard_target =ₛ Entails [⟨"hp", [tlfml| □ p]⟩, ⟨"hr", [tlfml| □ r]⟩] [tlfml| □ q]
   exact h
 
+example {α : Type} (ps : α → pred σ) (h : ((∀ x, □ ps x) ∧ □ r) |-tl- (q)) :
+    ((∀ x, □ ps x) ∧ □ r) |-tl- (□ q) := by
+  tstart hp hr
+  ttoggle_goal_under_always
+  guard_target =ₛ Entails [⟨"hp", [tlfml| ∀ x, □ ps x]⟩, ⟨"hr", [tlfml| □ r]⟩] q
+  exact h
+
+example {α : Type} (ps : α → pred σ) (h : ((∀ x, □ ps x) ∧ q ∧ □ r) |-tl- (◇ q)) :
+    ((∀ x, □ ps x) ∧ ◇ q ∧ □ r) |-tl- (◇ q) := by
+  tstart hp hq hr
+  tadvance hq
+  guard_target =ₛ Entails [⟨"hp", [tlfml| ∀ x, □ ps x]⟩, ⟨"hq", q⟩, ⟨"hr", [tlfml| □ r]⟩] [tlfml| ◇ q]
+  exact h
+
 example (h : (p ⇒ q) |-tl- (r)) : (p ⇒ q) |-tl- (□ r) := by
   tstart hp
   ttoggle_goal_under_always
@@ -170,11 +184,29 @@ example : (□ p ∧ q) |-tl- (◯ r) := by
   tstep
 
 /--
-error: ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix
+error: ttoggle_goal_under_always: hypothesis hr is not known to be stable under `□` (no `AlwaysStable` instance applies):
+  r
 -/
 #guard_msgs in
 example : (□ p ∧ r) |-tl- (q) := by
   tstart hp hr
   ttoggle_goal_under_always
+
+example {α : Type} (ps : α → pred σ) (h : ((∃ x, □ ps x) ∧ ◇ □ p ∧ (□ q ∨ □ r)) |-tl- (r)) :
+    ((∃ x, □ ps x) ∧ ◇ □ p ∧ (□ q ∨ □ r)) |-tl- (□ r) := by
+  tstart h1 h2 h3
+  ttoggle_goal_under_always
+  guard_target =ₛ Entails [⟨"h1", [tlfml| ∃ x, □ ps x]⟩, ⟨"h2", [tlfml| ◇ □ p]⟩,
+    ⟨"h3", [tlfml| □ q ∨ □ r]⟩] r
+  exact h
+
+/--
+error: tadvance: hypothesis hr is not known to be stable under `□` (no `AlwaysStable` instance applies):
+  r
+-/
+#guard_msgs in
+example : (□ p ∧ ◇ q ∧ r) |-tl- (◇ q) := by
+  tstart hp hq hr
+  tadvance hq
 
 end Lentil.Test.ModalityMisc

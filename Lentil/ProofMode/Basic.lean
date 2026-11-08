@@ -26,6 +26,10 @@ theorem repeatedAnd_eq_bigwedge (ps : List (pred σ)) :
   · rfl
   · apply and_true
 
+theorem repeatedAnd_eq_forall_mem (ps : List (pred σ)) :
+  ((repeatedAnd ps)) =tl= (∀ p, ⌞ p ∈ ps ⌟ → p) := by
+  rw [repeatedAnd_eq_bigwedge, bigwedge_forall_list]
+
 theorem repeatedAnd_eq_in_iff (ps1 ps2 : List (pred σ)) (h : ∀ p, p ∈ ps1 ↔ p ∈ ps2) :
   ((repeatedAnd ps1)) =tl= ((repeatedAnd ps2)) := by
   simp [repeatedAnd_eq_bigwedge, bigwedge_forall_list, h]

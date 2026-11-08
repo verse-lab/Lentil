@@ -235,6 +235,8 @@ theorem always_idem : (□ □ p) =tl= □ p := by
   · intro k ; exact h k 0
   · intro k l ; simpa [Nat.add_assoc] using h (k + l)
 
+theorem always_to_always_always : □ p |-tl- □ □ p := by rw [always_idem]
+
 @[tldual]
 theorem eventually_idem : (◇ ◇ p) =tl= ◇ p := by
   apply dual_lemma ; simp [not_eventually, always_idem]

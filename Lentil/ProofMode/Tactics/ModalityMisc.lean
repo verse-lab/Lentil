@@ -15,12 +15,9 @@ section
 
 variable {σ : Type u} {hyps : List (NamedPred σ)} {goal : pred σ}
 
-theorem Entails_toggle_goal_under_always :
-    Entails (mapHypPreds Lentil.always hyps) goal =
-      Entails (mapHypPreds Lentil.always hyps) (Lentil.always goal) := by
-  unfold Entails
-  rw [mapHypPreds_preds, repeatedAnd_map_always]
-  apply Lentil.always_pred_implies
+theorem Entails_toggle_goal_under_always (h : HypsInto Lentil.always hyps hyps) :
+    Entails hyps goal = Entails hyps (Lentil.always goal) :=
+  propext ⟨Entails_always_monotone h, Entails_trans always_weaken⟩
 
 end
 
@@ -83,26 +80,24 @@ instance prefixClosedExists {α : Sort v} (p : α → pred σ)
 -- else can we do?
 theorem Entails_advance_eventually_under_always
     (pre post : List (NamedPred σ)) {name : String} {p goal : pred σ}
+    (hpre : HypsInto Lentil.always pre pre) (hpost : HypsInto Lentil.always post post)
     [inst : PrefixClosed goal] :
-    Entails (mapHypPreds Lentil.always pre ++ ⟨name, p⟩ :: mapHypPreds Lentil.always post) goal →
-    Entails (mapHypPreds Lentil.always pre ++ ⟨name, Lentil.eventually p⟩ :: mapHypPreds Lentil.always post) goal := by
-  intro h
-  apply Entails_trans ; apply inst.prefix_closed
-  refine Entails_revert_by_idx (mapHypPreds Lentil.always pre).length ?_
-  simp
-  rw [List.eraseIdx_append_of_length_le]
-  on_goal 2=> simp
-  simp
-  unfold Entails
-  rw [← mapHypPreds_append, mapHypPreds_preds, repeatedAnd_map_always,
-    impl_intro_add_r, Lentil.and_comm]
-  apply pred_implies_trans ; apply always_and_eventually'
-  apply eventually_monotone
-  apply pred_implies_trans
-  on_goal 2 => apply h
-  simp [← repeatedAnd_map_always, mapHypPreds_preds]
-  rw [← repeatedAnd_cons]
-  apply repeatedAnd_subset_implies ; grind
+    Entails (pre ++ ⟨name, p⟩ :: post) goal →
+    Entails (pre ++ ⟨name, Lentil.eventually p⟩ :: post) goal := by
+  intro hg
+  have hpre' := hpre.entails
+  have hpost' := hpost.entails
+  rw [mapHypPreds_preds, repeatedAnd_map_always] at hpre' hpost'
+  unfold Entails at hg ⊢
+  simp only [List.map_append, List.map_cons, repeatedAnd_append, repeatedAnd_cons] at hg ⊢
+  rw [Lentil.and_left_comm] at hg ⊢
+  refine pred_implies_trans ?_ inst.prefix_closed
+  refine pred_implies_trans ?_ (pred_implies_trans always_and_eventually (eventually_monotone hg))
+  rw [and_pred_implies_split]
+  refine ⟨Lentil.and_left, ?_⟩
+  rw [always_and, and_pred_implies_split]
+  exact ⟨pred_implies_trans (pred_implies_trans Lentil.and_right Lentil.and_left) hpre',
+    pred_implies_trans (pred_implies_trans Lentil.and_right Lentil.and_right) hpost'⟩
 
 end
 
@@ -145,30 +140,43 @@ end
 
 public meta section
 
-private def peelAlwaysHyps? (hyps : List (String × Expr)) : MetaM (Option (List (String × Expr))) := do
-  let mut peeledHyps := []
-  for (name, pred) in hyps do
-    let some pred ← peelTlModality? ``Lentil.always pred
-      | return none
-    peeledHyps := (name, pred) :: peeledHyps
-  return some peeledHyps.reverse
+/-- A proof of `p |-tl- □ p`: syntactically for a leading `□`, otherwise via
+`AlwaysStable`. -/
+private def alwaysStableProof? (p : Expr) : MetaM (Option Expr) := do
+  if let some q ← peelTlModality? ``Lentil.always p then
+    let pf ← mkAppM ``Lentil.always_to_always_always #[q]
+    let ty ← mkAppM ``Lentil.pred_implies #[p, ← mkAppM ``Lentil.always #[p]]
+    return some (← mkExpectedTypeHint pf ty)
+  let some inst ← (try synthInstance? (← mkAppM ``AlwaysStable #[p]) catch _ => pure none)
+    | return none
+  return some (← mkAppOptM ``AlwaysStable.always_stable #[none, some p, some inst])
+
+/-- A proof of `HypsInto Lentil.always hyps hyps`, i.e., every hypothesis is
+stable under `□`; otherwise an error naming the first one that is not. -/
+private def mkAlwaysStableHyps (tacName : String) (σ : Expr) (hyps : List (String × Expr)) :
+    MetaM Expr := do
+  let f ← mkAppOptM ``Lentil.always #[some σ]
+  match ← mkHypsInto f hyps (fun p => return (← alwaysStableProof? p).map (p, ·)) with
+  | .ok (_, h) => return h
+  | .error (name, p) =>
+    throwError "{tacName}: hypothesis {name} is not known to be stable under `□` \
+      (no `{.ofConstName ``AlwaysStable}` instance applies):{indentExpr p}"
 
 private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
-  let_expr Entails _ hypsExpr goal := target
+  let_expr Entails σ hypsExpr goal := target
     | throwError "ttoggle_goal_under_always: expected a proof-mode Entails goal"
-  let some (hypTy, hyps) ← recognizeHypsList hypsExpr
+  let some (_, hyps) ← recognizeHypsList hypsExpr
     | throwError "ttoggle_goal_under_always: failed to read the hypotheses from the goal"
-  let some peeledHypsList ← peelAlwaysHyps? hyps
-    | throwError "ttoggle_goal_under_always: expected every temporal hypothesis to have an always prefix"
-  let peeledHypsExpr ← toHypsList hypTy peeledHypsList
+  let hStable ← mkAlwaysStableHyps "ttoggle_goal_under_always" σ hyps
   let peeledGoal? ← peelTlModality? ``Lentil.always goal
   let (leftToRight?, toggledGoal) :=
     match peeledGoal? with
     | some goal => (true, goal)
     | none => (false, goal)
-  let thm ← mkAppOptM ``Entails_toggle_goal_under_always #[none, some peeledHypsExpr, some toggledGoal]
+  let thm ← mkAppOptM ``Entails_toggle_goal_under_always
+    #[none, some hypsExpr, some toggledGoal, some hStable]
   let thm ← mkAppM (if leftToRight? then ``Eq.mp else ``Eq.mpr) #[thm]
   let [g'] ← g.apply thm
     | throwError "ttoggle_goal_under_always: unexpected number of goals after applying the reflection theorem"
@@ -179,7 +187,7 @@ private def proofModeToggleGoalUnderAlways : TacticM Unit := withMainContext do
 private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := withMainContext do
   let g ← getMainGoal
   let target ← cleanupAnnotAndMore (← g.getType)
-  let_expr Entails _ hypsExpr goal := target
+  let_expr Entails σ hypsExpr goal := target
     | throwError "tadvance: expected a proof-mode Entails goal"
   let some (hypTy, hyps) ← recognizeHypsList hypsExpr
     | throwError "tadvance: failed to read the hypotheses from the goal"
@@ -188,12 +196,10 @@ private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := 
   let postHyps := postHyps.tail
   let some chosenP ← peelTlModality? ``Lentil.eventually chosenPred
     | throwError "tadvance: selected hypothesis must have a leading eventually (`◇`) prefix"
-  let some peeledPreHyps ← peelAlwaysHyps? preHyps
-    | throwError "tadvance: every hypothesis before the selected one must have a leading always (`□`) prefix"
-  let some peeledPostHyps ← peelAlwaysHyps? postHyps
-    | throwError "tadvance: every hypothesis after the selected one must have a leading always (`□`) prefix"
-  let preExpr ← toHypsList hypTy peeledPreHyps
-  let postExpr ← toHypsList hypTy peeledPostHyps
+  let hpre ← mkAlwaysStableHyps "tadvance" σ preHyps
+  let hpost ← mkAlwaysStableHyps "tadvance" σ postHyps
+  let preExpr ← toHypsList hypTy preHyps
+  let postExpr ← toHypsList hypTy postHyps
   let hgoal ← do
     let expected ← mkAppM ``PrefixClosed #[goal]
     try
@@ -202,7 +208,7 @@ private def proofModeAdvanceEventually (loc : TemporalHypLoc) : TacticM Unit := 
       throwError "tadvance: failed to synthesize a PrefixClosed instance for the goal"
   let thm ← mkAppOptM ``Entails_advance_eventually_under_always
     #[none, some preExpr, some postExpr, some (toExpr chosenName),
-      some chosenP, some goal, some hgoal]
+      some chosenP, some goal, some hpre, some hpost, some hgoal]
   let [g'] ← g.apply thm
     | throwError "tadvance: unexpected number of goals after applying the reflection theorem"
   let newHypsExpr ← toHypsList hypTy (preHyps ++ (chosenName, chosenP) :: postHyps)
@@ -269,7 +275,14 @@ where
 
 /--
 `ttoggle_goal_under_always` toggles one leading `□` on the current
-proof-mode goal when every temporal hypothesis has a leading `□`.
+proof-mode goal when every temporal hypothesis is stable under `□`
+(`p |-tl- □ p`). The hypotheses are kept unchanged.
+
+A hypothesis is stable if it has a leading `□`, or if typeclass search finds an
+`AlwaysStable` instance (see `Lentil.ProofMode.Classes`). The built-in instances
+cover, e.g., `∀ x, □ p x`, `□ p ∧ □ q`, `∃ x, □ p x`, `◇ □ p` and pure facts;
+for other connectives, add an instance. When a hypothesis is not stable, the
+error message names it.
 
 When the leading `□` is hidden behind a definition tagged with
 `[tl_modality_unfold]`, this tactic unfolds only that expression head while
@@ -296,8 +309,9 @@ syntax (name := tlToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic
 `tadvance h` advances the current proof point to a selected eventuality.
 
 If `h : ◇ p`, the tactic replaces `h` by `p`, provided every other proof-mode
-hypothesis has a leading `□` (possibly hidden behind a definition tagged with
-`[tl_modality_unfold]`) and typeclass search can synthesize
+hypothesis is stable under `□` (as for `ttoggle_goal_under_always`: a leading
+`□`, possibly hidden behind a definition tagged with `[tl_modality_unfold]`, or
+an `AlwaysStable` instance) and typeclass search can synthesize
 `PrefixClosed goal`. Built-in instances cover `◇ q`, `□◇ q`, and pure facts.
 For other prefix-closed goals, add a `PrefixClosed` instance.
 -/
