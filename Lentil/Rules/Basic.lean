@@ -31,6 +31,7 @@ open Classical LentilLib
 #tl_lift Or.inr => Lentil.or_inr
 #tl_lift Or.elim => Lentil.or_elim
 #tl_lift Or.imp => Lentil.or_imp
+#tl_lift or_imp => Lentil.or_in_imp_lhs
 #tl_lift Or.imp_left => Lentil.or_imp_left
 #tl_lift Or.imp_right => Lentil.or_imp_right
 
@@ -63,6 +64,7 @@ open Classical LentilLib
   Decidable.not_imp_self Decidable.or_iff_not_imp_left
   Decidable.imp_iff_or_not Decidable.not_and_not_right
   Decidable.or_iff_not_not_and_not Decidable.and_iff_not_not_or_not
+#tl_lift Decidable.imp_or => Lentil.or_in_imp_rhs
 #tl_lift Decidable.not_iff_not => Lentil.tl_not_iff_not
 #tl_lift Decidable.not_iff_comm => Lentil.tl_not_iff_comm
 #tl_lift Decidable.not_iff => Lentil.tl_not_iff

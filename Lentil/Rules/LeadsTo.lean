@@ -23,12 +23,9 @@ theorem leads_to_refl {p : pred σ} : |-tl- (p ↝ p) := by
   rw [← always_intro, impl_intro]
   exact now_weaken_to_eventually
 
-/-- Two sources of the same target combine by cases. -/
 theorem leads_to_or_lhs {p q r : pred σ} :
-    ((p ↝ r) ∧ (q ↝ r)) |-tl- ((p ∨ q) ↝ r) := by
-  tstart hp hq ; tmonotone ; trintro (h | h)
-  · tapply hp h
-  · tapply hq h
+    ((p ↝ r) ∧ (q ↝ r)) =tl= ((p ∨ q) ↝ r) := by
+  unfold leads_to ; rw [← always_and, or_in_imp_lhs]
 
 -- FIXME: any chance to make the following two lemmas more general
 theorem leads_to_exists (Γ q : pred σ) (p : α → pred σ) :
@@ -78,6 +75,32 @@ theorem leads_to_combine {Γ Γ' p1 q1 p2 q2 : pred σ}
 theorem leads_to_strengthen_lhs {p q inv : pred σ} :
   |-tl- (□ inv → (p ∧ inv ↝ q) → (p ↝ q)) := by
   tunfold_simp ; aesop
+
+/-- The lattice rule. Over a well-founded relation `r`, if every stage `F c`
+leads to the goal or to a smaller stage, every stage leads to the goal. The
+proof is `WellFounded.induction`, with leads-to algebra at every step:
+`leads_to_exists` and `leads_to_pure_pred_and` spread "some smaller stage" over
+the stages, `leads_to_or_lhs` absorbs the goal branch, and `leads_to_trans`
+chains. -/
+theorem leads_to_lattice {α : Sort v} {r : α → α → Prop} (hwf : WellFounded r)
+    (F : α → pred σ) (G : pred σ) :
+    (∀ c, F c ↝ (G ∨ ∃ d, ⌞ r d c ⌟ ∧ F d)) |-tl- (∀ c, F c ↝ G) := by
+  tstart hLattice
+  tintro c
+  induction c using WellFounded.induction hwf
+  rename_i c ih
+  thave h := hLattice c
+  ttoggle_goal_under_always
+  treplace h := always_weaken h
+  trewrite [eventually_or, or_in_imp_rhs] at h
+  trcases h with (h | h)
+  on_goal 1=> tapply h
+  tintro h1 ; tspecialize h h1 ; tclear h1
+  tadvance h
+  trcases h with ⟨d, hr, hd⟩ ; tpull_pure hr
+  trevert hd
+  ttoggle_goal_under_always
+  exact ih _ hr
 
 end leads_to
 
