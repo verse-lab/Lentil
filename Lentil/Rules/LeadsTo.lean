@@ -76,12 +76,6 @@ theorem leads_to_strengthen_lhs {p q inv : pred σ} :
   |-tl- (□ inv → (p ∧ inv ↝ q) → (p ↝ q)) := by
   tunfold_simp ; aesop
 
-/-- The lattice rule. Over a well-founded relation `r`, if every stage `F c`
-leads to the goal or to a smaller stage, every stage leads to the goal. The
-proof is `WellFounded.induction`, with leads-to algebra at every step:
-`leads_to_exists` and `leads_to_pure_pred_and` spread "some smaller stage" over
-the stages, `leads_to_or_lhs` absorbs the goal branch, and `leads_to_trans`
-chains. -/
 theorem leads_to_lattice {α : Sort v} {r : α → α → Prop} (hwf : WellFounded r)
     (F : α → pred σ) (G : pred σ) :
     (∀ c, F c ↝ (G ∨ ∃ d, ⌞ r d c ⌟ ∧ F d)) |-tl- (∀ c, F c ↝ G) := by
@@ -101,6 +95,22 @@ theorem leads_to_lattice {α : Sort v} {r : α → α → Prop} (hwf : WellFound
   trevert hd
   ttoggle_goal_under_always
   exact ih _ hr
+
+/-- A current stage cannot keep leading to smaller stages of a well-founded relation. -/
+theorem leads_to_no_infinite_descent {α : Sort v} {r : α → α → Prop}
+    (hwf : WellFounded r) (F : α → pred σ) :
+    ((∀ c, F c ↝ (∃ d, ⌞ r d c ⌟ ∧ F d)) ∧ (∃ c, F c)) |-tl- ⊥ := by
+  tstart hprogress hex
+  thave hlat : ∀ c, F c ↝ ⊥ by
+    tapply' leads_to_lattice hwf F ⊥
+    tsimp only [Lentil.false_or]
+    tassumption
+  trcases hex with ⟨c, hc⟩
+  tspecialize hlat c
+  tmap hc using hlat
+  tclear *- hc
+  tadvance hc
+  tassumption
 
 end leads_to
 

@@ -36,6 +36,24 @@ initialize registerBuiltinAttribute {
     modifyEnv fun env => tlModalityUnfoldExt.addEntry env decl
 }
 
+/--
+Try a recognizer on `e`, unfolding only tagged heads when direct recognition fails.
+
+The unfolding is intentionally shallow: each step unfolds the current application
+head only when it has the `[tl_modality_unfold]` attribute, and it never scans
+or unfolds inside arguments.
+-/
+partial def recognizeWithTlModalityHeadUnfold? {α : Type} (recognize : Expr → Option α)
+    (e : Expr) : MetaM (Option α) := do
+  if let some res := recognize e then
+    return some res
+  let head := e.getAppFn'.constName
+  unless hasTlModalityUnfoldAttr (← getEnv) head do
+    return none
+  let some unfolded ← unfoldDefinition? e true
+    | return none
+  recognizeWithTlModalityHeadUnfold? recognize unfolded.headBeta.cleanupAnnotations
+
 end ModalityUnfold
 
 section TMapMono
@@ -46,14 +64,18 @@ form `|-tl- ((p ⇒ q) → (op p → op q))` or
 `tmap` to transport both global implications and proof-mode `always_implies`
 hypotheses through `op`. -/
 
-def recognizeAlwaysImplies? (e : Expr) : MetaM (Option (Expr × Expr)) := do
-  match_expr e with
-  | Lentil.always_implies _ lhs rhs => return (lhs, rhs)
-  | Lentil.always _ a =>
-    match_expr a with
-    | Lentil.tl_implies _ lhs rhs => return (lhs, rhs)
-    | _ => return none
-  | _ => return none
+/-- Recognize a stable implication, unfolding tagged definition heads as needed. -/
+def recognizeAlwaysImplies? (e : Expr) : MetaM (Option (Expr × Expr)) :=
+  recognizeWithTlModalityHeadUnfold? recognizeDirect e
+where
+  recognizeDirect (e : Expr) : Option (Expr × Expr) :=
+    match_expr e with
+    | Lentil.always_implies _ lhs rhs => some (lhs, rhs)
+    | Lentil.always _ a =>
+      match_expr a with
+      | Lentil.tl_implies _ lhs rhs => some (lhs, rhs)
+      | _ => none
+    | _ => none
 
 /-- Extract `op` from either supported statement form of `@[tmap_mono]`. -/
 private def tmapMonotoneOperator? (type : Expr) : MetaM (Option Name) :=

@@ -110,11 +110,14 @@ private def normalizeGlobalRule (stateType : Expr) (tm : Term) : TacticM MapRule
       unless ← isDefEq stateType' stateType do
         throwError "tmap: rule state type{indentExpr stateType'}\ndoes not match proof-mode state type{indentExpr stateType}"
       let some (lhs, rhs) ← recognizeAlwaysImplies? formula
-        | throwError "tmap: valid rule must have the form `|-tl- (p ⇒ q)`; got {body}"
+        | throwError "tmap: valid rule must have the form `|-tl- (p ⇒ q)` or `|-tl- □ (p → q)`, \
+            possibly after unfolding `[tl_modality_unfold]` definition heads; got {body}"
       let introEq ← mkAppM ``always_impl_intro #[lhs, rhs]
       let normalized ← mkAppM ``Eq.mp #[introEq, proof]
       return ⟨lhs, rhs, normalized⟩
-  | _ => throwError "tmap: expected a rule whose body is `p |-tl- q` or `|-tl- (p ⇒ q)`; got {ty}"
+  | _ => throwError "tmap: expected a rule whose body is `p |-tl- q` or `|-tl- φ`, \
+      where `φ` is `p ⇒ q` or `□ (p → q)`, possibly after unfolding \
+      `[tl_modality_unfold]` definition heads; got {ty}"
 
 /-- Peel one registered monotone operator, returning the partially applied
 operator, its registered theorem, and the inner predicate. Keeping the partial
@@ -208,7 +211,8 @@ private def proofModeMap (newName : String) (sourceLoc : TemporalHypLoc)
     let (ruleIdx, _, relation) ← findIdxByTemporalHypLoc hyps ruleLoc
       "tmap" "the goal's Entails list"
     let some (lhs, rhs) ← recognizeAlwaysImplies? relation
-      | throwError "tmap: temporal rule must have the form `p ⇒ q` or `□ (p → q)`; got {relation}"
+      | throwError "tmap: temporal rule must have the form `p ⇒ q` or `□ (p → q)`, \
+          possibly after unfolding `[tl_modality_unfold]` definition heads; got {relation}"
     -- Reflexivity makes the selected temporal rule an explicit premise. Each
     -- lifting step preserves that same premise via `always_implies_map`.
     let relationProof ← mkAppM ``Lentil.pred_implies_refl #[relation]
@@ -257,6 +261,8 @@ nesting of modalities that have registered monotonicity.
 
 The rule may prove `p |-tl- q`, `|-tl- (p ⇒ q)`, or `|-tl- □ (p → q)`.
 A proof-mode hypothesis `hrule : p ⇒ q` or `hrule : □ (p → q)` is also accepted.
+Stable implication formulas may be hidden behind definitions tagged with
+`[tl_modality_unfold]`; for example, `p ↝ q` is recognized as `p ⇒ ◇ q`.
 
 Additional unary predicate operators can be registered with:
 ```lean

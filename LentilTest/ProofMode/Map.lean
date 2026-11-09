@@ -92,6 +92,44 @@ example :
     [tlfml| □ ◇ q]
   tassumption
 
+-- Recognizing a leads-to rule leaves its original definition in the context.
+example : ((p ↝ q) ∧ p) |-tl- (◇ q) := by
+  tstart hpq hp
+  tmap hq := hp using hpq
+  guard_target =ₛ Entails
+    [⟨"hpq", [tlfml| p ↝ q]⟩, ⟨"hp", p⟩, ⟨"hq", [tlfml| ◇ q]⟩]
+    [tlfml| ◇ q]
+  tassumption
+
+-- The replacement form also lifts a leads-to rule through modalities.
+example : ((p ↝ q) ∧ □ p) |-tl- (□ ◇ q) := by
+  tstart hpq hp
+  tmap hp using hpq
+  tassumption
+
+example (hpq : |-tl- (p ↝ q)) : (□ p) |-tl- (□ ◇ q) := by
+  tstart hp
+  tmap hq := hp using hpq
+  tassumption
+
+@[tl_modality_unfold]
+def wrappedLeadsTo (p q : pred σ) : pred σ := [tlfml| p ↝ q]
+
+@[tl_modality_unfold]
+def wrappedLeadsToAgain (p q : pred σ) : pred σ := wrappedLeadsTo p q
+
+-- Tagged definition heads are unfolded repeatedly until the rule is recognized.
+example : ((wrappedLeadsToAgain p q) ∧ p) |-tl- (◇ q) := by
+  tstart hpq hp
+  tmap hq := hp using hpq
+  tassumption
+
+-- A current-time implication cannot be used as a stable mapping rule.
+example : ((p → q) ∧ □ p) |-tl- (□ p) := by
+  tstart hpq hp
+  fail_if_success tmap hq := hp using hpq
+  tassumption
+
 -- Pointwise state theorems require a source-driven `apply at` adapter and are
 -- intentionally not accepted as global `tmap` rules for now.
 example (P Q : σ → Prop) (_hPQ : ∀ s, P s → Q s) :

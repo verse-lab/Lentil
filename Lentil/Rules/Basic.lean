@@ -381,6 +381,21 @@ theorem always_eventually_monotone {p q : pred σ} : (p) |-tl- (q) → (□ ◇ 
 theorem eventually_always_monotone {p q : pred σ} : (p) |-tl- (q) → (◇ □ p) |-tl- (◇ □ q) := by
   intro h ; apply eventually_monotone ; apply always_monotone ; assumption
 
+/-- An invariant preserved by `p` still holds when strong until reaches `q`. -/
+theorem until_preserve (p q inv : pred σ)
+    (hstep : (inv ∧ p) |-tl- ◯ inv) :
+    (inv ∧ (p 𝑈 q)) |-tl- ◇ (inv ∧ q) := by
+  intro e t ⟨hinv, n, hq, hp⟩
+  have hkeep : ∀ k, k ≤ n → inv e (t + k) := by
+    intro k
+    induction k with
+    | zero => intro _ ; simpa using hinv
+    | succ k ih =>
+      intro hk
+      have hnext := hstep e (t + k) ⟨ih (by omega), hp k (by omega)⟩
+      simpa only [later, Nat.add_assoc] using hnext
+  exact ⟨n, hkeep n (Nat.le_refl n), hq⟩
+
 theorem until_induction {p q : pred σ} : (p ∧ □ (p ∧ ¬ q → ◯ p)) |-tl- ((□ (p ∧ ¬ q)) ∨ (p 𝑈 (p ∧ q))) := by
   tunfold_simp ; intro e i hp h
   by_cases h' : ∃ n, q e (i + n)

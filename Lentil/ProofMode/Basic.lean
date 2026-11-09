@@ -169,24 +169,6 @@ def parseStringLit? : Expr → Option String
 def cleanupAnnotAndMore (e : Expr) : MetaM Expr := do
   pure (← instantiateMVars e).headBeta.cleanupAnnotations
 
-/--
-Try a recognizer on `e`, unfolding only tagged heads when direct recognition fails.
-
-The unfolding is intentionally shallow: each step unfolds the current application
-head only when it has the `[tl_modality_unfold]` attribute, and it never scans
-or unfolds inside arguments.
--/
-partial def recognizeWithTlModalityHeadUnfold? {α : Type} (recognize : Expr → Option α)
-    (e : Expr) : MetaM (Option α) := do
-  if let some res := recognize e then
-    return some res
-  let head := e.getAppFn'.constName
-  unless hasTlModalityUnfoldAttr (← getEnv) head do
-    return none
-  let some unfolded ← unfoldDefinition? e true
-    | return none
-  recognizeWithTlModalityHeadUnfold? recognize unfolded.headBeta.cleanupAnnotations
-
 attribute [tl_modality_unfold] Lentil.leads_to
 attribute [tl_modality_unfold] Lentil.always_implies
 attribute [tl_modality_unfold] Lentil.weak_fairness
