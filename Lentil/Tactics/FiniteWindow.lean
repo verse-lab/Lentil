@@ -50,6 +50,19 @@ def evalExec {σ : Type u} : {n : Nat} → IteratedHomPred n σ → exec σ → 
   | 0, p, _, _ => p.down
   | _ + 1, p, e, i => evalExec (p (e i)) e (i + 1)
 
+/-- A core of width `n` gives the same result on executions that agree on
+the `n` states it reads. -/
+theorem evalExec_congr {σ : Type u} {n : Nat} (p : IteratedHomPred n σ) {e t : exec σ}
+    {i : Nat} (agree : e.take_from i n = t.take_from i n) : evalExec p e i ↔ evalExec p t i := by
+  induction n generalizing i with
+  | zero => rfl
+  | succ n ih =>
+    have ⟨head, tail⟩ : e i = t i ∧ e.take_from (i + 1) n = t.take_from (i + 1) n := by
+      simp only [exec.take_from, List.range'_succ] at agree
+      exact List.cons.inj agree
+    simp only [evalExec, head]
+    exact ih _ tail
+
 /-- View an `n`-state core as an `m`-state core when `n ≤ m`, ignoring the
 additional trailing states. This is used to combine two formulas with different
 window sizes into a common `max` window. -/

@@ -70,6 +70,19 @@ theorem exec.take_length {α : Type u} (k : Nat) (σ : exec α) : (σ.take k).le
   unfold exec at σ
   simp [exec.take]
 
+/-- Two executions have the same slice of length `k` starting at `i` exactly when
+they agree at every position in `[i, i + k)`. -/
+theorem exec.take_from_eq_iff {α : Type u} {e t : exec α} {i k : Nat} :
+    e.take_from i k = t.take_from i k ↔ ∀ j, i ≤ j ∧ j < i + k → e j = t j := by
+  simpa only [exec.take_from, List.mem_range'_1] using
+    (List.map_inj_left (l := List.range' i k) (f := e) (g := t))
+
+/-- Executions that agree on `[i, i + k)` agree on every subinterval `[j, j + n)`. -/
+theorem exec.take_from_eq_of_subinterval {α : Type u} {e t : exec α} {i k j n : Nat}
+    (agree : e.take_from i k = t.take_from i k) (lo : i ≤ j) (hi : j + n ≤ i + k) :
+    e.take_from j n = t.take_from j n :=
+  exec.take_from_eq_iff.mpr fun x hx => exec.take_from_eq_iff.mp agree x (by omega)
+
 theorem exec.drop_drop {α : Type u} (k l : Nat) (σ : exec α) : (σ.drop k).drop l = σ.drop (k + l) := by
   funext n ; simp [exec.drop] ; ac_rfl
 
