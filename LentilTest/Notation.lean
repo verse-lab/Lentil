@@ -57,4 +57,8 @@ example : [tlfml| p ↔ q] = Lentil.tl_iff p q := rfl
 example : (□ p |-tl- (q)) = ((□ p) |-tl- (q)) := rfl
 example : (|-tl- (p → q)) = Lentil.valid [tlfml| p → q] := rfl
 
+-- Brackets delimit the temporal connectives from the surrounding Lean proposition.
+example : (IsSafety[□ (p ∧ q)] ∧ IsLiveness[◇ p]) =
+    (IsSafety (always (tl_and p q)) ∧ IsLiveness (eventually p)) := rfl
+
 end Lentil.Test.Notation
