@@ -61,4 +61,9 @@ example : (|-tl- (p → q)) = Lentil.valid [tlfml| p → q] := rfl
 example : (IsSafety[□ (p ∧ q)] ∧ IsLiveness[◇ p]) =
     (IsSafety (always (tl_and p q)) ∧ IsLiveness (eventually p)) := rfl
 
+-- Quantifier commas can appear in either argument of MachineClosed.
+example : MachineClosed[∀ n, □ (P n), ∃ n, ◇ ⟨A n⟩] =
+    MachineClosed (tl_forall fun n => always (P n))
+      (tl_exists fun n => eventually (action_pred (A n))) := rfl
+
 end Lentil.Test.Notation
