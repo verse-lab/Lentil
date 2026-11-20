@@ -41,7 +41,7 @@ example (a : action σ) : IsLiveness[𝒮ℱ a] ∧ IsLiveness[𝒲ℱ a] :=
   ⟨inferInstance, inferInstance⟩
 
 -- Both factors in the decomposition are recognized through typeclass inference.
-example (P : pred σ) : IsSafety (safetyClosure P) ∧ IsLiveness[(safetyClosure P) → P] :=
+example (P : pred σ) : IsSafety[𝒞 P] ∧ IsLiveness[𝒞 P → P] :=
   ⟨inferInstance, inferInstance⟩
 
 -- At i > 0 a witness for P can change the preceding state. A witness for ◯ P

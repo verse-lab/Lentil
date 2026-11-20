@@ -13,7 +13,7 @@ variable {σ : Type u}
 `i`, each finite prefix starting at `i` admits an execution satisfying `P` there
 (Alpern and Schneider, *Defining Liveness*, §§3–4). -/
 class IsLiveness (P : pred σ) : Prop where
-  closure_eq : (safetyClosure P) =tl= (⊤)
+  closure_eq : (𝒞 P) =tl= (⊤)
 
 /-- Inside `IsLiveness[…]`, write a Lentil temporal formula. For example,
 `IsLiveness[◇ ⌜done⌝]` says that every finite prefix admits an extension on
@@ -21,13 +21,13 @@ which `done` eventually holds. When the whole property is already a Lean term
 `P : pred σ`, write `IsLiveness P`, or `[IsLiveness P]` for a typeclass assumption. -/
 scoped macro:max "IsLiveness[" p:tlfml "]" : term => `(Lentil.IsLiveness [tlfml| $p])
 
-theorem IsLiveness.by_def : IsLiveness P ↔ (safetyClosure P) =tl= (⊤) :=
+theorem IsLiveness.by_def : IsLiveness P ↔ (𝒞 P) =tl= (⊤) :=
   ⟨fun h => h.closure_eq, fun h => ⟨h⟩⟩
 
 namespace IsLiveness
 
 /-- The witness agrees with the given execution on `[i, i + k)`. At `i = 0`
-this is the finite-prefix extension condition of Alpern and Schneider. -/
+this is the finite-prefix extension condition (Alpern and Schneider, *Defining Liveness*, §3). -/
 theorem iff_extend_prefix {P : pred σ} :
     IsLiveness P ↔
       ∀ (e : exec σ) (i k : Nat), ∃ t, e.take_from i k = t.take_from i k ∧ (t |=tl[i]= P) := by
@@ -43,7 +43,7 @@ theorem iff_safety_consequences {P : pred σ} :
     rw [live.closure_eq] at h
     exact (pred_eq_iff_iff _ _).mpr ⟨fun _ _ _ => trivial, h⟩
   · intro h
-    exact ⟨h (safetyClosure P) inferInstance (safetyClosure_extensive P)⟩
+    exact ⟨h _ inferInstance (safetyClosure_extensive P)⟩
 
 instance top : IsLiveness (σ := σ) tl_true := ⟨IsSafety.closure_eq⟩
 
@@ -130,10 +130,10 @@ instance leadsTo (P Q : pred σ) [IsLiveness[□ ◇ Q]] : IsLiveness[P ↝ Q] :
 /-- The liveness factor in the safety–liveness decomposition of `P`.
 Inside the closure, take a satisfying extension of the prefix. Outside it,
 the original execution already satisfies the implication. -/
-instance livenessPart (P : pred σ) : IsLiveness[(safetyClosure P) → P] := by
+instance livenessPart (P : pred σ) : IsLiveness[𝒞 P → P] := by
   apply iff_extend_prefix.mpr
   intro e i k
-  by_cases hc : (e |=tl[i]= safetyClosure P)
+  by_cases hc : (e |=tl[i]= 𝒞 P)
   · obtain ⟨t, agree, hp⟩ := hc k
     exact ⟨t, agree, fun _ => hp⟩
   · exact ⟨e, rfl, fun h => (hc h).elim⟩
@@ -150,9 +150,9 @@ theorem isSafety_and_isLiveness_iff_eq_top {P : pred σ} :
     exact ⟨inferInstance, inferInstance⟩
 
 /-- Every property is the conjunction of its safety closure and a liveness
-property (Alpern and Schneider, *Defining Liveness*, Theorem 1). -/
+property (Alpern and Schneider, *Defining Liveness*, §4, Theorem 1). -/
 theorem safety_liveness_decomposition (P : pred σ) :
-    (P) =tl= ((safetyClosure P) ∧ ((safetyClosure P) → P)) := by
+    (P) =tl= (𝒞 P ∧ (𝒞 P → P)) := by
   funext e i
   exact propext ⟨fun hp => ⟨safetyClosure_extensive P e i hp, fun _ => hp⟩,
     fun ⟨hc, h⟩ => h hc⟩
