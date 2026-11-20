@@ -31,6 +31,12 @@ some finite prefix starting at `i` rules out every satisfying continuation. -/
 class IsSafety (P : pred σ) : Prop where
   closure_eq : safetyClosure P = P
 
+/-- Inside `IsSafety[…]`, write a Lentil temporal formula. For example,
+`IsSafety[□ ⌜inv⌝]` says that “`inv` holds at every position” is a safety property.
+When the whole property is already a Lean term of type `pred σ`, use ordinary
+application, as in `IsSafety P` or `IsSafety (safetyClosure P)`. -/
+scoped macro:max "IsSafety[" p:tlfml "]" : term => `(Lentil.IsSafety [tlfml| $p])
+
 theorem IsSafety.by_def : IsSafety P ↔ safetyClosure P = P := ⟨fun h => h.closure_eq, fun h => ⟨h⟩⟩
 
 /-- A property is safe exactly when its safety closure entails it. -/
@@ -63,18 +69,18 @@ instance (priority := low) ofFiniteWindow (P : pred σ) {n : Nat} [HasFiniteWind
   let cert := finiteWindowOfHasFiniteWindow (p := P) (n := n)
   rwa [cert.iff_of_eval e i, IteratedHomPred.evalExec_congr cert.core agree, ← cert.iff_of_eval t i]
 
-instance and (P Q : pred σ) [IsSafety P] [IsSafety Q] : IsSafety (tl_and P Q) := by
+instance and (P Q : pred σ) [IsSafety P] [IsSafety Q] : IsSafety[P ∧ Q] := by
   apply safetyClosure_implies_iff_isSafety.mp
   intro e i h
   exact ⟨safetyClosure_least and_left e i h, safetyClosure_least and_right e i h⟩
 
 instance forallPred {α : Sort v} (P : α → pred σ) [∀ x, IsSafety (P x)] :
-    IsSafety (tl_forall P) := by
+    IsSafety[∀ x, P x] := by
   apply safetyClosure_implies_iff_isSafety.mp
   intro e i h x
   exact safetyClosure_least (P := (tl_forall P)) (fun _ _ ht => ht x) e i h
 
-instance or (P Q : pred σ) [hP : IsSafety P] [hQ : IsSafety Q] : IsSafety (tl_or P Q) := by
+instance or (P Q : pred σ) [hP : IsSafety P] [hQ : IsSafety Q] : IsSafety[P ∨ Q] := by
   apply safetyClosure_implies_iff_isSafety.mp
   intro e i h
   by_cases hp : P e i
@@ -98,27 +104,27 @@ private theorem at_offset (P : pred σ) [hP : IsSafety P] (d : Nat) :
   obtain ⟨t, agree, ht⟩ := h (d + k)
   exact ⟨t, exec.take_from_eq_of_subinterval agree (by omega) (by omega), ht⟩
 
-instance laterPred (P : pred σ) [IsSafety P] : IsSafety (later P) := at_offset P 1
+instance laterPred (P : pred σ) [IsSafety P] : IsSafety[◯ P] := at_offset P 1
 
-instance alwaysPred (P : pred σ) [IsSafety P] : IsSafety (always P) :=
+instance alwaysPred (P : pred σ) [IsSafety P] : IsSafety[□ P] :=
   @forallPred σ Nat (fun d e i => P e (i + d)) (at_offset P)
 
 instance bigwedge {α : Type v} (P : α → pred σ) [∀ x, IsSafety (P x)] (xs : List α) :
-    IsSafety (tl_bigwedge P xs) := by
+    IsSafety[⋀ x ∈ xs, P x] := by
   induction xs with
-  | nil => exact inferInstanceAs (IsSafety (σ := σ) [tlfml| ⊤])
+  | nil => exact inferInstanceAs (IsSafety[⊤])
   | cons x xs ih => exact @and σ (P x) _ inferInstance ih
 
 instance bigvee {α : Type v} (P : α → pred σ) [∀ x, IsSafety (P x)] (xs : List α) :
-    IsSafety (tl_bigvee P xs) := by
+    IsSafety[⋁ x ∈ xs, P x] := by
   induction xs with
-  | nil => exact inferInstanceAs (IsSafety (σ := σ) [tlfml| ⊥])
+  | nil => exact inferInstanceAs (IsSafety[⊥])
   | cons x xs ih => exact @or σ (P x) _ inferInstance ih
 
 /-
 -- FIXME: This should be generalized to arbitrary finite types, not just `Fin n`.
 instance existsFin {n : Nat} (P : Fin n → pred σ) [∀ x, IsSafety (P x)] :
-    IsSafety (tl_exists P) := by
+    IsSafety[∃ x, P x] := by
   have eq : (⋁ x ∈ List.finRange n, P x) =tl= (∃ x, P x) := by
     rw [bigvee_exists_list P]
     funext e i
@@ -129,7 +135,7 @@ instance existsFin {n : Nat} (P : Fin n → pred σ) [∀ x, IsSafety (P x)] :
 /-- Release in Lentil's existing syntax. At each offset `d`, either `Q` holds
 there or `P` held at one of the finitely many earlier positions. -/
 instance release (P Q : pred σ) [IsSafety P] [IsSafety Q] :
-    IsSafety [tlfml| ¬ (¬ P 𝑈 ¬ Q)] := by
+    IsSafety[¬ (¬ P 𝑈 ¬ Q)] := by
   let shifted (R : pred σ) (d : Nat) : pred σ := fun e i => R e (i + d)
   haveI (d : Nat) : IsSafety (shifted P d) := at_offset P d
   haveI (d : Nat) : IsSafety (shifted Q d) := at_offset Q d
