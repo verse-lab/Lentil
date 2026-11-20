@@ -8,51 +8,65 @@ namespace Lentil
 
 variable {σ : Type u}
 
--- TODO Give `safetyClosure` a notation like `𝒞`
 /-- For each length `k`, some execution satisfying `P` at `i` agrees with `e`
 on the interval `[i, i + k)`. At `i = 0` this is the safety closure of the
-set of executions satisfying `P` initially (Alpern and Schneider, *Defining Liveness*). -/
+set of executions satisfying `P` initially (Alpern and Schneider, *Defining Liveness*, §4). -/
 @[expose] def safetyClosure (P : pred σ) : pred σ := fun e i =>
   ∀ k, ∃ t, e.take_from i k = t.take_from i k ∧ P t i
 
+/-- `𝒞 P` is the safety closure of the temporal formula `P`. -/
+syntax:max "𝒞 " tlfml:40 : tlfml
+
+macro_rules
+  | `([tlfml| 𝒞 $p:tlfml ]) => `(Lentil.safetyClosure [tlfml| $p])
+
+open Lean in
+open PrettyPrinter.Delaborator SubExpr in
+@[delab app.Lentil.safetyClosure] meta def delabSafetyClosure : Delab :=
+  delab_tlfml_app (fun e offset => e.isAppOfArity' ``safetyClosure (2 + offset)) do
+    let p ← withAppArg delab_tlfml_inner
+    annAsTerm (← `(tlfml| 𝒞 $p:tlfml ))
+
 /-- An execution satisfying `P` witnesses every prefix required by its closure. -/
-theorem safetyClosure_extensive (P : pred σ) : (P) |-tl- (safetyClosure P) :=
+theorem safetyClosure_extensive (P : pred σ) : (P) |-tl- 𝒞 P :=
   fun e _ hp _ => ⟨e, rfl, hp⟩
 
 /-- Safety closure preserves temporal entailment. -/
 theorem safetyClosure_monotone {P Q : pred σ} (h : (P) |-tl- (Q)) :
-    (safetyClosure P) |-tl- (safetyClosure Q) := by
+    (𝒞 P) |-tl- (𝒞 Q) := by
   intro e i hp k
   obtain ⟨t, agree, ht⟩ := hp k
   exact ⟨t, agree, h t i ht⟩
 
 /-- A safety property is equal to its safety closure. If it fails at `i`,
-some finite prefix starting at `i` rules out every satisfying continuation. -/
+some finite prefix starting at `i` rules out every satisfying continuation
+(Alpern and Schneider, *Defining Liveness*, §§2 and 4). -/
 class IsSafety (P : pred σ) : Prop where
-  closure_eq : safetyClosure P = P
+  closure_eq : (𝒞 P) =tl= (P)
 
 /-- Inside `IsSafety[…]`, write a Lentil temporal formula. For example,
-`IsSafety[□ ⌜inv⌝]` says that “`inv` holds at every position” is a safety property.
+`IsSafety[□ ⌜inv⌝]` says that “`inv` holds at every position” is a safety property,
+and `IsSafety[𝒞 P]` says that the safety closure of `P` is a safety property.
 When the whole property is already a Lean term of type `pred σ`, use ordinary
-application, as in `IsSafety P` or `IsSafety (safetyClosure P)`. -/
+application, as in `IsSafety P`. -/
 scoped macro:max "IsSafety[" p:tlfml "]" : term => `(Lentil.IsSafety [tlfml| $p])
 
-theorem IsSafety.by_def : IsSafety P ↔ safetyClosure P = P := ⟨fun h => h.closure_eq, fun h => ⟨h⟩⟩
+theorem IsSafety.by_def : IsSafety P ↔ ((𝒞 P) =tl= (P)) := ⟨fun h => h.closure_eq, fun h => ⟨h⟩⟩
 
 /-- A property is safe exactly when its safety closure entails it. -/
 theorem safetyClosure_implies_iff_isSafety {P : pred σ} :
-    ((safetyClosure P) |-tl- (P)) ↔ IsSafety P := by
+    ((𝒞 P) |-tl- (P)) ↔ IsSafety P := by
   rw [IsSafety.by_def, pred_eq_iff_iff] ; simp [safetyClosure_extensive]
 
 /-- The safety closure of `P` implies every safety property implied by `P`. -/
 theorem safetyClosure_least {P Q : pred σ} [hQ : IsSafety Q] (h : (P) |-tl- (Q)) :
-    (safetyClosure P) |-tl- (Q) := by
+    (𝒞 P) |-tl- (Q) := by
   simpa only [hQ.closure_eq] using safetyClosure_monotone h
 
 namespace IsSafety
 
-/-- The finite bad-prefix characterization of Alpern and Schneider
-(*Defining Liveness*, §2), applied at each evaluation position `i`. -/
+/-- The finite bad-prefix characterization, applied at each evaluation position `i`
+(Alpern and Schneider, *Defining Liveness*, §2). -/
 theorem iff_bad_prefix {P : pred σ} :
   IsSafety P ↔
     ∀ e i, (e |=tl[i]= ¬ P) → ∃ k, ∀ t, e.take_from i k = t.take_from i k → (t |=tl[i]= ¬ P) := by
@@ -150,7 +164,7 @@ instance release (P Q : pred σ) [IsSafety P] [IsSafety Q] :
     Classical.or_iff_not_imp_left]
 -/
 
-instance closure (P : pred σ) : IsSafety (safetyClosure P) := by
+instance closure (P : pred σ) : IsSafety[𝒞 P] := by
   apply safetyClosure_implies_iff_isSafety.mp
   intro e i h k
   obtain ⟨t, het, ht⟩ := h k
@@ -160,18 +174,18 @@ instance closure (P : pred σ) : IsSafety (safetyClosure P) := by
 end IsSafety
 
 theorem safetyClosure_idem (P : pred σ) :
-    (safetyClosure (safetyClosure P)) =tl= (safetyClosure P) := IsSafety.closure_eq
+    (𝒞 𝒞 P) =tl= (𝒞 P) := IsSafety.closure_eq
 
 /-- A prefix extension satisfying both conjuncts witnesses the closure of each. -/
 theorem safetyClosure_and_split (P Q : pred σ) :
-    (safetyClosure [tlfml| P ∧ Q]) |-tl- ((safetyClosure P) ∧ (safetyClosure Q)) := by
+    (𝒞 (P ∧ Q)) |-tl- (𝒞 P ∧ 𝒞 Q) := by
   intro e i h
   exact ⟨safetyClosure_monotone and_left e i h, safetyClosure_monotone and_right e i h⟩
 
 /-- Safety closure distributes over binary disjunction. -/
 theorem safetyClosure_or (P Q : pred σ) :
-    (safetyClosure [tlfml| P ∨ Q]) =tl= ((safetyClosure P) ∨ (safetyClosure Q)) := by
-  have h : (P ∨ Q) |-tl- ((safetyClosure P) ∨ (safetyClosure Q)) :=
+    (𝒞 (P ∨ Q)) =tl= (𝒞 P ∨ 𝒞 Q) := by
+  have h : (P ∨ Q) |-tl- (𝒞 P ∨ 𝒞 Q) :=
     fun e i => Or.imp (safetyClosure_extensive P e i) (safetyClosure_extensive Q e i)
   funext e i
   apply propext
