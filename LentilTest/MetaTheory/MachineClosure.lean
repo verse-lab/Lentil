@@ -9,7 +9,7 @@ example (p : σ → Prop) (a : action σ) :
     IsSafety[¬ ⌜p⌝ ↔ ◯ ¬ ⟨a⟩] := inferInstance
 
 example (init : σ → Prop) (step : action σ) :
-    safetyClosure [tlfml| ⌜init⌝ ∧ □ ⟨step⟩] = [tlfml| ⌜init⌝ ∧ □ ⟨step⟩] :=
+    (𝒞 (⌜init⌝ ∧ □ ⟨step⟩)) =tl= (⌜init⌝ ∧ □ ⟨step⟩) :=
   IsSafety.closure_eq
 
 -- Every finite all-false prefix still admits an extension that eventually reaches true.
@@ -26,12 +26,12 @@ example : ¬ IsSafety[◇ ⌜fun b : Bool => b = true⌝] := by
 
 -- At the initial position, the window is the ordinary prefix of length k.
 example (P : pred σ) (e : exec σ) :
-    safetyClosure P e 0 ↔ ∀ k, ∃ t, e.take k = t.take k ∧ P t 0 := by
+    [tlfml| 𝒞 P] e 0 ↔ ∀ k, ∃ t, e.take k = t.take k ∧ P t 0 := by
   simp only [safetyClosure, exec.take_from, exec.take, List.range_eq_range']
 
 -- At position 1, the witness may change state 0 and must preserve state 1.
 example (e : exec Bool) :
-    safetyClosure (fun t i => i = 1 ∧ t 0 = true ∧ t i = false) e 1 ↔ e 1 = false := by
+    [tlfml| 𝒞 (fun t i => i = 1 ∧ t 0 = true ∧ t i = false)] e 1 ↔ e 1 = false := by
   constructor
   · intro h
     obtain ⟨t, hp, _, _, ht⟩ := h 1
