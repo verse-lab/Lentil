@@ -138,7 +138,7 @@ syntax "⊤" : tlfml
 syntax "⊥" : tlfml
 syntax tlfml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
 syntax:max tlfml_heading_op tlfml:40 : tlfml
-syntax:max "Enabled" term:lead : tlfml
+syntax:max &"Enabled" term:lead : tlfml
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
 syntax:25 tlfml:26 " → " tlfml:25 : tlfml
 -- like Lean's `↔`, this binds more loosely than `→` and is non-associative
@@ -214,7 +214,7 @@ syntax:55 "|-tl- " tlfml:55 : term
 syntax:max tlfml:max " |-tl[0]- " tlfml:max : term
 syntax:55 "|-tl[0]- " tlfml:55 : term
 syntax:max tlfml:max " =tl= " tlfml:max : term
-syntax term " |=tl[" term "]=" tlfml : term
+syntax term " |=tl[" term "]" noWs "=" tlfml : term
 syntax term " |=tl= " tlfml : term
 
 macro_rules
