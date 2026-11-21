@@ -138,7 +138,12 @@ syntax "⊤" : tlfml
 syntax "⊥" : tlfml
 syntax tlfml_heading_op := "¬" <|> "□" <|> "◇" <|> "◯"
 syntax:max tlfml_heading_op tlfml:40 : tlfml
-syntax:max &"Enabled" term:lead : tlfml
+
+-- NOTE: `includeIdent := true` also registers this rule under `ident`, so
+-- `tlfml` tries it when `Enabled` is lexed as an ordinary identifier.
+meta def Lentil.enabledKeyword : ParserDescr := .nonReservedSymbol "Enabled" true
+syntax:max (name := tlfmlEnabled_) Lentil.enabledKeyword term:lead : tlfml
+
 -- HMM why `syntax:arg ... ...:max` does not work, when we need multiple layers like `□ ◇ p`?
 syntax:25 tlfml:26 " → " tlfml:25 : tlfml
 -- like Lean's `↔`, this binds more loosely than `→` and is non-associative
@@ -209,11 +214,14 @@ macro_rules
 
 /- NOTE: we can use something fancier like `ᴛʟᴀ`, but currently these characters cannot be
    easily typed in Lean VSCode extension, so anyway -/
-syntax:max tlfml:max " |-tl- " tlfml:max : term
+-- NOTE: `atomic` rewinds the input if the left formula or the following operator
+-- (`|-tl-`, `|-tl[0]-`, or `=tl=`) fails to parse. When the operator is absent,
+-- Lean can still parse `Enabled n` as an ordinary function call.
+syntax:max atomic(tlfml:max " |-tl- ") tlfml:max : term
 syntax:55 "|-tl- " tlfml:55 : term
-syntax:max tlfml:max " |-tl[0]- " tlfml:max : term
+syntax:max atomic(tlfml:max " |-tl[0]- ") tlfml:max : term
 syntax:55 "|-tl[0]- " tlfml:55 : term
-syntax:max tlfml:max " =tl= " tlfml:max : term
+syntax:max atomic(tlfml:max " =tl= ") tlfml:max : term
 syntax term " |=tl[" term "]" noWs "=" tlfml : term
 syntax term " |=tl= " tlfml : term
 

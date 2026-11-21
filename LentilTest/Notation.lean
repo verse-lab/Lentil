@@ -17,6 +17,9 @@ example (n : Nat) : [tlfml| 𝒲ℱ A n ∧ p] = [tlfml| (𝒲ℱ (A n)) ∧ p] 
 example (n : Nat) : [tlfml| 𝒮ℱ A n ∧ p] = [tlfml| (𝒮ℱ (A n)) ∧ p] := rfl
 example (n : Nat) : [tlfml| 𝒮ℱ A n] = Lentil.strong_fairness (A n) := rfl
 
+-- `Enabled` is also available as an ordinary Lean identifier.
+example (Enabled : Nat → Nat) : Enabled 0 = Enabled 0 := rfl
+
 -- Quantifiers scope over the whole following formula, matching Lean's binders.
 example : [tlfml| ∀ n : Nat, P n ∧ q] = [tlfml| ∀ n : Nat, ((P n) ∧ q)] := rfl
 example : [tlfml| ∃ n : Nat, P n ∨ q] = [tlfml| ∃ n : Nat, ((P n) ∨ q)] := rfl
