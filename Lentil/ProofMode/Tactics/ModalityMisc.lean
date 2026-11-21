@@ -8,6 +8,7 @@ public import Lentil.ProofMode.Tactics.Revert
 namespace Lentil.ProofMode
 
 open Lean Meta Elab Tactic
+open scoped LentilLib
 
 @[expose] public section
 

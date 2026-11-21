@@ -166,8 +166,11 @@ syntax:30 tlfml:31 " ∨ " tlfml:30 : tlfml
 syntax:29 tlfml:30 " ↝ " tlfml:29 : tlfml
 syntax:37 tlfml:38 " 𝑈 " tlfml:37 : tlfml
 syntax:27 tlfml:28 " ⇒ " tlfml:27 : tlfml
-syntax:arg "𝒲ℱ" term:lead : tlfml
-syntax:arg "𝒮ℱ" term:lead : tlfml
+
+meta def Lentil.weakFairnessKeyword : ParserDescr := .nonReservedSymbol "𝒲ℱ" true
+meta def Lentil.strongFairnessKeyword : ParserDescr := .nonReservedSymbol "𝒮ℱ" true
+syntax:arg Lentil.weakFairnessKeyword term:lead : tlfml
+syntax:arg Lentil.strongFairnessKeyword term:lead : tlfml
 
 -- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
 open Batteries.ExtendedBinder in

@@ -5,6 +5,7 @@ public import Lentil.ProofMode.Basic
 public import Lentil.Tactics.Basic
 
 open Lean
+open scoped LentilLib
 
 namespace Lentil
 

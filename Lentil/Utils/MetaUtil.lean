@@ -63,7 +63,7 @@ def «let» (g : MVarId) (h : Name) (v : Expr) (t : Option Expr := none) :
   (← g.define h (← t.getDM (inferType v)) v).intro1P
 
 /-- `delta_with% [defs] t` elaborates `t` and unfolds the listed definitions. -/
-syntax (name := deltaWith) "delta_with% " "[" ident,* "] " term : term
+scoped syntax (name := deltaWith) "delta_with% " "[" ident,* "] " term : term
 
 @[term_elab deltaWith] def elabDeltaWith : Term.TermElab
   | `(delta_with% [$defs:ident,*] $ty), expectedType? => do
@@ -79,7 +79,7 @@ syntax (name := deltaWith) "delta_with% " "[" ident,* "] " term : term
 -- NOTE: Lean attaches declaration hover info to the `declId` node. Parse and splice
 -- that node unchanged to retain its original source range; splicing an `ident`
 -- instead would create a synthetic `declId` wrapper without that original range.
-syntax "forward_instance " Lean.Parser.Command.declId " unfolding " "[" ident,* "]"
+scoped syntax "forward_instance " Lean.Parser.Command.declId " unfolding " "[" ident,* "]"
   bracketedBinder* " : " term : command
 
 macro_rules

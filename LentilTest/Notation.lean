@@ -2,8 +2,11 @@ import Lentil
 
 /- Tests pinning down the LTL formula parser precedences. -/
 
--- The closure symbol is an ordinary identifier outside the Lentil scope.
+-- Importing Lentil leaves these names available in ordinary Lean code.
 example (𝒞 : Nat) : 𝒞 = 𝒞 := rfl
+example (unfolding forward_instance : Nat) : unfolding = forward_instance →
+    forward_instance = unfolding := Eq.symm
+example (𝒲ℱ 𝒮ℱ : Nat → Nat) : 𝒲ℱ (𝒮ℱ 0) = 𝒲ℱ (𝒮ℱ 0) := rfl
 
 open scoped Lentil in
 example (p : Lentil.pred Bool) : [tlfml| 𝒞 p] = Lentil.safetyClosure p := rfl
