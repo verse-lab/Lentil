@@ -45,8 +45,7 @@ theorem MachineClosed.mono_right {S F G : pred σ} (h : MachineClosed S F)
     fun e i ⟨hs, hf⟩ => ⟨hs, entails e i hf⟩
 
 /-- At the end of any legal prefix where `a` is enabled, some `a` step
-extends that prefix to a legal behavior (Abadi and Lamport,
-*An Old-Fashioned Recipe for Real Time*, §2.3). The prefix includes the state enabling `a`. -/
+extends that prefix to a legal behavior. The prefix includes the state enabling `a`. -/
 def IsSubactionOf (a : action σ) (S : pred σ) : Prop :=
   ∀ e i n, (e |=tl[i]= S) → enabled a (e (i + n)) →
     -- `e[i: i+n] = t[i: i+n]`
@@ -147,8 +146,7 @@ private theorem exists_fair_schedule {α : Type v} [Nonempty α]
   simpa [block] using decode_code j
 
 /-- Countably many strong fairness requirements on subactions of a safety
-property can be satisfied by the same extension of each legal prefix
-(Abadi and Lamport, *An Old-Fashioned Recipe for Real Time*, §2.3, Proposition 1, SF case). -/
+property can be satisfied by the same extension of each legal prefix. -/
 theorem machineClosed_countableSF {α : Type v} (S : pred σ) [IsSafety S] (a : α → action σ)
     (sub : ∀ j, IsSubactionOf (a j) S)
     (countable : ∃ code : α → Nat, Function.Injective code := by exact ⟨id, Function.injective_id⟩) :
@@ -245,8 +243,7 @@ theorem machineClosed_countableFairness_of_total {α : Type v} {β : Type w}
     (fun j => sub _ (weakSub j)) (fun j => sub _ (strongSub j)) countWeak countStrong
 
 /-- A single strongly fair action is machine closed when its steps are legal
-and the machine can stutter in every state (Abadi and Lamport,
-*An Old-Fashioned Recipe for Real Time*, §2.3, Proposition 1, single-action SF case).
+and the machine can stutter in every state.
 For TLA's `SF_w(A)`, pass the nonstuttering action `fun s t => A s t ∧ w s ≠ w t` as `a`. -/
 theorem machineClosed_singleSF (init : σ → Prop) (step a : action σ)
     (stutter : ∀ s, step s s) (sub : ∀ s t, a s t → step s t) :
@@ -257,8 +254,7 @@ theorem machineClosed_singleSF (init : σ → Prop) (step a : action σ)
     fun _ _ fair => fair 0
 
 /-- The single-action WF case follows from `machineClosed_singleSF` since strong fairness
-implies weak fairness (Abadi and Lamport, *An Old-Fashioned Recipe for Real Time*, §2.3,
-Proposition 1). -/
+implies weak fairness. -/
 theorem machineClosed_singleWF (init : σ → Prop) (step a : action σ)
     (stutter : ∀ s, step s s) (sub : ∀ s t, a s t → step s t) :
     MachineClosed[⌜init⌝ ∧ □ ⟨step⟩, 𝒲ℱ a] :=
