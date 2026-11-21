@@ -19,4 +19,6 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           auto-config: "false"
+          build: "true"
+          build-args: "Lentil LentilApplications"
           test: "true"
