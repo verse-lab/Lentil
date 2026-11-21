@@ -2,6 +2,12 @@ import Lentil
 
 /- Tests pinning down the LTL formula parser precedences. -/
 
+-- The closure symbol is an ordinary identifier outside the Lentil scope.
+example (𝒞 : Nat) : 𝒞 = 𝒞 := rfl
+
+open scoped Lentil in
+example (p : Lentil.pred Bool) : [tlfml| 𝒞 p] = Lentil.safetyClosure p := rfl
+
 namespace Lentil.Test.Notation
 
 open Lentil

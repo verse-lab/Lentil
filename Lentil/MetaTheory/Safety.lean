@@ -15,14 +15,14 @@ set of executions satisfying `P` initially (Alpern and Schneider, *Defining Live
   ∀ k, ∃ t, e.take_from i k = t.take_from i k ∧ P t i
 
 /-- `𝒞 P` is the safety closure of the temporal formula `P`. -/
-syntax:max "𝒞 " tlfml:40 : tlfml
+scoped syntax:max "𝒞 " tlfml:40 : tlfml
 
 macro_rules
   | `([tlfml| 𝒞 $p:tlfml ]) => `(Lentil.safetyClosure [tlfml| $p])
 
 open Lean in
 open PrettyPrinter.Delaborator SubExpr in
-@[delab app.Lentil.safetyClosure] meta def delabSafetyClosure : Delab :=
+@[scoped delab app.Lentil.safetyClosure] meta def delabSafetyClosure : Delab :=
   delab_tlfml_app (fun e offset => e.isAppOfArity' ``safetyClosure (2 + offset)) do
     let p ← withAppArg delab_tlfml_inner
     annAsTerm (← `(tlfml| 𝒞 $p:tlfml ))
