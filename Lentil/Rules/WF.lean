@@ -37,6 +37,10 @@ theorem wf_as_implies : (𝒲ℱ a) =tl= ((◇ □ Enabled a) → □ ◇ ⟨a�
 
 end wf_def
 
+/-- Weak fairness after a finite prefix gives weak fairness. -/
+instance prefixClosedWeakFairness (a : action σ) : ProofMode.PrefixClosed (weak_fairness a) where
+  prefix_closed := by rw [wf_alt1', eventually_always_eventually]
+
 /--
 A useful rule for proving `↝`. Compared with its original presentation in
 the paper "The Temporal Logic of Actions", the following version contains

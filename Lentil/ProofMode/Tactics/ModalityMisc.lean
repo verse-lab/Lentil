@@ -44,38 +44,26 @@ forward_instance prefixClosedTrue unfolding [Lentil.tl_true] : @PrefixClosed σ 
 
 forward_instance prefixClosedFalse unfolding [Lentil.tl_false] : @PrefixClosed σ Lentil.tl_false
 
--- These are good, but let's have them later ...
-/-
 instance prefixClosedAnd (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
     PrefixClosed (Lentil.tl_and p q) where
-  prefix_closed := by
-    intro e k h
-    exact ⟨PrefixClosed.prefix_closed (p := p) e k h.1,
-      PrefixClosed.prefix_closed (p := q) e k h.2⟩
+  prefix_closed := fun e i ⟨k, hp, hq⟩ =>
+    ⟨PrefixClosed.prefix_closed (p := p) e i ⟨k, hp⟩,
+      PrefixClosed.prefix_closed (p := q) e i ⟨k, hq⟩⟩
 
 instance prefixClosedOr (p q : pred σ) [PrefixClosed p] [PrefixClosed q] :
     PrefixClosed (Lentil.tl_or p q) where
   prefix_closed := by
-    intro e k h
-    rcases h with h | h
-    · exact Or.inl (PrefixClosed.prefix_closed (p := p) e k h)
-    · exact Or.inr (PrefixClosed.prefix_closed (p := q) e k h)
+    rintro e i ⟨k, hp | hq⟩
+    · exact Or.inl (PrefixClosed.prefix_closed (p := p) e i ⟨k, hp⟩)
+    · exact Or.inr (PrefixClosed.prefix_closed (p := q) e i ⟨k, hq⟩)
 
-instance prefixClosedForall {α : Sort v} (p : α → pred σ)
-    [∀ x, PrefixClosed (p x)] :
+instance prefixClosedForall {α : Sort v} (p : α → pred σ) [h : ∀ x, PrefixClosed (p x)] :
     PrefixClosed (Lentil.tl_forall p) where
-  prefix_closed := by
-    intro e k h x
-    exact PrefixClosed.prefix_closed (p := p x) e k (h x)
+  prefix_closed := fun e i ⟨k, hp⟩ x => (h x).prefix_closed e i ⟨k, hp x⟩
 
-instance prefixClosedExists {α : Sort v} (p : α → pred σ)
-    [∀ x, PrefixClosed (p x)] :
+instance prefixClosedExists {α : Sort v} (p : α → pred σ) [h : ∀ x, PrefixClosed (p x)] :
     PrefixClosed (Lentil.tl_exists p) where
-  prefix_closed := by
-    intro e k h
-    rcases h with ⟨x, hx⟩
-    exact ⟨x, PrefixClosed.prefix_closed (p := p x) e k hx⟩
--/
+  prefix_closed := fun e i ⟨k, x, hx⟩ => ⟨x, (h x).prefix_closed e i ⟨k, hx⟩⟩
 
 -- NOTE: This prefix & suffix representation does not look very nice, but what
 -- else can we do?
@@ -312,8 +300,12 @@ syntax (name := tlToggleGoalUnderAlwaysTac) "ttoggle_goal_under_always" : tactic
 If `h : ◇ p`, the tactic replaces `h` by `p`, provided every other proof-mode
 hypothesis is stable under `□` (as for `ttoggle_goal_under_always`: a leading
 `□`, possibly hidden behind a definition tagged with `[tl_modality_unfold]`, or
-an `AlwaysStable` instance) and typeclass search can synthesize
-`PrefixClosed goal`. Built-in instances cover `◇ q`, `□◇ q`, and pure facts.
+an `AlwaysStable` instance). The goal must have a `PrefixClosed` instance,
+which supplies `◇ goal |-tl- goal`.
+
+Built-in instances cover `◇ q`, `□◇ q`, and pure facts. They compose across
+`∧` and `∨` when both operands are prefix-closed, and across `∀` and `∃`
+when the body is prefix-closed for every value of the bound variable.
 For other prefix-closed goals, add a `PrefixClosed` instance.
 -/
 syntax (name := tlAdvanceTac) "tadvance" (ppSpace colGt temporalHypLoc) : tactic

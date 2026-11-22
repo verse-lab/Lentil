@@ -831,8 +831,10 @@ It requires that
 - every other temporal hypothesis has a leading `□` (possibly hidden behind a
   definition tagged with `[tl_modality_unfold]`), and
 - `PrefixClosed goal` can be synthesized. Built-in instances cover `◇ q`,
-  `□ ◇ q`, and pure facts; for another prefix-closed goal, add a `PrefixClosed`
-  instance.
+  `□ ◇ q`, pure facts, and weak fairness. They compose across `∧` and `∨`
+  when both operands are prefix-closed, and across `∀` and `∃` when the body
+  is prefix-closed for every value of the bound variable. For another
+  prefix-closed goal, add a `PrefixClosed` instance.
 
 ### `tstep`
 
