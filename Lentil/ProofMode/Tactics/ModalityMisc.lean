@@ -33,6 +33,11 @@ class PrefixClosed (p : pred σ) : Prop where
 instance prefixClosedEventually (p : pred σ) : PrefixClosed (Lentil.eventually p) where
   prefix_closed := by rw [eventually_idem]
 
+instance prefixClosedLater (p : pred σ) [PrefixClosed p] : PrefixClosed (Lentil.later p) where
+  prefix_closed := by
+    rw [← later_eventually_comm]
+    exact later_monotone PrefixClosed.prefix_closed
+
 instance prefixClosedAlwaysEventually (p : pred σ) :
     PrefixClosed (Lentil.always (Lentil.eventually p)) where
   prefix_closed := by rw [eventually_always_eventually]
