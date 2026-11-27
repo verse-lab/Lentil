@@ -55,7 +55,8 @@ example (R : Nat → Nat → pred σ) : [tlfml| exists a b, R a b] = [tlfml| ∃
 -- Binder predicates follow Lean: `∀` guards with `→` and `∃` with `∧`.
 example : [tlfml| ∀ n > 0, P n ∧ q] = [tlfml| ∀ n, ⌞ n > 0 ⌟ → ((P n) ∧ q)] := rfl
 example : [tlfml| ∃ n < 3, P n ∨ q] = [tlfml| ∃ n, ⌞ n < 3 ⌟ ∧ ((P n) ∨ q)] := rfl
-example (n : Nat) : [tlfml| ∀ _ > 0, P n] = [tlfml| ∀ m, ⌞ m > 0 ⌟ → P n] := rfl
+example (a : Nat) : [tlfml| ∀ _ > a, P a] = [tlfml| ∀ m, ⌞ m > a ⌟ → P a] := rfl
+example (a : Nat) : [tlfml| ∃ _ < a, P a] = [tlfml| ∃ m, ⌞ m < a ⌟ ∧ P a] := rfl
 
 -- Directly nested quantifiers of the same kind print as one binder list.
 section
@@ -85,6 +86,26 @@ variable (D : (n : Nat) → Fin n → pred σ)
 
 /-- info: [tlfml|∀ (x : Nat), P x] : pred σ -/
 #guard_msgs in set_option pp.funBinderTypes true in #check tl_forall P
+end
+
+-- Eta-expanding a function argument keeps the outer `x` distinct from the new binder.
+section
+variable (x : Nat → pred σ) (xs : List Nat)
+
+/-- info: [tlfml|∀ x_1, x x_1] : pred σ -/
+#guard_msgs in #check tl_forall x
+
+/-- info: [tlfml|∃ (x_1 : Nat), x x_1] : pred σ -/
+#guard_msgs in set_option pp.funBinderTypes true in #check tl_exists x
+
+/-- info: [tlfml|⋀ x_1 ∈ xs, x x_1] : pred σ -/
+#guard_msgs in #check tl_bigwedge x xs
+
+/-- info: [tlfml|⋁ x_1 ∈ xs, x x_1] : pred σ -/
+#guard_msgs in #check tl_bigvee x xs
+
+example : [tlfml| ∀ x_1, x x_1] = tl_forall x := rfl
+example : [tlfml| ∃ (x_1 : Nat), x x_1] = tl_exists x := rfl
 end
 
 -- Until binds more tightly than conjunction and disjunction, but less tightly than unary temporal operators.

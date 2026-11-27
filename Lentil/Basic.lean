@@ -212,13 +212,16 @@ macro_rules
     expandExplicitBinders ``Lentil.tl_exists xs (← `([tlfml| $f ]))
   | `([tlfml| ∀ $x:ident $pred:binderPred, $f:tlfml]) =>
     `([tlfml| ∀ $x:ident, ⌞ satisfies_binder_pred% $x $pred ⌟ → $f ])
-  -- FIXME: This default `x` is not very good
-  | `([tlfml| ∀ _ $pred:binderPred, $f:tlfml]) =>
-    `([tlfml| ∀ x, ⌞ satisfies_binder_pred% x $pred ⌟ → $f ])
+  -- In both `_` rules, the identifier quotation attaches the fresh macro scope to `a`.
+  -- Passing a bare name to `mkIdent` would let the generated binder capture the caller's `a`.
+  | `([tlfml| ∀ _ $pred:binderPred, $f:tlfml]) => do
+    let a ← withFreshMacroScope `(ident| a)
+    `([tlfml| ∀ $a:ident, ⌞ satisfies_binder_pred% $a $pred ⌟ → $f ])
   | `([tlfml| ∃ $x:ident $pred:binderPred, $f:tlfml]) =>
     `([tlfml| ∃ $x:ident, ⌞ satisfies_binder_pred% $x $pred ⌟ ∧ $f ])
-  | `([tlfml| ∃ _ $pred:binderPred, $f:tlfml]) =>
-    `([tlfml| ∃ x, ⌞ satisfies_binder_pred% x $pred ⌟ ∧ $f ])
+  | `([tlfml| ∃ _ $pred:binderPred, $f:tlfml]) => do
+    let a ← withFreshMacroScope `(ident| a)
+    `([tlfml| ∃ $a:ident, ⌞ satisfies_binder_pred% $a $pred ⌟ ∧ $f ])
   | `([tlfml| $op:tlfml_bigop $x:binderIdent ∈ $l:term, $f:tlfml]) =>
     -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
     match op with
@@ -291,16 +294,17 @@ def annAsTerm {any} (stx : TSyntax any) : DelabM (TSyntax any) :=
   (⟨·⟩) <$> annotateTermInfo ⟨stx.raw⟩
 
 open PrettyPrinter.Delaborator SubExpr in
-def Lentil.delab_binder_body_as_tlfml (body : Term) : DelabM (Ident × TSyntax `tlfml) := do
-  match body with
-  | `(fun $a:ident => $stx) | `(fun ($a:ident : $_) => $stx) =>
-      pure (a, (← Lentil.syntax_term_to_tlfml stx))
-  | _ =>
-    -- we cannot go back to call `delab` on the whole term since that would result in dead recursion!
-    -- FIXME: it seems that the terminfo on `x` and `bodyapp` can get wrong here
-    let x := mkIdent <| .mkSimple "x"
-    let bodyapp ← `(term| $body $x )
-    pure (x, (← `(tlfml| $bodyapp:term )))
+def Lentil.delab_binder_body_as_tlfml : DelabM (Ident × TSyntax `tlfml) := do
+  let f ← getExpr
+  -- Like `skippingBinders` in Lean's `delabAppMatch`, eta-expand before choosing a binder name.
+  -- Each temporal binder consumes only the first argument of its function.
+  let lam ← if f.isLambda then pure f else do
+    let .forallE _ domain _ bi ← Meta.whnf (← Meta.inferType f) | failure
+    Meta.withLocalDecl `x bi domain fun x =>
+      Meta.mkLambdaFVars #[x] (mkApp f x)
+  withTheReader SubExpr (fun ctx => { ctx with expr := lam }) do
+    withBindingBodyUnusedName fun a => do
+      return (⟨a⟩, ← Lentil.syntax_term_to_tlfml (← delab))
 
 open PrettyPrinter.Delaborator SubExpr in
 def Lentil.delab_tlfml_app
@@ -365,12 +369,7 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
       | ``Lentil.always_implies => `(tlfml| $f1:tlfml ⇒ $f2:tlfml)
       | _ => unreachable!
     | ``Lentil.tl_forall | ``Lentil.tl_exists =>
-      /- we are not sure about whether the argument is a `fun _ => _` or something else,
-         so here we first `delab` the argument and then look into it;
-         this seems to work, as `delab` would also call `delab_tlfml_inner` on the argument,
-         so that we can match the inner syntax of `f` and use `Lentil.syntax_term_to_tlfml`? -/
-      let body ← withAppArg delab
-      let (a, stx) ← Lentil.delab_binder_body_as_tlfml body
+      let (a, stx) ← withAppArg Lentil.delab_binder_body_as_tlfml
       -- like Lean's `∃`, show the binder type only under `pp.funBinderTypes`
       let ty? ← if ← getPPOption getPPFunBinderTypes then some <$> withNaryArg 0 delab else pure none
       -- merge a directly nested quantifier of the same kind, e.g. `∀ a, ∀ b, f` into
@@ -400,9 +399,8 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
         | _ => `(tlfml| ∃ ($a:ident : $t), $stx )
       | _, _ => unreachable!
     | ``Lentil.tl_bigwedge | ``Lentil.tl_bigvee =>
-      let body ← withAppFn <| withAppArg delab
+      let (a, stx) ← withAppFn <| withAppArg Lentil.delab_binder_body_as_tlfml
       let l ← withAppArg delab
-      let (a, stx) ← Lentil.delab_binder_body_as_tlfml body
       match fn with
       | ``Lentil.tl_bigwedge => do `(tlfml| ⋀ $a:ident ∈ $l, $stx )
       | ``Lentil.tl_bigvee => do `(tlfml| ⋁ $a:ident ∈ $l, $stx )
