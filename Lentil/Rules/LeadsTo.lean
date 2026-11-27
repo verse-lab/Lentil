@@ -96,6 +96,21 @@ theorem leads_to_lattice {α : Sort v} {r : α → α → Prop} (hwf : WellFound
   ttoggle_goal_under_always
   exact ih _ hr
 
+/-- The converse of `leads_to_lattice`: if the lattice rule for `r` is valid over
+    some nonempty state type, then `r` is well-founded. Pure stages already suffice:
+    with `F c := ⌞ ¬ Acc r c ⌟` and `G := ⊥`, the rule is exactly the well-founded
+    induction principle for `Acc r`. -/
+theorem wellFounded_of_leads_to_lattice [Nonempty σ] {α : Sort v} {r : α → α → Prop}
+    (h : ∀ (F : α → pred σ) (G : pred σ),
+      (∀ c, F c ↝ (G ∨ ∃ d, ⌞ r d c ⌟ ∧ F d)) |-tl- (∀ c, F c ↝ G)) :
+    WellFounded r := by
+  have e : exec σ := fun _ => Classical.choice ‹Nonempty σ›
+  specialize h (fun c => [tlfml| ⌞ ¬ Acc r c ⌟ ]) [tlfml| ⊥ ] e 0
+  constructor ; intro a
+  tunfold_simp
+  refine h (fun x hx => byContradiction fun hne => hx ⟨x, fun y hy => ?_⟩) a
+  exact byContradiction fun hy' => hne ⟨y, hy, hy'⟩
+
 /-- A current stage cannot keep leading to smaller stages of a well-founded relation. -/
 theorem leads_to_no_infinite_descent {α : Sort v} {r : α → α → Prop}
     (hwf : WellFounded r) (F : α → pred σ) :
