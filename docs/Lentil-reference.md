@@ -151,12 +151,25 @@ Formula forms:
 | `⋀ x ∈ xs, p x` | `Lentil.tl_bigwedge (fun x => p x) xs` | Big conjunction over a `Foldable`. |
 | `⋁ x ∈ xs, p x` | `Lentil.tl_bigvee (fun x => p x) xs` | Big disjunction over a `Foldable`. |
 
-Quantifiers support typed binders:
+Quantifiers accept the same binders as Lean's `∃`, plus binder predicates.
+`forall` and `exists` are accepted as ASCII spellings:
 
 ```lean
 [tlfml| ∀ n : Nat, P n ∧ q]
-[tlfml| ∃ n : Nat, P n]
+[tlfml| ∀ a b, R a b]                -- ∀ a, ∀ b, R a b
+[tlfml| ∃ (a : Nat) (b : Bool), R a b]
+[tlfml| ∀ _ : Nat, q]
+[tlfml| ∀ n > 0, P n]                -- ∀ n, ⌞ n > 0 ⌟ → P n
+[tlfml| ∃ n < 3, P n]                -- ∃ n, ⌞ n < 3 ⌟ ∧ P n
 ```
+
+Mixed binder lists such as `∀ a (b : Nat), ...` are not accepted. Write
+`∀ (a : _) (b : Nat), ...` instead.
+
+Directly nested quantifiers of the same kind print as one binder list, such as
+`∀ a b, R a b`. As with Lean's `∃`, binder types are printed only when
+`pp.funBinderTypes` is set. Adjacent binders of the same type are then grouped:
+`∀ (a b : Nat), R a b`.
 
 Big operators use binder identifiers:
 

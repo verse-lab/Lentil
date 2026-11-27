@@ -172,11 +172,13 @@ meta def Lentil.strongFairnessKeyword : ParserDescr := .nonReservedSymbol "𝒮�
 syntax:arg Lentil.weakFairnessKeyword term:lead : tlfml
 syntax:arg Lentil.strongFairnessKeyword term:lead : tlfml
 
--- the way how binders are defined and how they are expanded is taken from `Mathlib.Order.SetNotation`
-open Batteries.ExtendedBinder in
-syntax "∀ " extBinder ", " tlfml : tlfml
-open Batteries.ExtendedBinder in
-syntax "∃ " extBinder ", " tlfml : tlfml
+-- Quantifier binders follow Lean's `∃`: `x y`, `x y : α`, `(x : α) (y : β)`, and `_`
+-- are accepted, and are expanded by `expandExplicitBinders`. Binder predicates
+-- `∀ n > 0, f` and `∃ n < 3, f` follow `Init.BinderPredicates`.
+syntax unicode("∀ ", "forall ") explicitBinders ", " tlfml : tlfml
+syntax unicode("∃ ", "exists ") explicitBinders ", " tlfml : tlfml
+syntax unicode("∀ ", "forall ") binderIdent binderPred ", " tlfml : tlfml
+syntax unicode("∃ ", "exists ") binderIdent binderPred ", " tlfml : tlfml
 
 syntax tlfml_bigop := "⋀ " <|> "⋁ "
 syntax tlfml_bigop binderIdent " ∈ " term ", " tlfml : tlfml
@@ -204,10 +206,19 @@ macro_rules
   | `([tlfml| $f1:tlfml ∧ $f2:tlfml ]) => `(Lentil.tl_and [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml ∨ $f2:tlfml ]) => `(Lentil.tl_or [tlfml| $f1 ] [tlfml| $f2 ])
   | `([tlfml| $f1:tlfml 𝑈 $f2:tlfml ]) => `(Lentil.tl_until [tlfml| $f1 ] [tlfml| $f2 ])
-  | `([tlfml| ∀ $x:ident, $f:tlfml]) => `(Lentil.tl_forall fun $x:ident => [tlfml| $f ])
-  | `([tlfml| ∀ $x:ident : $t, $f:tlfml]) => `(Lentil.tl_forall fun $x:ident : $t => [tlfml| $f ])
-  | `([tlfml| ∃ $x:ident, $f:tlfml]) => `(Lentil.tl_exists fun $x:ident => [tlfml| $f ])
-  | `([tlfml| ∃ $x:ident : $t, $f:tlfml]) => `(Lentil.tl_exists fun $x:ident : $t => [tlfml| $f ])
+  | `([tlfml| ∀ $xs:explicitBinders, $f:tlfml]) => do
+    expandExplicitBinders ``Lentil.tl_forall xs (← `([tlfml| $f ]))
+  | `([tlfml| ∃ $xs:explicitBinders, $f:tlfml]) => do
+    expandExplicitBinders ``Lentil.tl_exists xs (← `([tlfml| $f ]))
+  | `([tlfml| ∀ $x:ident $pred:binderPred, $f:tlfml]) =>
+    `([tlfml| ∀ $x:ident, ⌞ satisfies_binder_pred% $x $pred ⌟ → $f ])
+  -- FIXME: This default `x` is not very good
+  | `([tlfml| ∀ _ $pred:binderPred, $f:tlfml]) =>
+    `([tlfml| ∀ x, ⌞ satisfies_binder_pred% x $pred ⌟ → $f ])
+  | `([tlfml| ∃ $x:ident $pred:binderPred, $f:tlfml]) =>
+    `([tlfml| ∃ $x:ident, ⌞ satisfies_binder_pred% $x $pred ⌟ ∧ $f ])
+  | `([tlfml| ∃ _ $pred:binderPred, $f:tlfml]) =>
+    `([tlfml| ∃ x, ⌞ satisfies_binder_pred% x $pred ⌟ ∧ $f ])
   | `([tlfml| $op:tlfml_bigop $x:binderIdent ∈ $l:term, $f:tlfml]) =>
     -- HMM why the `⟨x.raw⟩` coercion does not work here, so that we have to define `binderIdentToFunBinder`?
     match op with
@@ -360,10 +371,34 @@ partial def delab_tlfml_inner : DelabM (TSyntax `tlfml) := do
          so that we can match the inner syntax of `f` and use `Lentil.syntax_term_to_tlfml`? -/
       let body ← withAppArg delab
       let (a, stx) ← Lentil.delab_binder_body_as_tlfml body
-      match fn with
-      | ``Lentil.tl_forall => do `(tlfml| ∀ $a:ident, $stx )
-      | ``Lentil.tl_exists => do `(tlfml| ∃ $a:ident, $stx )
-      | _ => unreachable!
+      -- like Lean's `∃`, show the binder type only under `pp.funBinderTypes`
+      let ty? ← if ← getPPOption getPPFunBinderTypes then some <$> withNaryArg 0 delab else pure none
+      -- merge a directly nested quantifier of the same kind, e.g. `∀ a, ∀ b, f` into
+      -- `∀ a b, f`, `∀ (a : α), ∀ (b : β), f` into `∀ (a : α) (b : β), f`, and
+      -- `∀ (a : α), ∀ (b : α), f` into `∀ (a b : α), f`; the parser expands each back to the
+      -- same nesting, re-elaborating `α` for every binder as the nested form does
+      match fn, ty? with
+      | ``Lentil.tl_forall, none =>
+        match stx with
+        | `(tlfml| ∀ $xs:binderIdent*, $f) => `(tlfml| ∀ $a:ident $xs*, $f )
+        | _ => `(tlfml| ∀ $a:ident, $stx )
+      | ``Lentil.tl_forall, some t =>
+        match stx with
+        | `(tlfml| ∀ ($ys:binderIdent* : $t') $bs:bracketedExplicitBinders*, $f) =>
+          if t'.raw == t.raw then `(tlfml| ∀ ($a:ident $ys* : $t) $bs*, $f )
+          else `(tlfml| ∀ ($a:ident : $t) ($ys* : $t') $bs*, $f )
+        | _ => `(tlfml| ∀ ($a:ident : $t), $stx )
+      | ``Lentil.tl_exists, none =>
+        match stx with
+        | `(tlfml| ∃ $xs:binderIdent*, $f) => `(tlfml| ∃ $a:ident $xs*, $f )
+        | _ => `(tlfml| ∃ $a:ident, $stx )
+      | ``Lentil.tl_exists, some t =>
+        match stx with
+        | `(tlfml| ∃ ($ys:binderIdent* : $t') $bs:bracketedExplicitBinders*, $f) =>
+          if t'.raw == t.raw then `(tlfml| ∃ ($a:ident $ys* : $t) $bs*, $f )
+          else `(tlfml| ∃ ($a:ident : $t) ($ys* : $t') $bs*, $f )
+        | _ => `(tlfml| ∃ ($a:ident : $t), $stx )
+      | _, _ => unreachable!
     | ``Lentil.tl_bigwedge | ``Lentil.tl_bigvee =>
       let body ← withAppFn <| withAppArg delab
       let l ← withAppArg delab
